@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_82m77"]
+albedo_color = Color(0.35, 0.55, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_lgute"]
+size = Vector3(0.8, 0.6, 8)
+
+[node name="Filare" type="Node3D" unique_id=965244216]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=2094629652]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1557092382]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+material_override = SubResource("StandardMaterial3D_82m77")
+visibility_range_end = 100.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_lgute")

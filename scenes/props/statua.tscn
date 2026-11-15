@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ggia4"]
+albedo_color = Color(0.86, 0.84, 0.79, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_nnh7d"]
+size = Vector3(1.8, 1.5, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mm5ws"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.72, 0.3, 1)
+emission_energy_multiplier = 0.3
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_vinjx"]
+height = 2.6
+radial_segments = 12
+rings = 4
+
+[sub_resource type="SphereMesh" id="SphereMesh_rlolb"]
+radius = 0.33
+height = 0.66
+radial_segments = 14
+rings = 7
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sjgmi"]
+size = Vector3(1.8, 4, 1.8)
+
+[node name="Statua" type="StaticBody3D" unique_id=259243724 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=2024894736]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1646322354]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_ggia4")
+mesh = SubResource("BoxMesh_nnh7d")
+
+[node name="capsule_1" type="MeshInstance3D" parent="Graybox" unique_id=2044509032]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 0)
+material_override = SubResource("StandardMaterial3D_mm5ws")
+cast_shadow = 0
+mesh = SubResource("CapsuleMesh_vinjx")
+
+[node name="sphere_2" type="MeshInstance3D" parent="Graybox" unique_id=614613975]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.45, 0)
+material_override = SubResource("StandardMaterial3D_mm5ws")
+cast_shadow = 0
+mesh = SubResource("SphereMesh_rlolb")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=644369730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+shape = SubResource("BoxShape3D_sjgmi")

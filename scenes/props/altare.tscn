@@ -1,0 +1,79 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://world/checkpoint.gd" id="1_xmyr5"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ggia4"]
+albedo_color = Color(0.86, 0.84, 0.79, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_ythot"]
+size = Vector3(2.4, 0.8, 2.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_uk6ms"]
+size = Vector3(1.4, 0.8, 1.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rsia2"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bjo6a"]
+top_radius = 0.6
+height = 0.3
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_migcl"]
+albedo_color = Color(0.3, 0.7, 1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.3, 0.7, 1, 1)
+emission_energy_multiplier = 6.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_toeuc"]
+radius = 0.45
+height = 0.9
+radial_segments = 14
+rings = 7
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6nwj3"]
+size = Vector3(2.4, 1.6, 2.4)
+
+[node name="Altare" type="StaticBody3D" unique_id=1807258692]
+collision_mask = 0
+script = ExtResource("1_xmyr5")
+
+[node name="Graybox" type="Node3D" parent="." unique_id=305072353]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1143106889]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+material_override = SubResource("StandardMaterial3D_ggia4")
+mesh = SubResource("BoxMesh_ythot")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=193558257]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+material_override = SubResource("StandardMaterial3D_ggia4")
+mesh = SubResource("BoxMesh_uk6ms")
+
+[node name="cyl_2" type="MeshInstance3D" parent="Graybox" unique_id=284811845]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+material_override = SubResource("StandardMaterial3D_rsia2")
+mesh = SubResource("CylinderMesh_bjo6a")
+
+[node name="Flame" type="MeshInstance3D" parent="Graybox" unique_id=1950560734]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+material_override = SubResource("StandardMaterial3D_migcl")
+cast_shadow = 0
+mesh = SubResource("SphereMesh_toeuc")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=454658099]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("BoxShape3D_6nwj3")
+
+[node name="Light" type="OmniLight3D" parent="." unique_id=1131637809]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
+light_color = Color(0.4, 0.7, 1, 1)
+light_energy = 1.5
+distance_fade_enabled = true
+distance_fade_begin = 60.0
+distance_fade_length = 15.0
+omni_range = 8.0

@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mwiv0"]
+albedo_color = Color(0.5, 0.55, 0.3, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_sjm6r"]
+top_radius = 0.04
+bottom_radius = 0.05
+height = 1.6
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_g5gcl"]
+albedo_color = Color(0.45, 0.5, 0.28, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_dwk6u"]
+top_radius = 0.04
+bottom_radius = 0.05
+height = 1.8
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d4byr"]
+albedo_color = Color(0.52, 0.56, 0.3, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_q1k26"]
+top_radius = 0.04
+bottom_radius = 0.05
+height = 1.4
+radial_segments = 12
+rings = 1
+
+[node name="Canne" type="Node3D" unique_id=1953766912]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=2026802797]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=710853020]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.8, 0)
+material_override = SubResource("StandardMaterial3D_mwiv0")
+visibility_range_end = 80.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_sjm6r")
+
+[node name="cyl_1" type="MeshInstance3D" parent="Graybox" unique_id=1007833603]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.9, 0.15)
+material_override = SubResource("StandardMaterial3D_g5gcl")
+visibility_range_end = 80.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_dwk6u")
+
+[node name="cyl_2" type="MeshInstance3D" parent="Graybox" unique_id=1871884520]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, -0.2)
+material_override = SubResource("StandardMaterial3D_d4byr")
+visibility_range_end = 80.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_q1k26")

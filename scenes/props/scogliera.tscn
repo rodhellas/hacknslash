@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q2d2u"]
+albedo_color = Color(0.42, 0.4, 0.38, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_1gsno"]
+size = Vector3(8.2, 5, 8.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_57gic"]
+albedo_color = Color(0.378, 0.35999998, 0.34199998, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_rraob"]
+size = Vector3(5, 2.5, 5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_oy340"]
+albedo_color = Color(0.449, 0.43, 0.41099998, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_emcr4"]
+size = Vector3(4, 3, 3.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_e8yyn"]
+size = Vector3(8, 6, 8)
+
+[node name="Scogliera" type="StaticBody3D" unique_id=2059009351 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=148517702]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=891963275]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+material_override = SubResource("StandardMaterial3D_q2d2u")
+mesh = SubResource("BoxMesh_1gsno")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=302368490]
+transform = Transform3D(0.9396926, 0, 0.34202012, 0, 1, 0, -0.34202012, 0, 0.9396926, 1.5, 5.5, -1)
+material_override = SubResource("StandardMaterial3D_57gic")
+mesh = SubResource("BoxMesh_rraob")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=277028495]
+transform = Transform3D(0.9622502, -0.08418597, -0.25881904, 0.08715574, 0.9961947, 0, 0.25783417, -0.022557564, 0.9659258, -2, 4.5, 2)
+material_override = SubResource("StandardMaterial3D_oy340")
+mesh = SubResource("BoxMesh_emcr4")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=492942537]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+shape = SubResource("BoxShape3D_e8yyn")

@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6ba5n"]
+albedo_color = Color(0.45, 0.33, 0.22, 1)
+roughness = 0.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_clytc"]
+radius = 0.42
+height = 1.6
+radial_segments = 12
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pcldu"]
+albedo_color = Color(0.3, 0.22, 0.15, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_os3vy"]
+top_radius = 0.0
+bottom_radius = 0.33
+height = 0.55
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m6qcw"]
+albedo_color = Color(1, 0.4, 0.1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(1, 0.4, 0.1, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_613vp"]
+size = Vector3(0.3, 0.08, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j3vs2"]
+albedo_color = Color(0.58000004, 0.594, 0.622, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_4h0rh"]
+size = Vector3(0.06, 0.06, 0.6)
+
+[node name="Model" type="Node3D" unique_id=497435961]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=218512242]
+
+[node name="capsule_0" type="MeshInstance3D" parent="Graybox" unique_id=473217320]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+material_override = SubResource("StandardMaterial3D_6ba5n")
+mesh = SubResource("CapsuleMesh_clytc")
+
+[node name="cyl_1" type="MeshInstance3D" parent="Graybox" unique_id=1696879426]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+material_override = SubResource("StandardMaterial3D_pcldu")
+mesh = SubResource("CylinderMesh_os3vy")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=997139544]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, -0.3)
+material_override = SubResource("StandardMaterial3D_m6qcw")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_613vp")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=1575059288]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.9, -0.4)
+material_override = SubResource("StandardMaterial3D_j3vs2")
+mesh = SubResource("BoxMesh_4h0rh")

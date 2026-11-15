@@ -1,0 +1,58 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_k0s41"]
+albedo_color = Color(0.55, 0.53, 0.5, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_jmg61"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfctt"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_ei3ce"]
+size = Vector3(0.15, 1.6, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_n3qt7"]
+size = Vector3(0.15, 1.6, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vavjp"]
+size = Vector3(2.2, 0.15, 0.15)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_b73me"]
+height = 1.0
+radius = 1.0
+
+[node name="Pozzo" type="StaticBody3D" unique_id=1852542899]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1547511133]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=1009588663]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("StandardMaterial3D_k0s41")
+mesh = SubResource("CylinderMesh_jmg61")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=1174881650]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 1.3, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+mesh = SubResource("BoxMesh_ei3ce")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=987390355]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 1.3, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+mesh = SubResource("BoxMesh_n3qt7")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=1670340489]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+mesh = SubResource("BoxMesh_vavjp")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1350443554]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("CylinderShape3D_b73me")

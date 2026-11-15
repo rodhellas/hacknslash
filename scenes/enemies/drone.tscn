@@ -1,0 +1,72 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cyvab"]
+albedo_color = Color(0.35, 0.3, 0.42, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_y6iu8"]
+radius = 0.42
+height = 0.84
+radial_segments = 14
+rings = 7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y3ws1"]
+albedo_color = Color(1, 0.2, 0.9, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(1, 0.2, 0.9, 1)
+emission_energy_multiplier = 5.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_dyfay"]
+radius = 0.15
+height = 0.3
+radial_segments = 14
+rings = 7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bf6fv"]
+albedo_color = Color(0.4, 0.42, 0.46, 1)
+roughness = 0.8
+
+[sub_resource type="TorusMesh" id="TorusMesh_xgp3v"]
+inner_radius = 0.45
+outer_radius = 0.55
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lt60k"]
+albedo_color = Color(1, 0.2, 0.9, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(1, 0.2, 0.9, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_cq5ml"]
+top_radius = 0.0
+bottom_radius = 0.15
+height = 0.4
+radial_segments = 12
+rings = 1
+
+[node name="Model" type="Node3D" unique_id=1426272286]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1505639628]
+
+[node name="sphere_0" type="MeshInstance3D" parent="Graybox" unique_id=575419196]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+material_override = SubResource("StandardMaterial3D_cyvab")
+mesh = SubResource("SphereMesh_y6iu8")
+
+[node name="sphere_1" type="MeshInstance3D" parent="Graybox" unique_id=1488022126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, -0.36)
+material_override = SubResource("StandardMaterial3D_y3ws1")
+cast_shadow = 0
+mesh = SubResource("SphereMesh_dyfay")
+
+[node name="torus_2" type="MeshInstance3D" parent="Graybox" unique_id=1809023550]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.85, 0)
+material_override = SubResource("StandardMaterial3D_bf6fv")
+mesh = SubResource("TorusMesh_xgp3v")
+
+[node name="cyl_3" type="MeshInstance3D" parent="Graybox" unique_id=2058796286]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+material_override = SubResource("StandardMaterial3D_lt60k")
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_cq5ml")

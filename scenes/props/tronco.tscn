@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x1klb"]
+albedo_color = Color(0.35, 0.24, 0.15, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_6ckd2"]
+top_radius = 0.4
+bottom_radius = 0.45
+height = 4.0
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wwiys"]
+size = Vector3(4, 0.8, 0.8)
+
+[node name="Tronco" type="StaticBody3D" unique_id=1432542573]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1851292627]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=1573601169]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 0.4, 0)
+material_override = SubResource("StandardMaterial3D_x1klb")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_6ckd2")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1405520147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("BoxShape3D_wwiys")

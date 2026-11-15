@@ -1,0 +1,76 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x1klb"]
+albedo_color = Color(0.35, 0.24, 0.15, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_8h67l"]
+top_radius = 0.3
+bottom_radius = 0.4
+height = 2.8
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_seulq"]
+albedo_color = Color(0.24, 0.42, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_1cvx6"]
+radius = 2.4
+height = 3.8
+radial_segments = 14
+rings = 7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dvjqx"]
+albedo_color = Color(0.21599999, 0.378, 0.17999999, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_v13fk"]
+radius = 1.4
+height = 2.4
+radial_segments = 14
+rings = 7
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_l7f7x"]
+height = 3.0
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hiwqy"]
+size = Vector3(4.5, 4.5, 4.5)
+
+[node name="AlberoQuercia" type="StaticBody3D" unique_id=933401473 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1973285258]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=784471501]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+material_override = SubResource("StandardMaterial3D_x1klb")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_8h67l")
+
+[node name="sphere_1" type="MeshInstance3D" parent="Graybox" unique_id=2052668528]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+material_override = SubResource("StandardMaterial3D_seulq")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("SphereMesh_1cvx6")
+
+[node name="sphere_2" type="MeshInstance3D" parent="Graybox" unique_id=1403233241]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 3.8, 0.6)
+material_override = SubResource("StandardMaterial3D_dvjqx")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("SphereMesh_v13fk")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=313065848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_l7f7x")
+
+[node name="OcclusionVolume" type="StaticBody3D" parent="." unique_id=602713768]
+collision_layer = 16
+collision_mask = 0
+
+[node name="@CollisionShape3D@3" type="CollisionShape3D" parent="OcclusionVolume" unique_id=100353315]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+shape = SubResource("BoxShape3D_hiwqy")

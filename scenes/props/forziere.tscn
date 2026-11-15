@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://world/chest.gd" id="1_2qreb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfctt"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_nc8hj"]
+size = Vector3(1.4, 0.7, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ktmin"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.72, 0.3, 1)
+emission_energy_multiplier = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_hjqii"]
+size = Vector3(1.45, 0.25, 0.95)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_38ntc"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.72, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_m7plv"]
+size = Vector3(0.25, 0.3, 0.05)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_acsa5"]
+size = Vector3(1.4, 1, 0.9)
+
+[node name="Forziere" type="StaticBody3D" unique_id=1054624792]
+collision_mask = 0
+script = ExtResource("1_2qreb")
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1941633335]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1857883897]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+mesh = SubResource("BoxMesh_nc8hj")
+
+[node name="Lid" type="MeshInstance3D" parent="Graybox" unique_id=1840697535]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82, 0)
+material_override = SubResource("StandardMaterial3D_ktmin")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_hjqii")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=1940002760]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -0.47)
+material_override = SubResource("StandardMaterial3D_38ntc")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_m7plv")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=2016099069]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("BoxShape3D_acsa5")

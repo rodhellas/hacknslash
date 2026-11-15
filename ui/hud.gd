@@ -1,0 +1,381 @@
+class_name Hud
+extends CanvasLayer
+## Interfaccia di gioco stile Diablo: globi vita/risorsa, barra abilità + pozione, esperienza,
+## riquadro del bersaglio, minimappa, messaggi, raccolta oggetti, pannelli morte/storia/fine livello.
+
+const GOLD := Color(0.95, 0.78, 0.35)
+
+var player: Player
+var level: Level
+var life_globe: Globe
+var res_globe: Globe
+var slots: Dictionary = {}
+var potion_slot: SkillSlot
+var xp_bar: ProgressBar
+var xp_label: Label
+var target_box: PanelContainer
+var target_name: Label
+var target_bar: ProgressBar
+var _target: Enemy = null
+var _target_timer := 0.0
+var minimap: Minimap
+var area_label: Label
+var banner: Label
+var message: Label
+var warning: Label
+var hover_label: Label
+var pickup_log: VBoxContainer
+var death_panel: Control
+var lore_panel: Control
+var lore_title: Label
+var lore_text: RichTextLabel
+var end_panel: Control
+var end_title: Label
+var end_text: Label
+var _banner_t := 0.0
+var _msg_t := 0.0
+var _warn_t := 0.0
+
+
+func _ready() -> void:
+	layer = 5
+	var root := Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(root)
+
+	# --- Barra in basso ---
+	var bottom := HBoxContainer.new()
+	bottom.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	bottom.offset_left = -430
+	bottom.offset_right = 430
+	bottom.offset_top = -150
+	bottom.offset_bottom = -6
+	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom.add_theme_constant_override("separation", 14)
+	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(bottom)
+
+	life_globe = Globe.new()
+	life_globe.custom_minimum_size = Vector2(140, 140)
+	life_globe.fill_color = Color(0.75, 0.06, 0.08)
+	life_globe.caption = "Vita"
+	life_globe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.add_child(life_globe)
+
+	var mid := VBoxContainer.new()
+	mid.alignment = BoxContainer.ALIGNMENT_END
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.add_child(mid)
+	xp_label = _label(13, Color(0.9, 0.85, 0.6))
+	xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mid.add_child(xp_label)
+	xp_bar = _bar(Color(0.85, 0.65, 0.2), Vector2(520, 8))
+	mid.add_child(xp_bar)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_child(row)
+	potion_slot = SkillSlot.new()
+	potion_slot.set_ability({"name": "Pozione", "color": Color(0.9, 0.15, 0.2), "desc": "Cura il 60% della vita. Ricarica 30 s."}, "Q")
+	potion_slot.label_override = "POZ"
+	row.add_child(potion_slot)
+	var sep := Control.new()
+	sep.custom_minimum_size = Vector2(10, 0)
+	row.add_child(sep)
+	for s: String in HeroClasses.SLOT_ORDER:
+		var sl := SkillSlot.new()
+		row.add_child(sl)
+		slots[s] = sl
+
+	res_globe = Globe.new()
+	res_globe.custom_minimum_size = Vector2(140, 140)
+	res_globe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.add_child(res_globe)
+
+	# --- Bersaglio in alto ---
+	target_box = PanelContainer.new()
+	target_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	target_box.offset_left = -220
+	target_box.offset_right = 220
+	target_box.offset_top = 10
+	target_box.add_theme_stylebox_override("panel", _panel_style(0.6))
+	target_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tv := VBoxContainer.new()
+	target_box.add_child(tv)
+	target_name = _label(18, Color.WHITE)
+	target_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tv.add_child(target_name)
+	target_bar = _bar(Color(0.8, 0.1, 0.1), Vector2(420, 14))
+	tv.add_child(target_bar)
+	target_box.visible = false
+	root.add_child(target_box)
+
+	# --- Minimappa ---
+	minimap = Minimap.new()
+	root.add_child(minimap)
+	area_label = _label(16, GOLD)
+	area_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	area_label.offset_left = -260
+	area_label.offset_right = -14
+	area_label.offset_top = 250
+	area_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	root.add_child(area_label)
+
+	# --- Messaggi ---
+	banner = _label(46, GOLD)
+	_center(banner, -260, 80)
+	root.add_child(banner)
+	message = _label(28, Color(1, 0.92, 0.7))
+	_center(message, -170, 90)
+	root.add_child(message)
+	warning = _label(20, Color(1, 0.45, 0.4))
+	_center(warning, 170, 40)
+	root.add_child(warning)
+	hover_label = _label(16, Color.WHITE)
+	hover_label.visible = false
+	root.add_child(hover_label)
+
+	pickup_log = VBoxContainer.new()
+	pickup_log.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	pickup_log.offset_left = -360
+	pickup_log.offset_right = -20
+	pickup_log.offset_top = -40
+	pickup_log.offset_bottom = 160
+	pickup_log.alignment = BoxContainer.ALIGNMENT_END
+	pickup_log.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(pickup_log)
+
+	# --- Pannelli ---
+	death_panel = _make_panel(root, "SEI CADUTO", "Gli dèi ti concedono un'altra possibilità.",
+		[["Risorgi all'ultimo altare", func() -> void: level.respawn_player()]])
+	var lp := _make_panel(root, "", "", [["Chiudi", func() -> void: lore_panel.visible = false]])
+	lore_panel = lp
+	lore_title = lp.find_child("Title", true, false)
+	var body := lp.find_child("Body", true, false) as Label
+	lore_text = RichTextLabel.new()
+	lore_text.bbcode_enabled = true
+	lore_text.fit_content = true
+	lore_text.custom_minimum_size = Vector2(520, 0)
+	lore_text.add_theme_font_size_override("normal_font_size", 18)
+	body.get_parent().add_child(lore_text)
+	body.get_parent().move_child(lore_text, body.get_index())
+	body.queue_free()
+	end_panel = _make_panel(root, "", "", [
+		["Continua a esplorare", func() -> void: end_panel.visible = false],
+		["Salva e torna al menu", func() -> void: Game.quit_to_menu(true)],
+	])
+	end_title = end_panel.find_child("Title", true, false)
+	end_text = end_panel.find_child("Body", true, false)
+
+
+func bind(p: Player, l: Level) -> void:
+	player = p
+	level = l
+	minimap.target = p
+	area_label.text = l.level_title
+	res_globe.fill_color = p.cls["resource_color"]
+	res_globe.caption = p.cls["resource"]
+	for s: String in slots:
+		var ab: Dictionary = p.abilities.get(s, {})
+		(slots[s] as SkillSlot).set_ability(ab, HeroClasses.SLOT_KEYS[s])
+	p.xp_changed.connect(func(_a: int, _b: int, _c: int) -> void: _update_xp())
+	_update_xp()
+
+
+func _update_xp() -> void:
+	var need := HeroData.xp_to_next(player.hero.level)
+	xp_bar.max_value = need
+	xp_bar.value = player.hero.xp
+	xp_label.text = "%s - %s livello %d   (%d / %d PE)" % [player.hero.hero_name, player.cls["name"], player.hero.level, player.hero.xp, need]
+
+
+func _process(delta: float) -> void:
+	if player == null:
+		return
+	life_globe.value = player.life
+	life_globe.max_value = player.stats["max_life"]
+	res_globe.value = player.resource
+	res_globe.max_value = player.stats["resource_max"]
+	for s: String in slots:
+		var sl: SkillSlot = slots[s]
+		var ab := sl.ability
+		if ab.is_empty():
+			continue
+		sl.locked = not player.is_unlocked(ab)
+		sl.cd_left = player.cooldown_left(ab)
+		sl.cd_total = maxf(float(ab.get("cooldown", 1.0)), 0.01)
+		sl.unaffordable = player.resource < float(ab.get("cost", 0.0))
+	potion_slot.cd_left = maxf(player.potion_cd, 0.0)
+	potion_slot.cd_total = Player.POTION_CD
+
+	# Bersaglio: il nemico sotto il cursore, altrimenti l'ultimo colpito
+	var t: Enemy = null
+	if level.hover["kind"] == "enemy":
+		t = level.hover["node"]
+	elif _target != null and is_instance_valid(_target) and not _target.dead and _target_timer > 0.0:
+		t = _target
+	_target_timer -= delta
+	target_box.visible = t != null
+	if t != null:
+		target_name.text = t.display_name + ("   (liv. %d)" % t.level)
+		target_name.add_theme_color_override("font_color",
+			Color(1.0, 0.6, 0.15) if t.unique else (Color(0.45, 0.65, 1.0) if t.elite else Color.WHITE))
+		target_bar.max_value = t.max_life
+		target_bar.value = t.life
+
+	# Etichetta sotto il cursore per oggetti interagibili
+	if level.hover["kind"] == "interact" and is_instance_valid(level.hover["node"]):
+		var n: Node = level.hover["node"]
+		hover_label.text = n.interact_name() if n.has_method("interact_name") else n.name
+		hover_label.position = get_viewport().get_mouse_position() + Vector2(18, 14)
+		hover_label.visible = true
+	else:
+		hover_label.visible = false
+
+	_banner_t -= delta
+	banner.modulate.a = clampf(_banner_t, 0.0, 1.0)
+	_msg_t -= delta
+	message.modulate.a = clampf(_msg_t, 0.0, 1.0)
+	_warn_t -= delta
+	warning.modulate.a = clampf(_warn_t * 2.0, 0.0, 1.0)
+
+
+func set_target(e: Enemy) -> void:
+	_target = e
+	_target_timer = 3.0
+
+
+func show_banner(text: String) -> void:
+	banner.text = text
+	_banner_t = 3.5
+
+
+func show_message(text: String, duration: float = 2.5) -> void:
+	message.text = text
+	_msg_t = duration
+
+
+func show_warning(text: String) -> void:
+	warning.text = text
+	_warn_t = 1.6
+
+
+func log_pickup(text: String, col: Color) -> void:
+	var l := _label(17, col)
+	l.text = text
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pickup_log.add_child(l)
+	if pickup_log.get_child_count() > 6:
+		pickup_log.get_child(0).queue_free()
+	var tw := l.create_tween()
+	tw.tween_interval(3.5)
+	tw.tween_property(l, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(l.queue_free)
+
+
+func show_death() -> void:
+	death_panel.visible = true
+
+
+func hide_death() -> void:
+	death_panel.visible = false
+
+
+func show_lore(title: String, text: String) -> void:
+	lore_title.text = title
+	lore_text.text = text
+	lore_panel.visible = true
+
+
+func show_end(title: String, text: String) -> void:
+	end_title.text = title
+	end_text.text = text
+	end_panel.visible = true
+
+
+# --- Helper di costruzione ----------------------------------------------------------------
+
+func _label(size: int, color: Color) -> Label:
+	var l := Label.new()
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 6)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
+
+func _bar(color: Color, min_size: Vector2) -> ProgressBar:
+	var b := ProgressBar.new()
+	b.custom_minimum_size = min_size
+	b.show_percentage = false
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = color
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0, 0, 0, 0.7)
+	bg.border_color = Color(0.6, 0.48, 0.25, 0.8)
+	bg.set_border_width_all(1)
+	b.add_theme_stylebox_override("fill", fill)
+	b.add_theme_stylebox_override("background", bg)
+	return b
+
+
+func _center(l: Label, y: float, h: float) -> void:
+	l.set_anchors_preset(Control.PRESET_CENTER)
+	l.offset_left = -700
+	l.offset_right = 700
+	l.offset_top = y
+	l.offset_bottom = y + h
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.modulate.a = 0.0
+
+
+static func _panel_style(alpha: float = 0.92) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.05, 0.04, alpha)
+	sb.border_color = Color(0.6, 0.48, 0.25)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(4)
+	sb.set_content_margin_all(14)
+	return sb
+
+
+func _make_panel(root: Control, title: String, body: String, buttons: Array) -> Control:
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(center)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _panel_style())
+	center.add_child(panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	panel.add_child(v)
+	var t := _label(34, GOLD)
+	t.name = "Title"
+	t.text = title
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var b := _label(18, Color(0.9, 0.88, 0.8))
+	b.name = "Body"
+	b.text = body
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.custom_minimum_size = Vector2(520, 0)
+	b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(b)
+	var hb := HBoxContainer.new()
+	hb.alignment = BoxContainer.ALIGNMENT_CENTER
+	hb.add_theme_constant_override("separation", 12)
+	v.add_child(hb)
+	for pair: Array in buttons:
+		var btn := Button.new()
+		btn.text = pair[0]
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.custom_minimum_size = Vector2(200, 40)
+		btn.pressed.connect(pair[1])
+		hb.add_child(btn)
+	center.visible = false
+	return center

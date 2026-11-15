@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cahrq"]
+albedo_color = Color(0.204, 0.357, 0.17, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_n5ed0"]
+radius = 0.9
+height = 1.1
+radial_segments = 14
+rings = 7
+
+[node name="Cespuglio" type="Node3D" unique_id=343182200]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=367557691]
+
+[node name="sphere_0" type="MeshInstance3D" parent="Graybox" unique_id=386481702]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("StandardMaterial3D_cahrq")
+visibility_range_end = 90.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("SphereMesh_n5ed0")

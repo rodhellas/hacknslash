@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tab3q"]
+albedo_color = Color(0.731, 0.714, 0.6715, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_qotll"]
+size = Vector3(16, 0.08, 26)
+
+[node name="PavimentoTempio" type="Node3D" unique_id=1528518466]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=378887697]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=953565974]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+material_override = SubResource("StandardMaterial3D_tab3q")
+mesh = SubResource("BoxMesh_qotll")

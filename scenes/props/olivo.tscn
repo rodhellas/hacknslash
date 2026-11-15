@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x1klb"]
+albedo_color = Color(0.35, 0.24, 0.15, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_754d2"]
+top_radius = 0.2
+bottom_radius = 0.3
+height = 1.8
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2rk86"]
+albedo_color = Color(0.45, 0.52, 0.36, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_c5kq5"]
+radius = 1.8
+height = 1.8
+radial_segments = 14
+rings = 7
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_t77fb"]
+radius = 0.35
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3bu1i"]
+size = Vector3(3.4, 1.8, 3.4)
+
+[node name="Olivo" type="StaticBody3D" unique_id=1835965604 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=414244209]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=138524669]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+material_override = SubResource("StandardMaterial3D_x1klb")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_754d2")
+
+[node name="sphere_1" type="MeshInstance3D" parent="Graybox" unique_id=882099576]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0)
+material_override = SubResource("StandardMaterial3D_2rk86")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("SphereMesh_c5kq5")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1043849134]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CylinderShape3D_t77fb")
+
+[node name="OcclusionVolume" type="StaticBody3D" parent="." unique_id=522015425]
+collision_layer = 16
+collision_mask = 0
+
+[node name="@CollisionShape3D@6" type="CollisionShape3D" parent="OcclusionVolume" unique_id=96748458]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0)
+shape = SubResource("BoxShape3D_3bu1i")

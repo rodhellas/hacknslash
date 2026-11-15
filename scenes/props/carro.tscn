@@ -1,0 +1,79 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfctt"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_nqcm5"]
+size = Vector3(2, 0.5, 3.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vf4mw"]
+albedo_color = Color(0.315, 0.22399999, 0.14, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_aysyd"]
+height = 0.15
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ywgfl"]
+height = 0.15
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_os111"]
+height = 0.15
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_o2dar"]
+height = 0.15
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ql5eu"]
+size = Vector3(2.4, 1.4, 3.4)
+
+[node name="Carro" type="StaticBody3D" unique_id=2006671140]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1967694041]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=50415675]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_nqcm5")
+
+[node name="cyl_1" type="MeshInstance3D" parent="Graybox" unique_id=470423556]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -1.1, 0.5, -1)
+material_override = SubResource("StandardMaterial3D_vf4mw")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_aysyd")
+
+[node name="cyl_2" type="MeshInstance3D" parent="Graybox" unique_id=1710827927]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 1.1, 0.5, -1)
+material_override = SubResource("StandardMaterial3D_vf4mw")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_ywgfl")
+
+[node name="cyl_3" type="MeshInstance3D" parent="Graybox" unique_id=523783012]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -1.1, 0.5, 1)
+material_override = SubResource("StandardMaterial3D_vf4mw")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_os111")
+
+[node name="cyl_4" type="MeshInstance3D" parent="Graybox" unique_id=1152975599]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 1.1, 0.5, 1)
+material_override = SubResource("StandardMaterial3D_vf4mw")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_o2dar")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=192340652]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("BoxShape3D_ql5eu")

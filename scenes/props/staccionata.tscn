@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfctt"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_rnhhi"]
+size = Vector3(0.15, 1.2, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_xngv5"]
+size = Vector3(0.15, 1.2, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ofc2c"]
+size = Vector3(4, 0.12, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_y3f47"]
+size = Vector3(4, 0.12, 0.08)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_q4jat"]
+size = Vector3(4, 1.2, 0.3)
+
+[node name="Staccionata" type="StaticBody3D" unique_id=1444538199]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=589673676]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1501778187]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.9, 0.6, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+visibility_range_end = 100.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_rnhhi")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=1762890615]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9, 0.6, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+visibility_range_end = 100.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_xngv5")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=562835346]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+visibility_range_end = 100.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_ofc2c")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=1328874203]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+visibility_range_end = 100.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_y3f47")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=2052991614]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("BoxShape3D_q4jat")

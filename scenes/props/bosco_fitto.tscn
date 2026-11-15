@@ -1,0 +1,85 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_njrh7"]
+albedo_color = Color(0.103999995, 0.20799999, 0.1105, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_dsejc"]
+size = Vector3(8, 1.2, 8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_77ix5"]
+albedo_color = Color(0.16, 0.32, 0.17, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_7mlub"]
+top_radius = 0.0
+bottom_radius = 2.4
+height = 7.0
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8cfhc"]
+albedo_color = Color(0.144, 0.288, 0.153, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_54f4v"]
+top_radius = 0.0
+bottom_radius = 2.6
+height = 8.0
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dhkxx"]
+albedo_color = Color(0.20199999, 0.354, 0.2115, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ovy2l"]
+top_radius = 0.0
+bottom_radius = 2.5
+height = 7.5
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_4t7dj"]
+top_radius = 0.0
+bottom_radius = 2.2
+height = 6.5
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6cad5"]
+size = Vector3(8, 6, 8)
+
+[node name="BoscoFitto" type="StaticBody3D" unique_id=2072348334 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1648631920]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1448813605]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+material_override = SubResource("StandardMaterial3D_njrh7")
+mesh = SubResource("BoxMesh_dsejc")
+
+[node name="cyl_1" type="MeshInstance3D" parent="Graybox" unique_id=326879244]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 4, -2)
+material_override = SubResource("StandardMaterial3D_77ix5")
+mesh = SubResource("CylinderMesh_7mlub")
+
+[node name="cyl_2" type="MeshInstance3D" parent="Graybox" unique_id=805021585]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3, 4.5, -1.5)
+material_override = SubResource("StandardMaterial3D_8cfhc")
+mesh = SubResource("CylinderMesh_54f4v")
+
+[node name="cyl_3" type="MeshInstance3D" parent="Graybox" unique_id=1348750921]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 4.2, 2.4)
+material_override = SubResource("StandardMaterial3D_dhkxx")
+mesh = SubResource("CylinderMesh_ovy2l")
+
+[node name="cyl_4" type="MeshInstance3D" parent="Graybox" unique_id=4461965]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3.8, 2.2)
+material_override = SubResource("StandardMaterial3D_77ix5")
+mesh = SubResource("CylinderMesh_4t7dj")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1972716515]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+shape = SubResource("BoxShape3D_6cad5")

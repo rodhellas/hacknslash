@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q2d2u"]
+albedo_color = Color(0.42, 0.4, 0.38, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_t6g3o"]
+size = Vector3(1.2, 0.7, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bgcbj"]
+size = Vector3(1.1, 0.7, 0.9)
+
+[node name="RocciaPiccola" type="StaticBody3D" unique_id=2029244646]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=262474272]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1428800620]
+transform = Transform3D(0.93881327, -0.07196675, 0.33682406, 0.13705875, 0.97522366, -0.17364818, -0.3159819, 0.2091879, 0.9254165, 0, 0.35, 0)
+material_override = SubResource("StandardMaterial3D_q2d2u")
+visibility_range_end = 100.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_t6g3o")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1698586960]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+shape = SubResource("BoxShape3D_bgcbj")

@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://world/lore_sign.gd" id="1_3h1k1"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfctt"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_hu35m"]
+size = Vector3(0.15, 1.8, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v4n7a"]
+albedo_color = Color(0.56, 0.456, 0.36, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_qagkl"]
+size = Vector3(1.4, 0.8, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_38ntc"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.72, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_hw6wn"]
+size = Vector3(1.1, 0.5, 0.02)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qv755"]
+size = Vector3(1.4, 2, 0.4)
+
+[node name="Cartello" type="StaticBody3D" unique_id=429145587]
+collision_mask = 0
+script = ExtResource("1_3h1k1")
+
+[node name="Graybox" type="Node3D" parent="." unique_id=433737443]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=2005709042]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+material_override = SubResource("StandardMaterial3D_pfctt")
+mesh = SubResource("BoxMesh_hu35m")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=191073900]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+material_override = SubResource("StandardMaterial3D_v4n7a")
+mesh = SubResource("BoxMesh_qagkl")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=152837113]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -0.06)
+material_override = SubResource("StandardMaterial3D_38ntc")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_hw6wn")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=307450730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BoxShape3D_qv755")

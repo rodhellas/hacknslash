@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ggia4"]
+albedo_color = Color(0.86, 0.84, 0.79, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_3nv63"]
+top_radius = 0.35
+bottom_radius = 0.4
+height = 1.6
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_04sxt"]
+albedo_color = Color(0.2, 0.9, 1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.2, 0.9, 1, 1)
+emission_energy_multiplier = 4.0
+
+[sub_resource type="TorusMesh" id="TorusMesh_g3in8"]
+inner_radius = 0.42
+outer_radius = 0.5
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_mtr8p"]
+height = 1.6
+radius = 0.4
+
+[node name="Miliario" type="StaticBody3D" unique_id=1949521657]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1465617862]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=482772644]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+material_override = SubResource("StandardMaterial3D_ggia4")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("CylinderMesh_3nv63")
+
+[node name="torus_1" type="MeshInstance3D" parent="Graybox" unique_id=892519169]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+material_override = SubResource("StandardMaterial3D_04sxt")
+cast_shadow = 0
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("TorusMesh_g3in8")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=473981534]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CylinderShape3D_mtr8p")

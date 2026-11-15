@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4akgn"]
+albedo_color = Color(0.505, 0.388, 0.28, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs1oq"]
+size = Vector3(10, 4, 7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ajayp"]
+albedo_color = Color(0.49600002, 0.2, 0.120000005, 1)
+roughness = 0.8
+
+[sub_resource type="PrismMesh" id="PrismMesh_tk0ke"]
+size = Vector3(7.6, 2, 10.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_x3pev"]
+size = Vector3(10, 4, 7)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pe0d6"]
+size = Vector3(10.6, 2.2, 7.6)
+
+[node name="Fienile" type="StaticBody3D" unique_id=1009367440 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1550312908]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=869236667]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+material_override = SubResource("StandardMaterial3D_4akgn")
+mesh = SubResource("BoxMesh_gs1oq")
+
+[node name="prism_1" type="MeshInstance3D" parent="Graybox" unique_id=1474686017]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 5, 0)
+material_override = SubResource("StandardMaterial3D_ajayp")
+mesh = SubResource("PrismMesh_tk0ke")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1399534986]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+shape = SubResource("BoxShape3D_x3pev")
+
+[node name="OcclusionVolume" type="StaticBody3D" parent="." unique_id=2146693349]
+collision_layer = 16
+collision_mask = 0
+
+[node name="@CollisionShape3D@9" type="CollisionShape3D" parent="OcclusionVolume" unique_id=72997113]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+shape = SubResource("BoxShape3D_pe0d6")

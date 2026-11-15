@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sui7m"]
+albedo_color = Color(0.82, 0.76, 0.62, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_4w504"]
+size = Vector3(8, 5, 1.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rsia2"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_845pl"]
+size = Vector3(8.1, 0.3, 1.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_p84qj"]
+size = Vector3(8, 5, 1.4)
+
+[node name="Muro" type="StaticBody3D" unique_id=679679935 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1813824388]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1810940097]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+material_override = SubResource("StandardMaterial3D_sui7m")
+mesh = SubResource("BoxMesh_4w504")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=1461318263]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.1, 0)
+material_override = SubResource("StandardMaterial3D_rsia2")
+mesh = SubResource("BoxMesh_845pl")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1140845155]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("BoxShape3D_p84qj")

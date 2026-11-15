@@ -1,0 +1,66 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bf6fv"]
+albedo_color = Color(0.4, 0.42, 0.46, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_qxhac"]
+size = Vector3(0.5, 0.2, 0.5)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_vxanu"]
+top_radius = 0.08
+bottom_radius = 0.12
+height = 3.5
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h552g"]
+albedo_color = Color(0.2, 0.9, 1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.2, 0.9, 1, 1)
+emission_energy_multiplier = 5.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_fi6es"]
+radius = 0.3
+height = 0.6
+radial_segments = 14
+rings = 7
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_qre2n"]
+height = 3.5
+radius = 0.25
+
+[node name="LampionePlasma" type="StaticBody3D" unique_id=301212057]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=621920183]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1037334171]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+material_override = SubResource("StandardMaterial3D_bf6fv")
+mesh = SubResource("BoxMesh_qxhac")
+
+[node name="cyl_1" type="MeshInstance3D" parent="Graybox" unique_id=160845818]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+material_override = SubResource("StandardMaterial3D_bf6fv")
+mesh = SubResource("CylinderMesh_vxanu")
+
+[node name="sphere_2" type="MeshInstance3D" parent="Graybox" unique_id=966286226]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.7, 0)
+material_override = SubResource("StandardMaterial3D_h552g")
+cast_shadow = 0
+mesh = SubResource("SphereMesh_fi6es")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1740624494]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+shape = SubResource("CylinderShape3D_qre2n")
+
+[node name="Light" type="OmniLight3D" parent="." unique_id=642841654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, 0)
+light_color = Color(0.2, 0.9, 1, 1)
+light_energy = 1.6
+distance_fade_enabled = true
+distance_fade_begin = 60.0
+distance_fade_length = 15.0
+omni_range = 9.0

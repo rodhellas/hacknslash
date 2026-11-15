@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_k0s41"]
+albedo_color = Color(0.55, 0.53, 0.5, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_0c4m4"]
+size = Vector3(2.2, 0.9, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ggia4"]
+albedo_color = Color(0.86, 0.84, 0.79, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_oy3yp"]
+size = Vector3(2.3, 0.2, 1.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ucu0v"]
+size = Vector3(2.3, 1.1, 1.1)
+
+[node name="Sarcofago" type="StaticBody3D" unique_id=805106676]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1976546919]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=122536874]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_k0s41")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_0c4m4")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=809725467]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+material_override = SubResource("StandardMaterial3D_ggia4")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_oy3yp")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1093851714]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+shape = SubResource("BoxShape3D_ucu0v")

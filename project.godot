@@ -1,0 +1,115 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+
+config_version=5
+
+[application]
+
+config/name="Legio 3000"
+config/description="Action RPG isometrico: l'Impero Romano nel 3000 d.C."
+run/main_scene="res://scenes/main_menu.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[autoload]
+
+Game="*res://core/game.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[input]
+
+move_up={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventKey,"physical_keycode":4194320)]
+}
+move_down={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventKey,"physical_keycode":4194322)]
+}
+move_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":65), Object(InputEventKey,"physical_keycode":4194319)]
+}
+move_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":68), Object(InputEventKey,"physical_keycode":4194321)]
+}
+primary={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"button_index":1)]
+}
+secondary={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"button_index":2)]
+}
+skill_1={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":49)]
+}
+skill_2={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":50)]
+}
+skill_3={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":51)]
+}
+skill_4={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":52)]
+}
+potion={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":81)]
+}
+interact={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":69)]
+}
+force_stand={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":4194325)]
+}
+inventory={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":73), Object(InputEventKey,"physical_keycode":67)]
+}
+map={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":4194306)]
+}
+pause={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":4194305)]
+}
+zoom_in={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"button_index":4)]
+}
+zoom_out={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"button_index":5)]
+}
+
+[layer_names]
+
+3d_physics/layer_1="mondo"
+3d_physics/layer_2="giocatore"
+3d_physics/layer_3="nemici"
+3d_physics/layer_4="interagibili"
+3d_physics/layer_5="occlusione"
+3d_render/layer_11="minimappa"
+
+[navigation]
+
+3d/default_cell_size=0.4
+3d/default_cell_height=0.25
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2
+lights_and_shadows/directional_shadow/size=4096
