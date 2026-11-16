@@ -5,7 +5,8 @@ extends SceneTree
 ##   scenes/characters/*.tscn   modelli segnaposto delle 4 classi
 ##   scenes/enemies/*.tscn      modelli segnaposto dei nemici
 ##   scenes/npcs/*.tscn         modelli segnaposto dei personaggi non giocanti
-##   scenes/levels/level_01.tscn  la mappa del livello 1, con navmesh già calcolata
+##   scenes/levels/level_01.tscn  la mappa del livello 1: luoghi, nemici e la FORMA (strade, aree,
+##                                fiume); terreno, vegetazione e navmesh li costruisce tools/map_builder.gd
 ##   (la città di Ostia Nova ha il suo generatore: tools/build_ostia.gd, che riusa questo file)
 ##
 ## Uso (da terminale, nella cartella del progetto):
@@ -124,7 +125,7 @@ func _generate() -> void:
 	if "missing" in args:
 		_build_props(true)
 		_build_models(true)
-	if all or "props" in args or "level" in args:
+	if all or "props" in args:
 		_build_props()
 	if all or "models" in args:
 		_build_models()
@@ -919,14 +920,11 @@ func _build_level() -> void:
 	region.owner = level_root
 
 	_find_bridge()
-	_build_ground(region)
-	_build_road(region)
-	_build_river(region)
 	var pois := _group(region, "Luoghi")
 	_build_villa(pois)
 	_build_pois(pois)
-	_build_road_props(region)
-	_build_scatter(region)
+	_build_river_props(pois)
+	_build_shape()
 	_build_encounters()
 
 	var start := Marker3D.new()
@@ -958,22 +956,8 @@ func _build_level() -> void:
 	level_root.add_child(from_hub)
 	from_hub.owner = level_root
 
-	print("Calcolo navmesh (può richiedere un po')...")
-	var t0 := Time.get_ticks_msec()
-	var nm := NavigationMesh.new()
-	nm.cell_size = 0.4
-	nm.cell_height = 0.25
-	nm.agent_radius = 0.4
-	nm.agent_height = 2.0
-	nm.agent_max_climb = 0.25
-	nm.region_min_size = 30.0
-	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	nm.geometry_collision_mask = Layers.WORLD
-	region.navigation_mesh = nm
-	region.bake_navigation_mesh(false)
-	print("Navmesh: %d poligoni in %d ms" % [nm.get_polygon_count(), Time.get_ticks_msec() - t0])
-	var nm_path := "res://scenes/levels/level_01_navmesh.res"
-	ResourceSaver.save(nm, nm_path, ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_CHANGE_PATH)
+	# Terreno, confini, strade, acqua, vegetazione, lampioni e navmesh dalla Forma
+	print(load("res://tools/map_builder.gd").new().build(level_root, true))
 
 	get_root().remove_child(level_root)
 	level_root.set_script(load("res://world/level.gd"))
@@ -984,6 +968,112 @@ func _build_level() -> void:
 	_save_scene(level_root, "res://scenes/levels/level_01.tscn")
 	print("Livello salvato. Lunghezza del percorso: %d m (circa %d s a piedi)" % [roundi(road_total), roundi(road_total / 6.0)])
 	level_root.free()
+
+
+## FORMA del livello 1 (modificabile poi nell'editor): strada principale con le zone lungo il
+## percorso, aree laterali, sentieri, fiume con ponte e guado, radure da tenere libere.
+func _build_shape() -> void:
+	var forma: Node3D = load("res://world/map_shape.gd").new()
+	forma.name = "Forma"
+	forma.set("seed", SEED)
+	forma.set("default_zone", "fattoria")
+	forma.set("background_color", Color(0.1, 0.14, 0.09))
+	forma.set("water_color", Color(0.15, 0.38, 0.58))
+	level_root.add_child(forma)
+	forma.owner = level_root
+	var widths := PackedFloat32Array()
+	for i in ROAD.size():
+		widths.append(float(maxi(ROAD_HW[maxi(i - 1, 0)], ROAD_HW[mini(i, ROAD_HW.size() - 1)])))
+	_shape_road(forma, "ViaPrincipale", ROAD, widths, {"paved_width": 6.0, "curbs": true, "paved_color": Color(0.6, 0.57, 0.52),
+		"zone_breaks": PackedStringArray(["0=fattoria", "0.17=bosco", "0.35=fiume", "0.43=tempio", "0.53=campo", "0.66=necropoli", "0.83=citta"]),
+		"lamp_spacing": 36.0, "milestone_every": 6})
+	var i := 0
+	for sd: Array in SIDE:
+		_shape_area(forma, "Area_%s_%d" % [sd[2], i], sd[0], float(sd[1]), {"zone": sd[2]})
+		i += 1
+	i = 0
+	for c: Array in PATHS:
+		var w := float(c[2])
+		_shape_road(forma, "Sentiero_%d" % i, [c[0], c[1]], PackedFloat32Array([w, w]), {"paved_width": 3.5, "paved_color": Color(0.5, 0.4, 0.28)})
+		i += 1
+	# Fiume: poligono d'acqua che segue _river_z, con ponte e guado che lo attraversano
+	var river := PackedVector2Array()
+	var x := X0 - 16.0
+	while x <= X0 + NX * CELL + 16.0:
+		river.append(Vector2(x, _river_z(x) - 7.0))
+		x += 8.0
+	x -= 8.0
+	while x >= X0 - 16.0:
+		river.append(Vector2(x, _river_z(x) + 7.0))
+		x -= 8.0
+	_shape_polygon(forma, "Fiume", river, {"mode": "acqua"})
+	_shape_road(forma, "Ponte", [_bridge_c - _bridge_d * 13.0, _bridge_c + _bridge_d * 13.0], PackedFloat32Array([3.6, 3.6]),
+		{"paved_width": 0.0, "over_water": true, "zone": "fiume"})
+	_shape_road(forma, "Guado", [FORD + Vector2(0, 9), FORD - Vector2(0, 9)], PackedFloat32Array([3.0, 3.0]),
+		{"paved_width": 0.0, "over_water": true, "zone": "fiume"})
+	# Radure: spazi da tenere liberi dalla vegetazione (cortili, campi, piazzali)
+	i = 0
+	for c: Array in _clear:
+		if float(c[1]) >= 8.0:
+			_shape_area(forma, "Radura_%d" % i, c[0], float(c[1]), {"walkable": false, "scatter": false})
+			i += 1
+
+
+func _shape_road(forma: Node, n: String, pts: Array, widths: PackedFloat32Array, props: Dictionary) -> Node3D:
+	var r: Path3D = load("res://world/map_road.gd").new()
+	r.name = n
+	var cv := Curve3D.new()
+	cv.bake_interval = 2.0
+	for p: Vector2 in pts:
+		cv.add_point(_v3(p))
+	r.curve = cv
+	r.set("widths", widths)
+	r.set("half_width", widths[0] if widths.size() > 0 else 10.0)
+	for k: String in props:
+		r.set(k, props[k])
+	forma.add_child(r)
+	r.owner = level_root
+	return r
+
+
+func _shape_area(forma: Node, n: String, c: Vector2, radius: float, props: Dictionary) -> Node3D:
+	var a: Node3D = load("res://world/map_area.gd").new()
+	a.name = n
+	a.position = _v3(c)
+	a.set("radius", radius)
+	for k: String in props:
+		a.set(k, props[k])
+	forma.add_child(a)
+	a.owner = level_root
+	return a
+
+
+func _shape_polygon(forma: Node, n: String, pts: PackedVector2Array, props: Dictionary) -> Node3D:
+	var p: Path3D = load("res://world/map_polygon.gd").new()
+	p.name = n
+	var cv := Curve3D.new()
+	for v in pts:
+		cv.add_point(_v3(v))
+	p.curve = cv
+	for k: String in props:
+		p.set(k, props[k])
+	forma.add_child(p)
+	p.owner = level_root
+	return p
+
+
+## Ponte, guado e canne del fiume (oggetti "a mano": non vengono toccati da Ricostruisci terreno).
+func _build_river_props(parent: Node) -> void:
+	var g := _group(parent, "Fiume")
+	_place("ponte", g, _bridge_c, rad_to_deg(atan2(_bridge_d.x, _bridge_d.y)))
+	for i in 6:
+		var p := FORD + Vector2(rng.randf_range(-3, 3), -6 + i * 2.4)
+		_disc(g, p, rng.randf_range(0.6, 0.9), 0.05, ROCK.lightened(0.1))
+	for i in 10:
+		var side := 1.0 if i % 2 == 0 else -1.0
+		var p := _bridge_c + Vector2(rng.randf_range(-14, 14), side * rng.randf_range(8, 11))
+		if absf(p.x - _bridge_c.x) > 5.0:
+			_place("canne", g, p, rng.randf() * 360.0)
 
 
 func _build_environment() -> void:
@@ -1039,152 +1129,6 @@ func _find_bridge() -> void:
 		s += 0.5
 	_clear.append([_bridge_c, 16.0])
 	_clear.append([FORD, 9.0])
-
-
-func _build_ground(region: Node3D) -> void:
-	var ground := _group(region, "Terreno")
-	var bounds := _group(region, "Confini")
-	# Base scura sotto tutto (solo grafica)
-	var base := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(NX * CELL + 200, NZ * CELL + 200)
-	base.mesh = pm
-	base.material_override = Fx.mat(Color(0.1, 0.14, 0.09))
-	base.position = Vector3(X0 + NX * CELL * 0.5, -0.05, Z0 - NZ * CELL * 0.5)
-	base.name = "Base"
-	ground.add_child(base)
-	base.owner = level_root
-
-	var allowed := []
-	for ix in NX:
-		var col := []
-		for iz in NZ:
-			col.append(_allowed(_cell_center(ix, iz)))
-		allowed.append(col)
-	var kind := {}   # Vector2i -> "a" giocabile / "b" confine
-	for ix in NX:
-		for iz in NZ:
-			if allowed[ix][iz]:
-				kind[Vector2i(ix, iz)] = "a"
-			else:
-				for dx in range(-1, 2):
-					for dz in range(-1, 2):
-						var nx := ix + dx
-						var nz := iz + dz
-						if nx >= 0 and nx < NX and nz >= 0 and nz < NZ and allowed[nx][nz]:
-							kind[Vector2i(ix, iz)] = "b"
-	# Terreno: strisce orizzontali unite per zona (meno nodi)
-	var runs := 0
-	for iz in NZ:
-		var ix := 0
-		while ix < NX:
-			if not kind.has(Vector2i(ix, iz)):
-				ix += 1
-				continue
-			var z := _zone(_cell_center(ix, iz))
-			var start := ix
-			while ix < NX and kind.has(Vector2i(ix, iz)) and _zone(_cell_center(ix, iz)) == z:
-				ix += 1
-			var n := ix - start
-			var c := Vector2(X0 + (start + n * 0.5) * CELL, Z0 - (iz + 0.5) * CELL)
-			var sb := StaticBody3D.new()
-			sb.name = "Suolo_%d" % runs
-			sb.collision_layer = Layers.WORLD
-			sb.collision_mask = 0
-			sb.position = _v3(c, -0.5)
-			var cs := CollisionShape3D.new()
-			var bs := BoxShape3D.new()
-			bs.size = Vector3(n * CELL, 1, CELL)
-			cs.shape = bs
-			sb.add_child(cs)
-			var mi := MeshInstance3D.new()
-			var bm := BoxMesh.new()
-			bm.size = bs.size
-			mi.mesh = bm
-			var zc: Color = ZONE_COLORS[z]
-			mi.material_override = Fx.mat(zc.darkened(0.04 * (iz % 2)))
-			sb.add_child(mi)
-			ground.add_child(sb)
-			sb.owner = level_root
-			cs.owner = level_root
-			mi.owner = level_root
-			runs += 1
-	# Confini: bosco fitto o scogliere
-	var nb := 0
-	for k: Vector2i in kind:
-		if kind[k] != "b":
-			continue
-		var c := _cell_center(k.x, k.y)
-		var z := _zone(c)
-		var pname := "scogliera" if z in ["campo", "necropoli", "citta", "relitto"] else "bosco_fitto"
-		var inst: Node3D = (prop_scenes[pname] as PackedScene).instantiate()
-		inst.position = _v3(c)
-		inst.rotation_degrees.y = 90.0 * rng.randi_range(0, 3)
-		bounds.add_child(inst)
-		inst.owner = level_root
-		nb += 1
-	print("Terreno: %d strisce, %d celle di confine" % [runs, nb])
-
-
-func _cell_center(ix: int, iz: int) -> Vector2:
-	return Vector2(X0 + (ix + 0.5) * CELL, Z0 - (iz + 0.5) * CELL)
-
-
-func _build_road(region: Node3D) -> void:
-	var road := _group(region, "Strada")
-	var stone := Color(0.6, 0.57, 0.52)
-	for i in ROAD.size() - 1:
-		_strip(road, ROAD[i], ROAD[i + 1], 6.0, 0.02, 0.04, stone)
-		_disc(road, ROAD[i], 3.0, 0.02, stone)
-		# Bordi della via (cordoli)
-		var d := ((ROAD[i + 1] as Vector2) - (ROAD[i] as Vector2)).normalized()
-		var n := _perp(d) * 3.2
-		_strip(road, (ROAD[i] as Vector2) + n, (ROAD[i + 1] as Vector2) + n, 0.4, 0.04, 0.08, stone.darkened(0.25))
-		_strip(road, (ROAD[i] as Vector2) - n, (ROAD[i + 1] as Vector2) - n, 0.4, 0.04, 0.08, stone.darkened(0.25))
-	_disc(road, ROAD[-1], 3.0, 0.02, stone)
-	var dirt := Color(0.5, 0.4, 0.28)
-	for c: Array in PATHS:
-		_strip(road, c[0], c[1], 3.5, 0.015, 0.03, dirt)
-		_disc(road, c[0], 1.75, 0.015, dirt)
-		_disc(road, c[1], 1.75, 0.015, dirt)
-
-
-func _build_river(region: Node3D) -> void:
-	var river := _group(region, "Fiume")
-	var water := Color(0.15, 0.38, 0.58)
-	var x := X0
-	while x < X0 + NX * CELL:
-		var a := Vector2(x, _river_z(x))
-		var b := Vector2(x + 4.0, _river_z(x + 4.0))
-		var mid := (a + b) * 0.5
-		_strip(river, a - (b - a).normalized() * 0.2, b + (b - a).normalized() * 0.2, 14.0, 0.03, 0.04, water)
-		if mid.distance_to(_bridge_c) > 4.5 and mid.distance_to(FORD) > 4.0:
-			if _allowed(mid) or _allowed(mid + Vector2(0, 8)) or _allowed(mid - Vector2(0, 8)):
-				var blk := StaticBody3D.new()
-				blk.collision_layer = Layers.WORLD
-				blk.collision_mask = 0
-				blk.position = _v3(mid, 0.75)
-				blk.rotation.y = atan2(-(b.y - a.y), b.x - a.x)
-				var cs := CollisionShape3D.new()
-				var bs := BoxShape3D.new()
-				bs.size = Vector3(4.4, 1.5, 12.0)
-				cs.shape = bs
-				blk.add_child(cs)
-				river.add_child(blk)
-				blk.owner = level_root
-				cs.owner = level_root
-		x += 4.0
-	# Ponte sulla strada
-	_place("ponte", river, _bridge_c, rad_to_deg(atan2(_bridge_d.x, _bridge_d.y)))
-	# Guado a ovest: pietre
-	for i in 6:
-		var p := FORD + Vector2(rng.randf_range(-3, 3), -6 + i * 2.4)
-		_disc(river, p, rng.randf_range(0.6, 0.9), 0.05, ROCK.lightened(0.1))
-	for i in 10:
-		var side := 1.0 if i % 2 == 0 else -1.0
-		var p := _bridge_c + Vector2(rng.randf_range(-14, 14), side * rng.randf_range(8, 11))
-		if absf(p.x - _bridge_c.x) > 5.0:
-			_place("canne", river, p, rng.randf() * 360.0)
 
 
 func _build_villa(parent: Node) -> void:
@@ -1382,55 +1326,6 @@ func _build_pois(parent: Node) -> void:
 	_place("altare", g, (rp4[0] as Vector2) + _perp(rp4[1]) * 6.0, 0.0, 1.0, {"checkpoint_id": "acquedotto", "title": "Altare di Giano"})
 	_place("cartello", g, Vector2(66, -884), 0.0, 1.0, {"title": "Porta di Ostia Nova",
 		"text": "La porta della città. Le guardie sono sparite e un rinnegato si è accampato qui davanti.\n\n[TRAMA]"})
-
-
-func _build_road_props(region: Node3D) -> void:
-	var g := _group(region, "ArredoStradale")
-	var s := 30.0
-	var side := 1.0
-	var i := 0
-	while s < road_total - 10.0:
-		var rp: Array = _road_point(s)
-		var p: Vector2 = (rp[0] as Vector2) + _perp(rp[1]) * 4.6 * side
-		if p.distance_to(_bridge_c) > 15.0 and _is_clear(p):
-			_place("lampione_plasma", g, p)
-		if i % 6 == 3:
-			var m: Vector2 = (rp[0] as Vector2) - _perp(rp[1]) * 4.6 * side
-			if _is_clear(m) and m.distance_to(_bridge_c) > 15.0:
-				_place("miliario", g, m)
-		side = -side
-		s += 36.0
-		i += 1
-
-
-func _build_scatter(region: Node3D) -> void:
-	var g := _group(region, "Vegetazione")
-	var count := 0
-	for ix in NX:
-		for iz in NZ:
-			var cc := _cell_center(ix, iz)
-			if not _allowed(cc):
-				continue
-			var z := _zone(cc)
-			for entry: Array in ZONE_SCATTER[z]:
-				if rng.randf() >= float(entry[1]):
-					continue
-				var pname: String = entry[0]
-				var p := cc + Vector2(rng.randf_range(-3.6, 3.6), rng.randf_range(-3.6, 3.6))
-				var big := pname in BIG_PROPS
-				var rad := 2.0 if big else 0.8
-				if float(_road_info(p)[0]) < (5.5 if big else 4.0):
-					continue
-				if _in_river(p, 2.0) and pname != "canne":
-					continue
-				if pname == "canne" and not _in_river(p, 6.0):
-					continue
-				if not _allowed(p) or not _is_clear(p) or not _free_spot(p, rad):
-					continue
-				_occupy(p, rad)
-				_place(pname, g, p, rng.randf() * 360.0, rng.randf_range(0.85, 1.25) if big else rng.randf_range(0.8, 1.2))
-				count += 1
-	print("Vegetazione e oggetti sparsi: %d" % count)
 
 
 func _build_encounters() -> void:

@@ -1,6 +1,6 @@
 extends "res://tools/build_world.gd"
 ## GENERATORE della città di OSTIA NOVA (hub del primo atto). Riusa le funzioni di build_world.gd.
-## Crea scenes/levels/level_02_ostia.tscn (+ navmesh) e, se mancano, i nuovi oggetti di scena e i
+## Crea scenes/levels/level_02_ostia.tscn (con la sua Forma) e, se mancano, i nuovi oggetti di scena e i
 ## modelli degli NPC (quelli che esistono già NON vengono toccati: le sostituzioni Tripo sono salve).
 ##
 ## Uso:  Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/build_ostia.gd
@@ -43,9 +43,9 @@ func _build_ostia() -> void:
 	level_root.add_child(region)
 	region.owner = level_root
 
-	_city_ground(region)
 	_city_walls(region)
 	var places := _group(region, "Luoghi")
+	_gate_decor(places)
 	_forum(places)
 	_quarters(places)
 	_temple(places)
@@ -101,20 +101,9 @@ func _build_ostia() -> void:
 	gate.set("flag", "porto_aperto")
 	gate.set("locked_text", "Il cancello del porto è sbarrato. Solo il prefetto può farlo aprire.")
 
-	print("Calcolo navmesh...")
-	var nm := NavigationMesh.new()
-	nm.cell_size = 0.4
-	nm.cell_height = 0.25
-	nm.agent_radius = 0.4
-	nm.agent_height = 2.0
-	nm.agent_max_climb = 0.25
-	nm.region_min_size = 30.0
-	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	nm.geometry_collision_mask = Layers.WORLD
-	region.navigation_mesh = nm
-	region.bake_navigation_mesh(false)
-	print("Navmesh: %d poligoni" % nm.get_polygon_count())
-	ResourceSaver.save(nm, "res://scenes/levels/level_02_ostia_navmesh.res", ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_CHANGE_PATH)
+	_city_shape()
+	# Terreno, confini, strade e navmesh dalla Forma
+	print(load("res://tools/map_builder.gd").new().build(level_root, true))
 
 	get_root().remove_child(level_root)
 	level_root.set_script(load("res://world/level.gd"))
@@ -130,75 +119,32 @@ func _build_ostia() -> void:
 
 # --- Terreno e mura ------------------------------------------------------------------------------
 
-func _city_ground(region: Node3D) -> void:
-	var ground := _group(region, "Terreno")
-	var base := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(300, 300)
-	base.mesh = pm
-	base.material_override = Fx.mat(Color(0.12, 0.14, 0.1))
-	base.position = Vector3(0, -0.05, 0)
-	base.name = "Base"
-	ground.add_child(base)
-	base.owner = level_root
-	# Suolo calpestabile: dentro le mura + piazzale fuori dalla porta sud
-	_ground_box(ground, "Suolo", Vector3(0, -0.5, (Z_N + Z_S) * 0.5), Vector3(HALF_X * 2.0 + 2.0, 1, Z_S - Z_N + 2.0), PAVE)
-	_ground_box(ground, "Piazzale", Vector3(0, -0.5, Z_S + 6.0), Vector3(14, 1, 12), STREET.darkened(0.1))
-	_ground_box(ground, "PiazzaleNord", Vector3(0, -0.5, Z_N - 6.0), Vector3(14, 1, 12), STREET.darkened(0.1))
-	# Strade e foro (solo grafica)
-	_strip(ground, Vector2(0, Z_S + 12.0), Vector2(0, -18), 8.0, 0.02, 0.04, STREET)
-	_strip(ground, Vector2(0, -38), Vector2(0, Z_N - 12.0), 8.0, 0.02, 0.04, STREET)
-	_strip(ground, Vector2(-HALF_X, -2), Vector2(HALF_X, -2), 6.0, 0.015, 0.03, STREET.darkened(0.05))
-	_strip(ground, Vector2(-21, -2), Vector2(21, -2), 32.0, 0.03, 0.04, FORUM)
-	# Bordi del piazzale esterno: niente "vuoto" ai lati della porta
-	for x: float in [-7.5, 7.5]:
-		_blocker(ground, Vector3(x, 1.5, Z_S + 6.0), Vector3(1.0, 3, 12))
-		_place("muro_rovina", ground, Vector2(x, Z_S + 6.0), 90.0)
-	_blocker(ground, Vector3(0, 1.5, Z_S + 12.5), Vector3(16, 3, 1))
-	for x: float in [-7.5, 7.5]:
-		_blocker(ground, Vector3(x, 1.5, Z_N - 6.0), Vector3(1.0, 3, 12))
-		_place("muro_rovina", ground, Vector2(x, Z_N - 6.0), 90.0)
-	_blocker(ground, Vector3(0, 1.5, Z_N - 12.5), Vector3(16, 3, 1))
+## FORMA della città (modificabile poi nell'editor): l'interno delle mura, i due piazzali fuori
+## dalle porte, il foro e le strade lastricate.
+func _city_shape() -> void:
+	var forma: Node3D = load("res://world/map_shape.gd").new()
+	forma.name = "Forma"
+	forma.set("seed", SEED + 2)
+	forma.set("default_zone", "urbe")
+	forma.set("background_color", Color(0.12, 0.14, 0.1))
+	level_root.add_child(forma)
+	forma.owner = level_root
+	var hx := HALF_X - 2.0
+	_shape_polygon(forma, "Citta", PackedVector2Array([Vector2(-hx, Z_N + 2), Vector2(hx, Z_N + 2), Vector2(hx, Z_S - 2), Vector2(-hx, Z_S - 2)]), {"zone": "urbe"})
+	_shape_polygon(forma, "PiazzaleSud", PackedVector2Array([Vector2(-6, Z_S - 4), Vector2(6, Z_S - 4), Vector2(6, Z_S + 12), Vector2(-6, Z_S + 12)]), {"zone": "piazzale"})
+	_shape_polygon(forma, "PiazzaleNord", PackedVector2Array([Vector2(-6, Z_N - 12), Vector2(6, Z_N - 12), Vector2(6, Z_N + 4), Vector2(-6, Z_N + 4)]), {"zone": "piazzale"})
+	_shape_polygon(forma, "Foro", PackedVector2Array([Vector2(-21, -18), Vector2(21, -18), Vector2(21, 14), Vector2(-21, 14)]), {"zone": "foro"})
+	_shape_road(forma, "Cardo", [Vector2(0, Z_S + 12.0), Vector2(0, -18)], PackedFloat32Array([4.0, 4.0]), {"paved_width": 8.0, "paved_color": STREET})
+	_shape_road(forma, "CardoNord", [Vector2(0, -38), Vector2(0, Z_N - 12.0)], PackedFloat32Array([4.0, 4.0]), {"paved_width": 8.0, "paved_color": STREET})
+	_shape_road(forma, "Decumano", [Vector2(-HALF_X + 2.0, -2), Vector2(HALF_X - 2.0, -2)], PackedFloat32Array([3.0, 3.0]), {"paved_width": 6.0, "paved_color": STREET.darkened(0.05)})
 
 
-func _ground_box(parent: Node, n: String, pos: Vector3, size: Vector3, col: Color) -> void:
-	var sb := StaticBody3D.new()
-	sb.name = n
-	sb.collision_layer = Layers.WORLD
-	sb.collision_mask = 0
-	sb.position = pos
-	var cs := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = size
-	cs.shape = bs
-	sb.add_child(cs)
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mi.mesh = bm
-	mi.material_override = Fx.mat(col)
-	sb.add_child(mi)
-	parent.add_child(sb)
-	sb.owner = level_root
-	cs.owner = level_root
-	mi.owner = level_root
-
-
-## Ostacolo invisibile (blocca il movimento e buca la navmesh).
-func _blocker(parent: Node, pos: Vector3, size: Vector3) -> void:
-	var sb := StaticBody3D.new()
-	sb.name = "Blocco_%d" % parent.get_child_count()
-	sb.collision_layer = Layers.WORLD
-	sb.collision_mask = 0
-	sb.position = pos
-	var cs := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = size
-	cs.shape = bs
-	sb.add_child(cs)
-	parent.add_child(sb)
-	sb.owner = level_root
-	cs.owner = level_root
+## Muretti decorativi ai lati dei piazzali fuori dalle porte.
+func _gate_decor(parent: Node) -> void:
+	var g := _group(parent, "Piazzali")
+	for z: float in [Z_S + 6.0, Z_N - 6.0]:
+		for x: float in [-7.5, 7.5]:
+			_place("muro_rovina", g, Vector2(x, z), 90.0)
 
 
 func _city_walls(region: Node3D) -> void:

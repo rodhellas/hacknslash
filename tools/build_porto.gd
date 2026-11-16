@@ -33,28 +33,14 @@ const P_PATHS := [
 	[Vector2(-25, -160), Vector2(-48, -160), 9.0],
 	[Vector2(-5, -318), Vector2(-40, -320), 9.0],
 	[Vector2(10, -140), Vector2(46, -140), 5.0],
-	[Vector2(15, -282), Vector2(46, -282), 6.0],
-	[Vector2(5, -385), Vector2(46, -385), 5.0],
+	[Vector2(15, -284), Vector2(46, -284), 6.0],
+	[Vector2(5, -380), Vector2(46, -380), 5.0],
 ]
 ## Moli nel mare: [x inizio, x fine, z centro, mezza larghezza]
-const P_PIERS := [[32.0, 82.0, -140.0, 4.0], [32.0, 92.0, -282.0, 5.0], [32.0, 78.0, -385.0, 4.0]]
+## (le z dei moli sono allineate alle celle di 8 m: z = 4 modulo 8)
+const P_PIERS := [[32.0, 82.0, -140.0, 4.0], [32.0, 92.0, -284.0, 4.0], [32.0, 78.0, -380.0, 4.0]]
 
-const P_ZONE_COLORS := {
-	"strada": Color(0.52, 0.5, 0.46), "magazzini": Color(0.47, 0.45, 0.41), "cantieri": Color(0.44, 0.39, 0.32),
-	"spazioporto": Color(0.38, 0.4, 0.44), "faro": Color(0.5, 0.48, 0.4), "sale": Color(0.62, 0.6, 0.55),
-	"cantiere": Color(0.45, 0.38, 0.3), "molo": Color(0.42, 0.3, 0.2),
-}
-const P_SCATTER := {
-	"strada": [["cassa", 0.06], ["barile", 0.06], ["anfora", 0.05], ["cipresso", 0.03]],
-	"magazzini": [["pila_casse", 0.08], ["cassa", 0.08], ["barile", 0.08], ["anfora", 0.04], ["bitta", 0.02]],
-	"cantieri": [["tronco", 0.07], ["cassa", 0.07], ["barile", 0.05], ["pila_casse", 0.04]],
-	"spazioporto": [["cassa", 0.05], ["pila_casse", 0.05], ["barile", 0.04]],
-	"faro": [["roccia_piccola", 0.1], ["roccia_grande", 0.03], ["cespuglio", 0.1], ["pino_marittimo", 0.03]],
-	"sale": [["pila_casse", 0.12], ["barile", 0.08], ["anfora", 0.05]],
-	"cantiere": [["tronco", 0.1], ["cassa", 0.06]],
-	"molo": [["bitta", 0.06], ["barile", 0.05], ["cassa", 0.04]],
-}
-const P_BIG := ["pila_casse", "tronco", "roccia_grande", "cipresso", "pino_marittimo"]
+## Zone, colori e vegetazione: data/map_zones.gd
 const WATER := Color(0.12, 0.32, 0.5)
 
 var p_cum: Array = []
@@ -131,24 +117,6 @@ func _allowed(p: Vector2) -> bool:
 	return false
 
 
-func _p_zone(p: Vector2) -> String:
-	if _on_pier(p) and _is_water(p):
-		return "molo"
-	for sd: Array in P_SIDE:
-		if p.distance_to(sd[0]) <= float(sd[1]):
-			return sd[2]
-	var t := float(_p_road_info(p)[1]) / p_total
-	if t < 0.16: return "strada"
-	if t < 0.42: return "magazzini"
-	if t < 0.64: return "cantieri"
-	if t < 0.86: return "spazioporto"
-	return "faro"
-
-
-func _p_cell(ix: int, iz: int) -> Vector2:
-	return Vector2(PX0 + (ix + 0.5) * PCELL, PZ0 - (iz + 0.5) * PCELL)
-
-
 # --- Livello --------------------------------------------------------------------------------------
 
 func _build_porto() -> void:
@@ -161,8 +129,6 @@ func _build_porto() -> void:
 	level_root.add_child(region)
 	region.owner = level_root
 
-	_p_ground(region)
-	_p_road(region)
 	var pois := _group(region, "Luoghi")
 	_p_start(pois)
 	_p_magazzini(pois)
@@ -170,8 +136,7 @@ func _build_porto() -> void:
 	_p_cantieri(pois)
 	_p_spazioporto(pois)
 	_p_faro(pois)
-	_p_road_props(region)
-	_p_scatter(region)
+	_p_shape()
 	_p_encounters()
 
 	for m: Array in [["PlayerStart", Vector3(0, 0, 4)], ["DaOstia", Vector3(0, 0, 4)]]:
@@ -196,21 +161,8 @@ func _build_porto() -> void:
 	exit.owner = level_root
 	ecs.owner = level_root
 
-	print("Calcolo navmesh...")
-	var t0 := Time.get_ticks_msec()
-	var nm := NavigationMesh.new()
-	nm.cell_size = 0.4
-	nm.cell_height = 0.25
-	nm.agent_radius = 0.4
-	nm.agent_height = 2.0
-	nm.agent_max_climb = 0.25
-	nm.region_min_size = 30.0
-	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	nm.geometry_collision_mask = Layers.WORLD
-	region.navigation_mesh = nm
-	region.bake_navigation_mesh(false)
-	print("Navmesh: %d poligoni in %d ms" % [nm.get_polygon_count(), Time.get_ticks_msec() - t0])
-	ResourceSaver.save(nm, "res://scenes/levels/level_03_porto_navmesh.res", ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_CHANGE_PATH)
+	# Terreno, confini, strade, mare, vegetazione, lampioni e navmesh dalla Forma
+	print(load("res://tools/map_builder.gd").new().build(level_root, true))
 
 	get_root().remove_child(level_root)
 	level_root.set_script(load("res://world/level.gd"))
@@ -224,118 +176,58 @@ func _build_porto() -> void:
 	level_root.free()
 
 
-func _p_ground(region: Node3D) -> void:
-	var ground := _group(region, "Terreno")
-	var bounds := _group(region, "Confini")
-	var sea := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(PNX * PCELL + 400, PNZ * PCELL + 400)
-	sea.mesh = pm
-	sea.material_override = Fx.mat(WATER, 0.15)
-	sea.position = Vector3(PX0 + PNX * PCELL * 0.5, -0.35, PZ0 - PNZ * PCELL * 0.5)
-	sea.name = "Mare"
-	ground.add_child(sea)
-	sea.owner = level_root
-
-	var kind := {}
-	for ix in PNX:
-		for iz in PNZ:
-			if _allowed(_p_cell(ix, iz)):
-				kind[Vector2i(ix, iz)] = "a"
-	for ix in PNX:
-		for iz in PNZ:
-			var k := Vector2i(ix, iz)
-			if kind.has(k):
-				continue
-			for dx in range(-1, 2):
-				for dz in range(-1, 2):
-					if kind.get(k + Vector2i(dx, dz), "") == "a":
-						kind[k] = "b"
-	var runs := 0
-	for iz in PNZ:
-		var ix := 0
-		while ix < PNX:
-			if kind.get(Vector2i(ix, iz), "") != "a":
-				ix += 1
-				continue
-			var z := _p_zone(_p_cell(ix, iz))
-			var start := ix
-			while ix < PNX and kind.get(Vector2i(ix, iz), "") == "a" and _p_zone(_p_cell(ix, iz)) == z:
-				ix += 1
-			var n := ix - start
-			var c := Vector2(PX0 + (start + n * 0.5) * PCELL, PZ0 - (iz + 0.5) * PCELL)
-			var sb := StaticBody3D.new()
-			sb.name = "Suolo_%d" % runs
-			sb.collision_layer = Layers.WORLD
-			sb.collision_mask = 0
-			sb.position = _v3(c, -0.5)
-			var cs := CollisionShape3D.new()
-			var bs := BoxShape3D.new()
-			bs.size = Vector3(n * PCELL, 1, PCELL)
-			cs.shape = bs
-			sb.add_child(cs)
-			var mi := MeshInstance3D.new()
-			var bm := BoxMesh.new()
-			bm.size = bs.size
-			mi.mesh = bm
-			mi.material_override = Fx.mat((P_ZONE_COLORS[z] as Color).darkened(0.04 * (iz % 2)))
-			sb.add_child(mi)
-			ground.add_child(sb)
-			sb.owner = level_root
-			cs.owner = level_root
-			mi.owner = level_root
-			runs += 1
-	var nb := 0
-	for k: Vector2i in kind:
-		if kind[k] != "b":
-			continue
-		var c := _p_cell(k.x, k.y)
-		if _is_water(c):
-			# Bordo sul mare: ostacolo invisibile (si vede l'acqua)
-			var blk := StaticBody3D.new()
-			blk.collision_layer = Layers.WORLD
-			blk.collision_mask = 0
-			blk.position = _v3(c, 1.0)
-			var cs := CollisionShape3D.new()
-			var bs := BoxShape3D.new()
-			bs.size = Vector3(PCELL, 2, PCELL)
-			cs.shape = bs
-			blk.add_child(cs)
-			bounds.add_child(blk)
-			blk.owner = level_root
-			cs.owner = level_root
-		else:
-			var z := _p_zone(c)
-			var pname := "scogliera" if z == "faro" else "isolato"
-			var inst: Node3D = (prop_scenes[pname] as PackedScene).instantiate()
-			inst.position = _v3(c)
-			inst.rotation_degrees.y = 90.0 * rng.randi_range(0, 3)
-			bounds.add_child(inst)
-			inst.owner = level_root
-		nb += 1
-	print("Terreno: %d strisce, %d celle di confine" % [runs, nb])
-
-
-func _p_road(region: Node3D) -> void:
-	var road := _group(region, "Strada")
-	var stone := Color(0.64, 0.61, 0.56)
-	for i in P_ROAD.size() - 1:
-		_strip(road, P_ROAD[i], P_ROAD[i + 1], 7.0, 0.02, 0.04, stone)
-		_disc(road, P_ROAD[i], 3.5, 0.02, stone)
-	_disc(road, P_ROAD[-1], 3.5, 0.02, stone)
-	for c: Array in P_PATHS:
-		_strip(road, c[0], c[1], float(c[2]) * 0.7, 0.015, 0.03, stone.darkened(0.1))
-	for pr: Array in P_PIERS:
-		var a := Vector2(float(pr[0]) - 6.0, float(pr[2]))
-		var b := Vector2(float(pr[1]), float(pr[2]))
-		_strip(road, a, b, float(pr[3]) * 2.0, 0.03, 0.05, Color(0.45, 0.32, 0.2))
-
-
 ## Oggetto al lato della strada all'ascissa s (offset > 0 = a destra guardando verso nord).
 func _beside(s: float, offset: float) -> Array:
 	var rp := _p_road_point(s)
 	var d: Vector2 = rp[1]
 	return [(rp[0] as Vector2) + _perp(d) * offset, d]
+
+
+## FORMA del porto (modificabile poi nell'editor): strada principale con le zone, aree laterali,
+## sentieri, moli sopra il mare, il mare a est della costa e le radure da tenere libere.
+func _p_shape() -> void:
+	var forma: Node3D = load("res://world/map_shape.gd").new()
+	forma.name = "Forma"
+	forma.set("seed", SEED + 3)
+	forma.set("default_zone", "strada")
+	forma.set("background_color", WATER)
+	forma.set("background_y", -0.35)
+	forma.set("water_color", WATER)
+	level_root.add_child(forma)
+	forma.owner = level_root
+	var widths := PackedFloat32Array()
+	for i in P_ROAD.size():
+		widths.append(float(maxi(P_HW[maxi(i - 1, 0)], P_HW[mini(i, P_HW.size() - 1)])))
+	_shape_road(forma, "ViaDelPorto", P_ROAD, widths, {"paved_width": 7.0, "paved_color": Color(0.64, 0.61, 0.56),
+		"zone_breaks": PackedStringArray(["0=strada", "0.16=magazzini", "0.42=cantieri", "0.64=spazioporto", "0.86=faro"]),
+		"lamp_spacing": 34.0})
+	var i := 0
+	for sd: Array in P_SIDE:
+		_shape_area(forma, "Area_%s" % sd[2], sd[0], float(sd[1]), {"zone": sd[2]})
+	for c: Array in P_PATHS:
+		var w := float(c[2])
+		_shape_road(forma, "Sentiero_%d" % i, [c[0], c[1]], PackedFloat32Array([w, w]), {"paved_width": w * 1.4, "paved_color": Color(0.58, 0.55, 0.5)})
+		i += 1
+	i = 0
+	for pr: Array in P_PIERS:
+		var hw := float(pr[3])
+		_shape_road(forma, "Molo_%d" % i, [Vector2(float(pr[0]) - 6.0, float(pr[2])), Vector2(float(pr[1]), float(pr[2]))],
+			PackedFloat32Array([hw, hw]), {"paved_width": hw * 2.0, "paved_color": Color(0.45, 0.32, 0.2), "over_water": true, "zone": "molo"})
+		i += 1
+	# Mare: tutto ciò che sta a est della costa
+	var sea := PackedVector2Array()
+	var z := PZ0 + 40.0
+	while z >= -700.0:
+		sea.append(Vector2(_shore_x(z), z))
+		z -= 8.0
+	sea.append(Vector2(400.0, -700.0))
+	sea.append(Vector2(400.0, PZ0 + 40.0))
+	_shape_polygon(forma, "Mare", sea, {"mode": "acqua"})
+	i = 0
+	for c: Array in _clear:
+		if float(c[1]) >= 8.0:
+			_shape_area(forma, "Radura_%d" % i, c[0], float(c[1]), {"walkable": false, "scatter": false})
+			i += 1
 
 
 # --- Luoghi ---------------------------------------------------------------------------------------
@@ -391,7 +283,7 @@ func _p_moli(parent: Node) -> void:
 		_place("nave", g, Vector2((float(pr[0]) + x1) * 0.5 + 4.0, z - hw - 5.5), 90.0)
 		_place("lampione_plasma", g, Vector2(x1 - 2.0, z + hw - 1.0))
 		_place("pila_casse", g, Vector2(x1 - 6.0, z + 1.0), 20.0)
-	_place("forziere", g, Vector2(88, -280), -90.0, 1.0, {"flag_id": "chest_porto_molo", "item_level": 7})
+	_place("forziere", g, Vector2(88, -284), -90.0, 1.0, {"flag_id": "chest_porto_molo", "item_level": 7})
 	_place("nave", g, Vector2(70, -215), 10.0)
 
 
@@ -457,54 +349,6 @@ func _p_faro(parent: Node) -> void:
 		"text": "La luce del faro guida le navi fino a Nova Roma. Ora è il covo di Vulso il Corsaro.\n\n[TRAMA: atto 3]"})
 
 
-func _p_road_props(region: Node3D) -> void:
-	var g := _group(region, "ArredoStradale")
-	var s := 20.0
-	var side := 1.0
-	while s < p_total - 10.0:
-		var b := _beside(s, 4.8 * side)
-		var p: Vector2 = b[0]
-		if _is_clear(p) and _allowed(p):
-			_place("lampione_plasma", g, p)
-		side = -side
-		s += 34.0
-
-
-func _p_scatter(region: Node3D) -> void:
-	var g := _group(region, "Oggetti")
-	var count := 0
-	for ix in PNX:
-		for iz in PNZ:
-			var cc := _p_cell(ix, iz)
-			if not _allowed(cc):
-				continue
-			var z := _p_zone(cc)
-			for entry: Array in P_SCATTER[z]:
-				if rng.randf() >= float(entry[1]):
-					continue
-				var pname: String = entry[0]
-				var p := cc + Vector2(rng.randf_range(-3.5, 3.5), rng.randf_range(-3.5, 3.5))
-				var big := pname in P_BIG
-				var rad := 2.0 if big else 0.8
-				if float(_p_road_info(p)[0]) < (5.5 if big else 4.5):
-					continue
-				if z == "molo" and absf(p.y - _pier_z(p)) > 2.0:
-					continue
-				if not _allowed(p) or not _is_clear(p) or not _free_spot(p, rad):
-					continue
-				_occupy(p, rad)
-				_place(pname, g, p, rng.randf() * 360.0, rng.randf_range(0.85, 1.2) if big else rng.randf_range(0.85, 1.15))
-				count += 1
-	print("Oggetti sparsi: %d" % count)
-
-
-func _pier_z(p: Vector2) -> float:
-	for pr: Array in P_PIERS:
-		if absf(p.y - float(pr[2])) <= float(pr[3]) + 1.0:
-			return float(pr[2])
-	return p.y
-
-
 func _p_encounters() -> void:
 	var g := Node3D.new()
 	g.name = "Incontri"
@@ -521,11 +365,11 @@ func _p_encounters() -> void:
 		["Molo_1", Vector2(62, -140), ["pirata", "granchio"], 5, 7, false, ""],
 		["Automa_magazzini", Vector2(-12, -215), ["automa", "granchio", "granchio"], 3, 7, false, ""],
 		["Pirati_curva", Vector2(8, -255), ["pirata", "arpionatore"], 6, 7, false, ""],
-		["Molo_2", Vector2(66, -282), ["arpionatore", "pirata"], 5, 7, false, ""],
+		["Molo_2", Vector2(66, -284), ["arpionatore", "pirata"], 5, 7, false, ""],
 		["Cantiere_operai", Vector2(-56, -318), ["automa", "pirata", "pirata"], 4, 8, false, ""],
 		["Cantiere_campioni", Vector2(-48, -334), ["arpionatore"], 3, 8, true, ""],
 		["Gru_pirati", Vector2(12, -335), ["pirata", "granchio"], 6, 8, false, ""],
-		["Molo_3", Vector2(60, -385), ["granchio"], 7, 8, false, ""],
+		["Molo_3", Vector2(60, -380), ["granchio"], 7, 8, false, ""],
 		["Strada_spazioporto", Vector2(-12, -398), ["pirata", "arpionatore"], 6, 8, false, ""],
 		["Droni_spazioporto", Vector2(22, -432), ["drone"], 5, 8, false, ""],
 		["Spazioporto_ciurma", Vector2(34, -458), ["pirata", "arpionatore", "automa"], 6, 9, false, ""],
