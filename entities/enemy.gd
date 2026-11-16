@@ -336,6 +336,8 @@ func _start_windup(kind: String) -> void:
 	if kind == "charge":
 		special_cd = 7.0
 	Fx.set_base_overlay(model, Color(1.0, 0.45, 0.0, 0.45))
+	if not bool(data.get("ranged", false)):
+		Sfx.play("enemy_attack", global_position, -8.0, 0.2)
 
 
 func aggro() -> void:
@@ -361,6 +363,8 @@ func _attack(p: Player, dist: float, dir: Vector3) -> void:
 		var center := global_position + dir * radius()
 		var rad := float(data.get("slam_radius", 3.0))
 		Fx.ring(Game.world_root(), center, rad, Color(1.0, 0.5, 0.1), 0.3)
+		Fx.burst(Game.world_root(), center + Vector3(0, 0.2, 0), Color(0.5, 0.42, 0.32), 16, 6.0, 0.18, 0.5, -10.0, 70.0)
+		Sfx.play("explosion", center, -6.0, 0.15)
 		var d := Vector2(p.global_position.x - center.x, p.global_position.z - center.z).length()
 		if d <= rad + 0.4:
 			p.take_damage(damage, level)
@@ -386,6 +390,8 @@ func take_damage(amount: float, knock: Vector3 = Vector3.ZERO, crit: bool = fals
 	else:
 		Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.4, 0), str(roundi(amount)), Color(1, 0.95, 0.7))
 	Fx.flash(model, Color(1, 1, 1, 0.7))
+	Fx.burst(Game.world_root(), global_position + Vector3(0, h * 0.6, 0), Color(1.0, 0.6, 0.15) if crit else Color(1.0, 0.85, 0.6),
+		10 if crit else 5, 6.0 if crit else 4.0, 0.08, 0.3)
 	_update_bar()
 	if state == State.WINDUP and data.get("interruptible", true) and not elite and _windup_kind == "attack":
 		Fx.set_base_overlay(model, null)
@@ -420,9 +426,17 @@ func _die() -> void:
 	if name_label:
 		name_label.visible = false
 	died.emit(self)
+	var h := float(data["height"]) * (1.25 if elite else 1.0)
+	Fx.burst(Game.world_root(), global_position + Vector3(0, h * 0.5, 0), Color(0.45, 0.4, 0.35), 14 if not unique else 40,
+		4.0, 0.18 if not unique else 0.3, 0.7, -6.0)
+	Sfx.play("enemy_die", global_position, 0.0 if (elite or unique) else -3.0)
+	if unique:
+		Fx.explosion(Game.world_root(), global_position, 6.0, Color(1.0, 0.5, 0.1))
+		Sfx.play("explosion", global_position)
 	var p := _player()
 	if p:
 		p.add_xp(xp_value())
+		p.on_enemy_killed(self)
 	if unique and Game.hero:
 		Game.hero.flags["unique_" + type_id] = true
 	Loot.on_enemy_killed(self)

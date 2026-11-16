@@ -12319,11 +12319,16 @@ unique_id = "brenno"
 [node name="PlayerStart" type="Marker3D" parent="." unique_id=309163236]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
 
+[node name="DaOstia" type="Marker3D" parent="." unique_id=1730000001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 0, -878)
+
 [node name="UscitaOstiaNova" type="Area3D" parent="." unique_id=349928616]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 0, -905)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("51_p2rwu")
+target_level = "ostia_nova"
+target_spawn = "DaLazio"
 
 [node name="@CollisionShape3D@2142" type="CollisionShape3D" parent="UscitaOstiaNova" unique_id=1001282711]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)

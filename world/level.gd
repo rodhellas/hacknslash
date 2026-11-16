@@ -8,12 +8,17 @@ extends Node3D
 @export var level_title := "Livello"
 @export var area_level := 1
 @export_multiline var exit_text := "Livello completato."
+## Città (hub): qui compare il portale di ritorno e non serve il portale cittadino.
+@export var is_town := false
+## Testo mostrato la prima volta che si entra nel livello (vuoto = nessuno).
+@export_multiline var intro_text := ""
 
 var player: Player
 var camera: IsoCamera
 var hud: Hud
 var inventory_ui: InventoryUI
 var pause_menu: PauseMenu
+var trade_ui: TradeUI
 var dynamic_root: Node3D
 var enemies_root: Node3D
 var hover: Dictionary = {"kind": "ground", "node": null, "point": Vector3.ZERO}
@@ -49,6 +54,10 @@ func _ready() -> void:
 	inventory_ui = InventoryUI.new()
 	add_child(inventory_ui)
 	inventory_ui.bind(player)
+	trade_ui = TradeUI.new()
+	add_child(trade_ui)
+	trade_ui.bind(player, inventory_ui)
+	inventory_ui.trade = trade_ui
 	pause_menu = PauseMenu.new()
 	add_child(pause_menu)
 
@@ -64,6 +73,14 @@ func _ready() -> void:
 	hud.show_banner(level_title)
 	if Game.current_slot < 0:
 		hud.show_warning("Partita di prova: i salvataggi sono disattivati")
+	if is_town:
+		_spawn_return_portal()
+	var first_visit := not Game.hero.flags.has("visited_" + level_id)
+	Game.hero.flags["visited_" + level_id] = true
+	if first_visit and intro_text != "":
+		hud.show_lore(level_title, intro_text)
+	# Salva subito dopo un cambio di livello (così il salvataggio sa dove si trova l'eroe)
+	Game.save_game.call_deferred()
 
 
 func _exit_tree() -> void:
@@ -74,9 +91,23 @@ func _exit_tree() -> void:
 
 func _spawn_position() -> Vector3:
 	var h := Game.hero
+	var spawn := Game.pending_spawn
+	Game.pending_spawn = ""
 	if h.has_position and h.level_id == level_id:
 		return h.position
-	var cp := _find_checkpoint(h.checkpoint_id)
+	if spawn != "":
+		var marker := find_child(spawn, true, false) as Node3D
+		if marker != null:
+			return marker.global_position
+		var wp := _find_checkpoint(spawn)
+		if wp:
+			return wp.spawn_point()
+	return _respawn_position()
+
+
+## Ultimo altare attivato in QUESTO livello, altrimenti l'inizio del livello.
+func _respawn_position() -> Vector3:
+	var cp := _find_checkpoint(String(Game.hero.flags.get("cp_last_" + level_id, "")))
 	if cp:
 		return cp.spawn_point()
 	var start := get_node_or_null("PlayerStart") as Node3D
@@ -102,9 +133,34 @@ func store_state() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("inventory"):
+		if inventory_ui.is_open:
+			trade_ui.close()
 		inventory_ui.toggle()
 	elif event.is_action_pressed("map"):
 		hud.minimap.toggle_big()
+
+
+## Chiude il pannello aperto più in alto (ESC). Ritorna false se non c'era niente da chiudere.
+func close_top_panel() -> bool:
+	if hud.waypoint_panel.visible:
+		hud.waypoint_panel.visible = false
+		return true
+	if trade_ui.is_open:
+		trade_ui.close()
+		inventory_ui.close()
+		return true
+	if inventory_ui.is_open:
+		inventory_ui.close()
+		return true
+	if hud.lore_panel.visible:
+		hud.lore_panel.visible = false
+		return true
+	return false
+
+
+func open_trade(npc: Npc) -> void:
+	trade_ui.open(npc)
+	inventory_ui.open()
 
 
 # --- Cosa c'è sotto il cursore ---------------------------------------------------------
@@ -181,13 +237,7 @@ func _on_player_died() -> void:
 
 
 func respawn_player() -> void:
-	var cp := _find_checkpoint(Game.hero.checkpoint_id)
-	var pos: Vector3
-	if cp:
-		pos = cp.spawn_point()
-	else:
-		var start := get_node_or_null("PlayerStart") as Node3D
-		pos = start.global_position if start else Vector3.ZERO
+	var pos := _respawn_position()
 	player.revive(pos)
 	camera.global_position = pos + IsoCamera.BASE_OFFSET
 	hud.hide_death()
@@ -195,5 +245,55 @@ func respawn_player() -> void:
 
 func on_exit_reached(exit: LevelExit) -> void:
 	Game.hero.flags["completed_" + level_id] = true
+	if exit.target_level != "" and Game.LEVELS.has(exit.target_level):
+		Sfx.play("portal")
+		Game.travel(exit.target_level, exit.target_spawn)
+		return
 	Game.save_game()
 	hud.show_end(exit.title, exit_text)
+
+
+# --- Viaggi: altari e portale cittadino ----------------------------------------------------
+
+## Viaggio rapido verso un altare attivato (anche di un altro livello).
+func travel_to_waypoint(id: String) -> void:
+	var w: Dictionary = Game.hero.waypoints.get(id, {})
+	if w.is_empty() or player.dead:
+		return
+	hud.waypoint_panel.visible = false
+	Sfx.play("portal")
+	if String(w["level"]) == level_id:
+		var cp := _find_checkpoint(id)
+		if cp:
+			Fx.pillar(dynamic_root, player.global_position, Color(0.4, 0.7, 1.0), 6.0, 0.6)
+			teleport_player(cp.spawn_point())
+			Fx.pillar(dynamic_root, player.global_position, Color(0.4, 0.7, 1.0), 6.0, 0.6)
+		return
+	Game.travel(String(w["level"]), id)
+
+
+func teleport_player(pos: Vector3) -> void:
+	player.global_position = pos
+	player.move_target = Vector3.INF
+	camera.global_position = pos + IsoCamera.BASE_OFFSET * camera.zoom
+
+
+## Chiamato dal giocatore alla fine della canalizzazione del portale (tasto T).
+func use_town_portal() -> void:
+	Game.hero.flags["portal_return"] = {"level": level_id, "x": player.global_position.x, "z": player.global_position.z}
+	Fx.pillar(dynamic_root, player.global_position, Color(0.35, 0.65, 1.0), 8.0, 0.8)
+	Sfx.play("portal")
+	Game.travel(Game.HUB, "PortaleArrivo")
+
+
+func _spawn_return_portal() -> void:
+	var data: Dictionary = Game.hero.flags.get("portal_return", {})
+	if data.is_empty() or String(data.get("level", "")) == level_id:
+		return
+	var portal := TownPortal.new()
+	portal.return_level = String(data["level"])
+	portal.return_pos = Vector3(float(data["x"]), 0.0, float(data["z"]))
+	var marker := find_child("PortaleArrivo", true, false) as Node3D
+	var base := marker.global_position if marker else player.global_position
+	portal.position = base + Vector3(-3.0, 0.0, 0.0)
+	dynamic_root.add_child(portal)

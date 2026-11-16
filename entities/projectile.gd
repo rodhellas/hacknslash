@@ -23,7 +23,7 @@ static func spawn_from_player(p: Player, ab: Dictionary, origin: Vector3, d: Vec
 	pr.dir = d.normalized()
 	pr.speed = float(ab.get("speed", 24.0))
 	pr.life = float(ab.get("max_range", 22.0)) / pr.speed
-	pr.pierce = bool(ab.get("pierce", false))
+	pr.pierce = bool(ab.get("pierce", false)) or p.has_power("diana")
 	pr.chain = int(ab.get("chain", 0))
 	pr.explode_radius = float(ab.get("explode_radius", 0.0))
 	pr.color = ab.get("color", Color.WHITE)
@@ -68,6 +68,7 @@ func _build(length: float, thickness: float) -> void:
 	light.light_energy = 1.2
 	light.omni_range = 3.0
 	add_child(light)
+	Fx.trail(self, color, clampf(thickness * 0.8, 0.08, 0.3))
 	body_entered.connect(_on_body_entered)
 
 
@@ -115,6 +116,7 @@ func _on_body_entered(body: Node) -> void:
 	else:
 		if body is Player:
 			(body as Player).take_damage(fixed_damage, attacker_level)
+			Fx.burst(Game.world_root(), global_position, color, 8, 4.0, 0.08, 0.3)
 			queue_free()
 		elif body is CollisionObject3D and (body as CollisionObject3D).collision_layer & Layers.WORLD:
 			queue_free()
@@ -123,6 +125,8 @@ func _on_body_entered(body: Node) -> void:
 func _explode() -> void:
 	Abilities.damage_area(owner_player, global_position, explode_radius, float(ability.get("dmg", 1.0)), float(ability.get("knock", 6.0)), ability)
 	Fx.ring(Game.world_root(), global_position, explode_radius, color, 0.35)
+	Fx.explosion(Game.world_root(), Vector3(global_position.x, 0.0, global_position.z), explode_radius, color)
+	Sfx.play("explosion", global_position, -4.0, 0.15)
 	owner_player.shake(0.08)
 
 

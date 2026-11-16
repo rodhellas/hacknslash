@@ -66,17 +66,49 @@ const SUFFIXES := {
 const RARE_A := ["Furia", "Ombra", "Gloria", "Aquila", "Tempesta", "Vendetta", "Onore", "Fato", "Eco", "Sangue", "Ruggito", "Stella", "Rovina", "Vigilia"]
 const RARE_B := ["di Marte", "di Giove", "dell'Impero", "del Senato", "di Cartagine", "di Nova Roma", "della Legione", "di Saturno", "dei Cesari", "dell'Esilio", "di Ostia", "del Tevere"]
 
+## Leggendari: statistiche fisse + 2 affissi casuali + un POTERE (vedi POWERS) che cambia il modo di giocare.
 const LEGENDARIES := [
-	{"base": "gladio_plasma", "name": "Gladio di Spartaco", "affixes": [["damage_pct", 25.0], ["attack_speed_pct", 10.0], ["life_on_hit", 6.0]], "flavor": "Non fu forgiato per un padrone."},
-	{"base": "scure", "name": "Scure di Commodo", "affixes": [["forza", 25.0], ["crit_damage", 45.0], ["damage_pct", 12.0]], "flavor": "L'imperatore che si credeva Ercole."},
-	{"base": "arco_plasma", "name": "Arco di Diana Stellare", "affixes": [["destrezza", 25.0], ["crit_chance", 6.0], ["crit_damage", 40.0]], "flavor": "Dicono che non manchi mai la luna."},
-	{"base": "lituo", "name": "Lituo di Romolo", "affixes": [["intelligenza", 25.0], ["cdr_pct", 12.0], ["damage_pct", 15.0]], "flavor": "Con questo bastone fu tracciato il primo solco."},
-	{"base": "scutum", "name": "Scutum dell'Ultima Legione", "affixes": [["armor", 40.0], ["vitalita", 20.0], ["life_regen", 4.0]], "flavor": "Nessuno è tornato. Lo scudo sì."},
-	{"base": "galea", "name": "Elmo di Scipione", "affixes": [["forza", 20.0], ["crit_chance", 5.0], ["armor", 20.0]], "flavor": "L'Africa era solo l'inizio."},
-	{"base": "anello_sigillo", "name": "Anello di Cesare", "affixes": [["damage_pct", 18.0], ["crit_damage", 35.0], ["gold_find", 50.0]], "flavor": "Il dado è tratto."},
-	{"base": "caligae", "name": "Calzari di Mercurio", "affixes": [["move_speed_pct", 20.0], ["destrezza", 15.0], ["attack_speed_pct", 8.0]], "flavor": "Ali ai piedi, fretta nel cuore."},
-	{"base": "toga", "name": "Toga del Pontefice", "affixes": [["intelligenza", 22.0], ["life", 60.0], ["cdr_pct", 8.0]], "flavor": "Tra gli dèi e gli uomini, un ponte."},
+	{"base": "gladio_plasma", "name": "Gladio di Spartaco", "affixes": [["damage_pct", 25.0], ["attack_speed_pct", 10.0], ["life_on_hit", 6.0]], "flavor": "Non fu forgiato per un padrone.", "power": "spartaco"},
+	{"base": "scure", "name": "Scure di Commodo", "affixes": [["forza", 25.0], ["crit_damage", 45.0], ["damage_pct", 12.0]], "flavor": "L'imperatore che si credeva Ercole.", "power": "commodo"},
+	{"base": "arco_plasma", "name": "Arco di Diana Stellare", "affixes": [["destrezza", 25.0], ["crit_chance", 6.0], ["crit_damage", 40.0]], "flavor": "Dicono che non manchi mai la luna.", "power": "diana"},
+	{"base": "lituo", "name": "Lituo di Romolo", "affixes": [["intelligenza", 25.0], ["cdr_pct", 12.0], ["damage_pct", 15.0]], "flavor": "Con questo bastone fu tracciato il primo solco.", "power": "romolo"},
+	{"base": "scutum", "name": "Scutum dell'Ultima Legione", "affixes": [["armor", 40.0], ["vitalita", 20.0], ["life_regen", 4.0]], "flavor": "Nessuno è tornato. Lo scudo sì.", "power": "ultima_legione"},
+	{"base": "galea", "name": "Elmo di Scipione", "affixes": [["forza", 20.0], ["crit_chance", 5.0], ["armor", 20.0]], "flavor": "L'Africa era solo l'inizio.", "power": "scipione"},
+	{"base": "anello_sigillo", "name": "Anello di Cesare", "affixes": [["damage_pct", 18.0], ["crit_damage", 35.0], ["gold_find", 50.0]], "flavor": "Il dado è tratto.", "power": "cesare"},
+	{"base": "caligae", "name": "Calzari di Mercurio", "affixes": [["move_speed_pct", 20.0], ["destrezza", 15.0], ["attack_speed_pct", 8.0]], "flavor": "Ali ai piedi, fretta nel cuore.", "power": "mercurio"},
+	{"base": "toga", "name": "Toga del Pontefice", "affixes": [["intelligenza", 22.0], ["life", 60.0], ["cdr_pct", 8.0]], "flavor": "Tra gli dèi e gli uomini, un ponte.", "power": "pontefice"},
+	{"base": "manicae", "name": "Manicae di Ercole", "affixes": [["forza", 20.0], ["attack_speed_pct", 8.0], ["crit_chance", 4.0]], "flavor": "Dodici fatiche, nemmeno un graffio.", "power": "ercole"},
+	{"base": "bulla", "name": "Bulla di Vesta", "affixes": [["vitalita", 20.0], ["life_regen", 3.0], ["life", 50.0]], "flavor": "Il fuoco sacro non si spegne mai.", "power": "vesta"},
+	{"base": "ocreae", "name": "Ocreae di Achille", "affixes": [["armor", 30.0], ["vitalita", 18.0], ["life", 40.0]], "flavor": "Proteggono tutto. Quasi tutto.", "power": "achille"},
 ]
+
+## Poteri dei leggendari: il testo è mostrato nel tooltip; l'effetto è implementato dove indicato.
+##   player.gd (uccisioni, danni subiti, abilità, pozione), abilities.gd (colpi), projectile.gd,
+##   loot_drop.gd (sesterzi), health_globe.gd (globi)
+const POWERS := {
+	"spartaco": "Ogni nemico ucciso ti cura del 3% della vita e aumenta i danni del 5% per 5 s (fino a 5 volte).",
+	"commodo": "I colpi critici provocano un'esplosione che infligge il 60% del danno dell'arma ai nemici vicini.",
+	"diana": "I tuoi proiettili trapassano tutti i nemici.",
+	"romolo": "Ogni nemico ucciso riduce di 1 secondo il tempo di ricarica delle abilità.",
+	"ultima_legione": "Quando la vita scende sotto il 30% ottieni uno scudo pari al 30% della vita massima (una volta ogni 60 s).",
+	"scipione": "+50% danni contro Campioni e boss.",
+	"cesare": "Raccogliere sesterzi ti cura del 2% della vita massima.",
+	"mercurio": "Dopo un'abilità di movimento ottieni +30% velocità d'attacco per 4 s.",
+	"pontefice": "Le abilità hanno il 25% di probabilità di non consumare risorsa.",
+	"ercole": "L'attacco principale ha il 15% di probabilità di generare un'onda d'urto che infligge il 150% del danno dell'arma.",
+	"vesta": "I globi di vita curano il doppio e ripristinano il 20% della risorsa.",
+	"achille": "La pozione si ricarica in metà tempo e ti rende invulnerabile per 2 s.",
+}
+
+## Materiali del fabbro (si ottengono smontando gli oggetti).
+const MATERIALS := {
+	"rottami": {"name": "Rottami di bronzo", "color": Color(0.85, 0.6, 0.35)},
+	"essenza": {"name": "Essenza arcana", "color": Color(0.45, 0.62, 1.0)},
+	"frammento": {"name": "Frammento divino", "color": Color(1.0, 0.55, 0.1)},
+}
+## Valore di vendita di base per rarità (cresce col livello dell'oggetto). Il mercante vende a ×BUY_MULT.
+const SELL_VALUE := [5, 15, 40, 120]
+const BUY_MULT := 5
 
 ## Probabilità di rarità per fonte: [comune, magico, raro, leggendario]
 const RARITY_TABLE := {
@@ -187,6 +219,7 @@ static func _legendary(ilvl: int, class_id: String, smart: bool) -> Item:
 	var it := _build(l["base"], ilvl, Item.Rarity.LEGGENDARIO, "")
 	it.item_name = l["name"]
 	it.flavor = l["flavor"]
+	it.power = String(l.get("power", ""))
 	var sc := 1.0 + 0.1 * (ilvl - 1)
 	for pair: Array in l["affixes"]:
 		var stat: String = pair[0]
@@ -251,3 +284,59 @@ static func roll_gold(source: String, ilvl: int, gold_find: float) -> int:
 		return 0
 	var mult := {"normal": 1.0, "elite": 4.0, "unique": 15.0, "chest": 3.0, "chest_rich": 6.0}.get(source, 1.0) as float
 	return int(randi_range(3, 9) * ilvl * mult * (1.0 + gold_find / 100.0))
+
+
+## Prezzo di vendita al mercante.
+static func sell_value(it: Item) -> int:
+	return int(SELL_VALUE[clampi(it.rarity, 0, 3)] * (1.0 + 0.25 * (it.ilvl - 1)))
+
+
+static func buy_price(it: Item) -> int:
+	return sell_value(it) * BUY_MULT
+
+
+## Materiali ottenuti smontando un oggetto dal fabbro: {materiale: quantità}.
+static func salvage_yield(it: Item) -> Dictionary:
+	match it.rarity:
+		Item.Rarity.COMUNE: return {"rottami": randi_range(2, 3)}
+		Item.Rarity.MAGICO: return {"rottami": randi_range(1, 2), "essenza": 1}
+		Item.Rarity.RARO: return {"essenza": randi_range(2, 3), "rottami": 1}
+		Item.Rarity.LEGGENDARIO: return {"frammento": 1, "essenza": 3}
+	return {}
+
+
+## Ricette del fabbro: costo in sesterzi (per livello dell'eroe) e materiali.
+const RECIPES := {
+	"magico": {"name": "Forgia un oggetto magico", "gold_per_level": 25, "mats": {"rottami": 4}, "rarity": Item.Rarity.MAGICO},
+	"raro": {"name": "Forgia un oggetto raro", "gold_per_level": 80, "mats": {"rottami": 8, "essenza": 4}, "rarity": Item.Rarity.RARO},
+	"leggendario": {"name": "Invoca un leggendario", "gold_per_level": 300, "mats": {"frammento": 2, "essenza": 10}, "rarity": Item.Rarity.LEGGENDARIO},
+}
+
+
+## Oggetto forgiato dal fabbro: rarità della ricetta, slot scelto (i leggendari ignorano lo slot).
+static func craft(recipe_id: String, slot: String, ilvl: int, class_id: String) -> Item:
+	var rarity: int = RECIPES[recipe_id]["rarity"]
+	if rarity == Item.Rarity.LEGGENDARIO:
+		return _legendary(ilvl, class_id, true)
+	var candidates: Array = []
+	for k: String in BASES:
+		var b: Dictionary = BASES[k]
+		if b["slot"] != slot:
+			continue
+		var probe := Item.new()
+		probe.slot = b["slot"]
+		probe.weapon_type = b.get("type", "")
+		if usable_by(probe, class_id):
+			candidates.append(k)
+	if candidates.is_empty():
+		return null
+	var main := String(HeroClasses.get_data(class_id)["main_stat"])
+	return _build(candidates.pick_random(), ilvl, rarity, main)
+
+
+## Potere di un leggendario dal nome (per i salvataggi fatti prima che esistessero i poteri).
+static func power_for_name(item_name: String) -> String:
+	for l: Dictionary in LEGENDARIES:
+		if l["name"] == item_name:
+			return String(l.get("power", ""))
+	return ""

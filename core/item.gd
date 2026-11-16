@@ -24,6 +24,7 @@ var attack_speed := 0.0
 var armor := 0.0
 var affixes: Array = []   # [{ "stat": String, "value": float }]
 var flavor := ""
+var power := ""   # potere leggendario (chiave di ItemDB.POWERS)
 
 
 func color() -> Color:
@@ -55,7 +56,7 @@ func to_dict() -> Dictionary:
 	return {
 		"uid": uid, "base_id": base_id, "name": item_name, "slot": slot, "weapon_type": weapon_type,
 		"rarity": rarity, "ilvl": ilvl, "dmg_min": dmg_min, "dmg_max": dmg_max, "attack_speed": attack_speed,
-		"armor": armor, "affixes": affixes, "flavor": flavor,
+		"armor": armor, "affixes": affixes, "flavor": flavor, "power": power,
 	}
 
 
@@ -73,6 +74,9 @@ static func from_dict(d: Dictionary) -> Item:
 	it.attack_speed = float(d.get("attack_speed", 0.0))
 	it.armor = float(d.get("armor", 0.0))
 	it.flavor = String(d.get("flavor", ""))
+	it.power = String(d.get("power", ""))
+	if it.power == "" and it.rarity == Rarity.LEGGENDARIO:
+		it.power = ItemDB.power_for_name(it.item_name)
 	for a: Dictionary in d.get("affixes", []):
 		it.affixes.append({"stat": String(a["stat"]), "value": float(a["value"])})
 	return it
@@ -104,6 +108,8 @@ func tooltip_bbcode(compare: Item = null, usable: bool = true) -> String:
 		t += "\n"
 		for a: Dictionary in affixes:
 			t += "[color=#7fa8ff]%s[/color]\n" % ItemDB.affix_text(a)
+	if power != "":
+		t += "\n[color=#ff9a30]%s[/color]\n" % ItemDB.POWERS.get(power, "")
 	if flavor != "":
 		t += "\n[i][color=#c8a050]%s[/color][/i]\n" % flavor
 	if compare:

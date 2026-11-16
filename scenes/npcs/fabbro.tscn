@@ -1,0 +1,70 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c16pg"]
+albedo_color = Color(0.5, 0.36, 0.25, 1)
+roughness = 0.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_73sis"]
+height = 1.75
+radial_segments = 12
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_e11bw"]
+albedo_color = Color(0.25, 0.18, 0.12, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_4wn1c"]
+size = Vector3(0.75, 1.1, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_404vc"]
+albedo_color = Color(0.85, 0.65, 0.5, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_rhsdl"]
+radius = 0.3
+height = 0.55
+radial_segments = 14
+rings = 7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u8437"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_k582l"]
+size = Vector3(0.07, 0.7, 0.07)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qqdp1"]
+albedo_color = Color(0.4, 0.42, 0.46, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_0wgct"]
+size = Vector3(0.3, 0.18, 0.18)
+
+[node name="Model" type="Node3D" unique_id=1851319736]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=277136632]
+
+[node name="capsule_0" type="MeshInstance3D" parent="Graybox" unique_id=989473673]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+material_override = SubResource("StandardMaterial3D_c16pg")
+mesh = SubResource("CapsuleMesh_73sis")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=958631428]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, -0.38)
+material_override = SubResource("StandardMaterial3D_e11bw")
+mesh = SubResource("BoxMesh_4wn1c")
+
+[node name="sphere_2" type="MeshInstance3D" parent="Graybox" unique_id=242478987]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.85, 0)
+material_override = SubResource("StandardMaterial3D_404vc")
+mesh = SubResource("SphereMesh_rhsdl")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=1205272165]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1, -0.2)
+material_override = SubResource("StandardMaterial3D_u8437")
+mesh = SubResource("BoxMesh_k582l")
+
+[node name="box_4" type="MeshInstance3D" parent="Graybox" unique_id=725817695]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.4, -0.2)
+material_override = SubResource("StandardMaterial3D_qqdp1")
+mesh = SubResource("BoxMesh_0wgct")

@@ -54,7 +54,8 @@ func _physics_process(delta: float) -> void:
 	if Game.level == null or Game.level.player == null:
 		return
 	var d := Game.level.player.global_position.distance_to(global_position)
-	if d < activation_range:
+	# Aspetta che la navmesh sia pronta (al caricamento del livello serve un frame)
+	if d < activation_range and NavigationServer3D.map_get_iteration_id(get_world_3d().navigation_map) > 0:
 		spawn()
 
 
@@ -73,7 +74,7 @@ func spawn() -> void:
 
 func _spawn_one(t: String, pos: Vector3, is_elite: bool, map: RID, container: Node) -> void:
 	var snapped := NavigationServer3D.map_get_closest_point(map, pos)
-	if snapped != Vector3.ZERO and snapped.y < 0.3 and snapped.distance_to(pos) < 6.0:
+	if snapped != Vector3.ZERO and snapped.y < 1.0 and Vector2(snapped.x - pos.x, snapped.z - pos.z).length() < 6.0:
 		pos = snapped
 	pos.y = 0.0
 	var e := Enemy.create(t, enemy_level, is_elite)
@@ -91,7 +92,7 @@ func alert() -> void:
 	for e: Variant in enemies:
 		if is_instance_valid(e):
 			(e as Enemy).aggro()
-	get_tree().create_timer(4.0).timeout.connect(func() -> void: alerted = false)
+	create_tween().tween_callback(func() -> void: alerted = false).set_delay(4.0)
 
 
 # --- Visualizzazione nell'editor -------------------------------------------------------

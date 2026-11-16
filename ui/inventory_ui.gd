@@ -4,6 +4,7 @@ extends CanvasLayer
 ##   Clic su un oggetto dello zaino: equipaggia (scambia con quello indossato)
 ##   Clic su un oggetto equipaggiato: lo rimette nello zaino
 ##   Shift + clic su un oggetto dello zaino: lo getta a terra
+##   Con mercante/fabbro aperto: clic destro su un oggetto dello zaino = vendi / smonta
 ## Passando il mouse sopra un oggetto compare il tooltip con il confronto.
 
 const GOLD := Color(0.95, 0.78, 0.35)
@@ -15,9 +16,13 @@ var equip_buttons: Dictionary = {}
 var bag_buttons: Array = []
 var stats_label: RichTextLabel
 var gold_label: Label
+var mats_label: Label
+var hint_label: Label
+var trade: TradeUI = null
 var tooltip: PanelContainer
 var tooltip_text: RichTextLabel
 var is_open := false
+var _tooltip_right := false
 
 
 func _ready() -> void:
@@ -48,7 +53,7 @@ func _ready() -> void:
 	eq.add_theme_constant_override("v_separation", 6)
 	v.add_child(eq)
 	for slot: String in HeroData.EQUIP_SLOTS:
-		var b := _slot_button(Vector2(168, 58))
+		var b := make_slot_button(Vector2(168, 58))
 		b.gui_input.connect(_on_equip_input.bind(slot))
 		b.mouse_entered.connect(_on_hover_equip.bind(slot))
 		b.mouse_exited.connect(_hide_tooltip)
@@ -70,20 +75,22 @@ func _ready() -> void:
 	gold_label = _label(16, GOLD)
 	hb.add_child(gold_label)
 	v.add_child(hb)
+	mats_label = _label(13, Color(0.75, 0.7, 0.6))
+	v.add_child(mats_label)
 	var bag := GridContainer.new()
 	bag.columns = 8
 	bag.add_theme_constant_override("h_separation", 4)
 	bag.add_theme_constant_override("v_separation", 4)
 	v.add_child(bag)
 	for i in HeroData.INV_SIZE:
-		var b := _slot_button(Vector2(60, 60))
+		var b := make_slot_button(Vector2(60, 60))
 		b.gui_input.connect(_on_bag_input.bind(i))
 		b.mouse_entered.connect(_on_hover_bag.bind(i))
 		b.mouse_exited.connect(_hide_tooltip)
 		bag.add_child(b)
 		bag_buttons.append(b)
-	v.add_child(_label(13, Color(0.6, 0.6, 0.6),
-		"Clic: equipaggia / togli    Shift+clic: getta a terra    I / C: chiudi"))
+	hint_label = _label(13, Color(0.6, 0.6, 0.6))
+	v.add_child(hint_label)
 
 	tooltip = PanelContainer.new()
 	tooltip.add_theme_stylebox_override("panel", Hud._panel_style(0.97))
@@ -114,6 +121,13 @@ func toggle() -> void:
 		refresh()
 
 
+func open() -> void:
+	if not is_open:
+		toggle()
+	else:
+		refresh()
+
+
 func close() -> void:
 	if is_open:
 		toggle()
@@ -124,7 +138,9 @@ func _process(_delta: float) -> void:
 		var mp := get_viewport().get_mouse_position()
 		var vs := get_viewport().get_visible_rect().size
 		var pos := mp + Vector2(-tooltip.size.x - 20, 16)
-		pos.x = maxf(pos.x, 8.0)
+		if _tooltip_right:
+			pos.x = mp.x + 24.0
+		pos.x = clampf(pos.x, 8.0, vs.x - tooltip.size.x - 8.0)
 		pos.y = clampf(pos.y, 8.0, vs.y - tooltip.size.y - 8.0)
 		tooltip.position = pos
 
@@ -135,12 +151,20 @@ func refresh() -> void:
 	var h := player.hero
 	title_label.text = "%s - %s livello %d" % [h.hero_name, player.cls["name"], h.level]
 	gold_label.text = "%d sesterzi" % h.gold
+	var m := ""
+	for id: String in ItemDB.MATERIALS:
+		m += "%s: %d    " % [ItemDB.MATERIALS[id]["name"], h.material(id)]
+	mats_label.text = m
+	var hint := "Clic: equipaggia / togli    Shift+clic: getta a terra    I / C: chiudi"
+	if trade != null and trade.is_open:
+		hint = "Clic destro: %s    Clic: equipaggia    I / C: chiudi" % ("VENDI" if trade.mode == "vendor" else "SMONTA")
+	hint_label.text = hint
 	for slot: String in equip_buttons:
 		var it: Item = h.equipment.get(slot)
-		_paint(equip_buttons[slot], it, Item.SLOT_NAMES[slot])
+		paint_slot(equip_buttons[slot], it, Item.SLOT_NAMES[slot], it == null or h.can_equip(it))
 	for i in bag_buttons.size():
 		var it: Item = h.inventory[i]
-		_paint(bag_buttons[i], it, "")
+		paint_slot(bag_buttons[i], it, "", it == null or h.can_equip(it))
 	_refresh_stats()
 
 
@@ -159,7 +183,7 @@ func _refresh_stats() -> void:
 	stats_label.text = t
 
 
-func _paint(b: Button, it: Item, empty_text: String) -> void:
+static func paint_slot(b: Button, it: Item, empty_text: String, usable: bool = true) -> void:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.1, 0.08, 0.06)
 	sb.set_border_width_all(2)
@@ -167,7 +191,7 @@ func _paint(b: Button, it: Item, empty_text: String) -> void:
 	if it != null:
 		sb.border_color = it.color()
 		sb.bg_color = it.color().darkened(0.82)
-		if not player.hero.can_equip(it):
+		if not usable:
 			sb.bg_color = Color(0.3, 0.05, 0.05)
 		b.text = it.short_label() if b.custom_minimum_size.x < 100 else it.item_name
 		b.add_theme_color_override("font_color", it.color())
@@ -191,6 +215,10 @@ func _on_bag_input(event: InputEvent, index: int) -> void:
 	var h := player.hero
 	var it: Item = h.inventory[index]
 	if it == null:
+		return
+	if mb.button_index == MOUSE_BUTTON_RIGHT and trade != null and trade.is_open:
+		_hide_tooltip()
+		trade.on_bag_right_click(index)
 		return
 	if mb.shift_pressed:
 		h.inventory[index] = null
@@ -223,7 +251,13 @@ func _on_hover_bag(index: int) -> void:
 	if it == null:
 		return
 	var equipped: Item = player.hero.equipment.get(it.slot)
-	_show_tooltip(it.tooltip_bbcode(equipped, player.hero.can_equip(it)))
+	var t := it.tooltip_bbcode(equipped, player.hero.can_equip(it))
+	if trade != null and trade.is_open:
+		if trade.mode == "vendor":
+			t += "\n[color=#f2c75a]Valore: %d sesterzi (clic destro per vendere)[/color]" % ItemDB.sell_value(it)
+		else:
+			t += "\n[color=#f2c75a]Clic destro per smontare[/color]"
+	_show_tooltip(t)
 
 
 func _on_hover_equip(slot: String) -> void:
@@ -233,6 +267,12 @@ func _on_hover_equip(slot: String) -> void:
 
 
 func _show_tooltip(text: String) -> void:
+	show_tooltip(text, false)
+
+
+## Tooltip condiviso (usato anche dal negozio). right_side = a destra del mouse.
+func show_tooltip(text: String, right_side: bool = false) -> void:
+	_tooltip_right = right_side
 	tooltip_text.text = text
 	tooltip.reset_size()
 	tooltip.visible = true
@@ -242,7 +282,11 @@ func _hide_tooltip() -> void:
 	tooltip.visible = false
 
 
-func _slot_button(min_size: Vector2) -> Button:
+func hide_tooltip() -> void:
+	tooltip.visible = false
+
+
+static func make_slot_button(min_size: Vector2) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = min_size
 	b.focus_mode = Control.FOCUS_NONE

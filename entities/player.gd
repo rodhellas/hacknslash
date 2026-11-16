@@ -4,6 +4,7 @@ extends CharacterBody3D
 ##   Clic sinistro (tieni premuto): muovi / attacca il nemico sotto il cursore / raccogli / interagisci
 ##   Shift + clic sinistro: attacca sul posto        Clic destro, 1-4: abilità
 ##   Q: pozione    E: interagisci con l'oggetto più vicino    WASD: movimento diretto (opzionale)
+##   T: portale cittadino (torna a Ostia Nova; in città compare il portale per tornare indietro)
 ## Il modello 3D viene caricato dalla scena indicata nella classe (sostituibile con un modello Tripo).
 ## Se il modello contiene un AnimationPlayer con animazioni "idle", "run", "attack", "cast", "hit",
 ## "death" vengono riprodotte automaticamente.
@@ -15,6 +16,7 @@ signal died
 const POTION_CD := 30.0
 const POTION_HEAL := 0.6
 const INTERACT_RANGE := 2.4
+const PORTAL_TIME := 1.5
 
 var hero: HeroData
 var cls: Dictionary
@@ -31,6 +33,11 @@ var cast_lock := 0.0
 var combo_step := 0
 var combo_timer := 0.0
 var facing_yaw := 0.0
+var powers: Dictionary = {}      # poteri dei leggendari indossati
+var shield := 0.0                # scudo che assorbe danni (Scutum dell'Ultima Legione)
+var _shield_t := 0.0
+var _shield_cd := 0.0
+var portal_t := 0.0              # > 0 mentre si apre il portale cittadino
 
 var move_target := Vector3.INF
 var attack_target: Enemy = null
@@ -101,6 +108,7 @@ func _ready() -> void:
 
 func refresh_stats() -> void:
 	stats = hero.compute_stats()
+	powers = hero.legendary_powers()
 	life = minf(life, stats["max_life"])
 	resource = minf(resource, stats["resource_max"])
 
@@ -114,6 +122,14 @@ func buff_sum(key: String) -> float:
 	for b: Dictionary in buffs:
 		t += float(b.get(key, 0.0))
 	return t
+
+
+func has_power(id: String) -> bool:
+	return powers.has(id)
+
+
+func potion_cooldown() -> float:
+	return POTION_CD * (0.5 if has_power("achille") else 1.0)
 
 
 func is_unlocked(ab: Dictionary) -> bool:
@@ -168,6 +184,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		use_potion()
 	elif event.is_action_pressed("interact"):
 		_interact_nearest()
+	elif event.is_action_pressed("town_portal"):
+		start_town_portal()
 
 
 func _input(event: InputEvent) -> void:
@@ -216,6 +234,15 @@ func _physics_process(delta: float) -> void:
 			_process_dash(delta)
 		return
 	var wish := _input_direction()
+	if portal_t > 0.0:
+		if wish != Vector3.ZERO or move_target != Vector3.INF or attack_target != null or interact_target != null:
+			cancel_town_portal()
+		else:
+			portal_t -= delta
+			_animate(delta, Vector3.ZERO)
+			if portal_t <= 0.0 and Game.level:
+				Game.level.use_town_portal()
+			return
 	if wish != Vector3.ZERO:
 		move_target = Vector3.INF
 		attack_target = null
@@ -297,8 +324,8 @@ func _nav_toward(target: Vector3) -> Vector3:
 func snap_to_nav(p: Vector3) -> Vector3:
 	var map := get_world_3d().navigation_map
 	var s := NavigationServer3D.map_get_closest_point(map, p)
-	# Scarta i punti vuoti o sulle "isole" della navmesh sopra gli oggetti alti
-	if (s == Vector3.ZERO and p.length() > 1.0) or s.y > 0.3:
+	# Scarta i punti vuoti o sulle "isole" della navmesh sopra gli oggetti alti (il suolo è a y 0.5, le isole da 2 m in su)
+	if (s == Vector3.ZERO and p.length() > 1.0) or s.y > 1.0:
 		return Vector3(p.x, 0.0, p.z)
 	return Vector3(s.x, 0.0, s.z)
 
@@ -335,7 +362,12 @@ func _tick(delta: float) -> void:
 		buffs[i]["time"] = float(buffs[i]["time"]) - delta
 		if buffs[i]["time"] <= 0.0:
 			buffs.remove_at(i)
-	buff_bubble.visible = buff_sum("dr") > 0.0
+	_shield_cd -= delta
+	if shield > 0.0:
+		_shield_t -= delta
+		if _shield_t <= 0.0:
+			shield = 0.0
+	buff_bubble.visible = buff_sum("dr") > 0.0 or shield > 0.0 or buff_sum("invuln") > 0.0
 	life = minf(life + float(stats["life_regen"]) * delta, stats["max_life"])
 	resource = clampf(resource + float(stats["resource_regen"]) * delta, 0.0, stats["resource_max"])
 
@@ -369,6 +401,7 @@ func _try_cast(slot: String, point: Vector3) -> bool:
 		return false
 	if cast_lock > 0.0:
 		return false
+	cancel_town_portal()
 	if slot == "lmb":
 		if attack_cd > 0.0:
 			return false
@@ -378,6 +411,9 @@ func _try_cast(slot: String, point: Vector3) -> bool:
 	if resource < cost:
 		_warn("%s insufficiente" % cls["resource"])
 		return false
+	if cost > 0.0 and has_power("pontefice") and randf() < 0.25:
+		cost = 0.0
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.6, 0), "Gratis!", Color(0.6, 0.7, 1.0), 30)
 	resource = clampf(resource - cost + float(ab.get("gain", 0.0)), 0.0, stats["resource_max"])
 	var aps := attack_speed() * float(ab.get("speed", 1.0))
 	if slot == "lmb":
@@ -390,6 +426,8 @@ func _try_cast(slot: String, point: Vector3) -> bool:
 	move_target = Vector3.INF
 	Abilities.execute(self, ab, point)
 	_play_anim("attack" if ab["kind"] == "melee" else "cast")
+	if ab["kind"] == "dash" and has_power("mercurio"):
+		add_buff({"id": "mercurio", "duration": 4.0, "aspd": 0.3})
 	return true
 
 
@@ -445,7 +483,7 @@ func add_buff(ab: Dictionary) -> void:
 	buffs.append({
 		"id": ab["id"], "time": float(ab.get("duration", 5.0)), "dr": float(ab.get("dr", 0.0)),
 		"damage": float(ab.get("damage", 0.0)), "aspd": float(ab.get("aspd", 0.0)),
-		"lifesteal": float(ab.get("lifesteal", 0.0)),
+		"lifesteal": float(ab.get("lifesteal", 0.0)), "invuln": float(ab.get("invuln", 0.0)),
 	})
 
 
@@ -453,9 +491,38 @@ func use_potion() -> void:
 	if potion_cd > 0.0:
 		_warn("Pozione in ricarica (%d s)" % ceili(potion_cd))
 		return
-	potion_cd = POTION_CD
+	potion_cd = potion_cooldown()
 	heal(float(stats["max_life"]) * POTION_HEAL)
 	Fx.ring(Game.world_root(), global_position, 2.0, Color(1, 0.2, 0.3), 0.4)
+	Fx.burst(Game.world_root(), global_position + Vector3(0, 1.0, 0), Color(1, 0.25, 0.35), 14, 3.0, 0.12, 0.6, 3.0)
+	Sfx.play("potion")
+	if has_power("achille"):
+		add_buff({"id": "achille", "duration": 2.0, "invuln": 1.0})
+
+
+# --- Portale cittadino ---------------------------------------------------------------
+
+func start_town_portal() -> void:
+	if dead or Game.level == null or portal_t > 0.0:
+		return
+	if Game.level.is_town:
+		_warn("Sei già in città")
+		return
+	if not Game.hero.flags.has("visited_" + Game.HUB):
+		_warn("Non conosci ancora la strada per %s" % Game.level_title(Game.HUB))
+		return
+	portal_t = PORTAL_TIME
+	move_target = Vector3.INF
+	attack_target = null
+	interact_target = null
+	lmb_held = false
+	_play_anim("cast")
+	Sfx.play("cast", null, -4.0)
+	Fx.ring(Game.world_root(), global_position, 1.6, Color(0.35, 0.65, 1.0), PORTAL_TIME)
+
+
+func cancel_town_portal() -> void:
+	portal_t = 0.0
 
 
 # --- Interazione --------------------------------------------------------------------
@@ -486,15 +553,48 @@ func _interact_with(n: Node3D) -> void:
 func take_damage(raw: float, attacker_level: int = 1) -> void:
 	if dead or not _dash.is_empty():
 		return
+	if buff_sum("invuln") > 0.0:
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.3, 0), "Immune", Color(0.8, 0.8, 1.0), 30)
+		return
+	if portal_t > 0.0:
+		cancel_town_portal()
+		_warn("Portale interrotto")
 	var armor := float(stats["armor"])
 	var armor_dr := clampf(armor / (armor + 50.0 * attacker_level), 0.0, 0.75)
 	var amount := raw * (1.0 - armor_dr) * (1.0 - clampf(buff_sum("dr"), 0.0, 0.85))
+	if shield > 0.0:
+		var absorbed := minf(shield, amount)
+		shield -= absorbed
+		amount -= absorbed
 	life -= amount
 	Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.3, 0), str(roundi(amount)), Color(1, 0.25, 0.25), 38)
 	Fx.flash(model, Color(1, 0.15, 0.15, 0.6))
+	Sfx.play("player_hurt", null, -3.0)
 	shake(0.08)
 	if life <= 0.0:
 		_die()
+		return
+	if has_power("ultima_legione") and _shield_cd <= 0.0 and life < float(stats["max_life"]) * 0.3:
+		shield = float(stats["max_life"]) * 0.3
+		_shield_t = 8.0
+		_shield_cd = 60.0
+		Fx.ring(Game.world_root(), global_position, 3.0, Color(1.0, 0.8, 0.3), 0.5)
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.8, 0), "Ultima Legione!", Color(1.0, 0.6, 0.15), 40)
+
+
+## Chiamato dal nemico quando muore (poteri leggendari "all'uccisione").
+func on_enemy_killed(_e: Enemy) -> void:
+	if has_power("spartaco"):
+		heal(float(stats["max_life"]) * 0.03, false)
+		var stacks := 1
+		for b: Dictionary in buffs:
+			if b["id"] == "spartaco":
+				stacks = mini(int(b.get("stacks", 1)) + 1, 5)
+		add_buff({"id": "spartaco", "duration": 5.0, "damage": 0.05 * stacks})
+		buffs[-1]["stacks"] = stacks
+	if has_power("romolo"):
+		for k: String in cooldowns.keys():
+			cooldowns[k] = maxf(0.0, float(cooldowns[k]) - 1.0)
 
 
 func heal(amount: float, show: bool = true) -> void:
@@ -523,6 +623,8 @@ func add_xp(amount: int) -> void:
 		resource = maxf(resource, stats["resource_max"] * 0.5)
 		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 3.0, 0), "LIVELLO %d!" % hero.level, Color(1, 0.85, 0.3), 80)
 		Fx.ring(Game.world_root(), global_position, 4.0, Color(1, 0.85, 0.3), 0.7)
+		Fx.pillar(Game.world_root(), global_position, Color(1, 0.85, 0.3), 12.0, 1.4)
+		Sfx.play("levelup")
 	xp_changed.emit(hero.xp, HeroData.xp_to_next(hero.level), hero.level)
 
 
@@ -531,6 +633,8 @@ func _die() -> void:
 	life = 0.0
 	velocity = Vector3.ZERO
 	lmb_held = false
+	portal_t = 0.0
+	shield = 0.0
 	_play_anim("death")
 	if anim == null:
 		create_tween().tween_property(model, "rotation:x", deg_to_rad(-90.0), 0.5)

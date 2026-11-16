@@ -20,6 +20,13 @@ var has_position := false
 var checkpoint_id := ""
 var flags: Dictionary = {}       # forzieri aperti, boss uccisi, altari attivati...
 var play_time := 0.0
+var materials: Dictionary = {}   # materiali del fabbro: "rottami", "essenza", "frammento"
+var waypoints: Dictionary = {}   # altari attivati (viaggio rapido): id -> {"level": id livello, "title": nome}
+
+## Altari del livello 1 nei salvataggi fatti prima del viaggio rapido.
+const LEGACY_WAYPOINTS := {
+	"villa": "Altare dei Lari", "ponte": "Altare di Portuno", "necropoli": "Altare di Proserpina", "acquedotto": "Altare di Giano",
+}
 
 
 static func create(p_name: String, p_class: String) -> HeroData:
@@ -31,6 +38,30 @@ static func create(p_name: String, p_class: String) -> HeroData:
 		var it := ItemDB.make_basic(base, 1)
 		h.equipment[it.slot] = it
 	return h
+
+
+func material(id: String) -> int:
+	return int(materials.get(id, 0))
+
+
+func add_material(id: String, amount: int) -> void:
+	materials[id] = material(id) + amount
+
+
+## Poteri dei leggendari indossati (chiavi di ItemDB.POWERS).
+func legendary_powers() -> Dictionary:
+	var out := {}
+	for slot: String in equipment:
+		var it: Item = equipment[slot]
+		if it.power != "":
+			out[it.power] = true
+	return out
+
+
+func register_waypoint(id: String, p_level: String, title: String) -> void:
+	waypoints[id] = {"level": p_level, "title": title}
+	flags["cp_" + id] = true
+	flags["cp_last_" + p_level] = id
 
 
 static func xp_to_next(lvl: int) -> int:
@@ -124,6 +155,7 @@ func to_dict() -> Dictionary:
 		"inventory": inv, "equipment": eq, "level_id": level_id,
 		"position": [position.x, position.y, position.z], "has_position": has_position,
 		"checkpoint_id": checkpoint_id, "flags": flags, "play_time": play_time,
+		"materials": materials, "waypoints": waypoints,
 	}
 
 
@@ -149,4 +181,16 @@ static func from_dict(d: Dictionary) -> HeroData:
 	h.checkpoint_id = String(d.get("checkpoint_id", ""))
 	h.flags = d.get("flags", {})
 	h.play_time = float(d.get("play_time", 0.0))
+	var mats: Dictionary = d.get("materials", {})
+	for k: String in mats:
+		h.materials[k] = int(mats[k])
+	h.waypoints = d.get("waypoints", {})
+	# Salvataggi vecchi: gli altari attivati erano solo flag "cp_<id>" del livello 1
+	for k: String in h.flags.keys():
+		if k.begins_with("cp_") and not k.begins_with("cp_last_"):
+			var id := k.substr(3)
+			if not h.waypoints.has(id) and LEGACY_WAYPOINTS.has(id):
+				h.waypoints[id] = {"level": "level_01", "title": LEGACY_WAYPOINTS[id]}
+	if h.checkpoint_id != "" and not h.flags.has("cp_last_" + h.level_id):
+		h.flags["cp_last_" + h.level_id] = h.checkpoint_id
 	return h

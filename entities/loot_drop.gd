@@ -69,6 +69,7 @@ func _ready() -> void:
 			beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			_visual.add_child(beam)
 			Fx.minimap_icon(self, col, 1.2, "square")
+			Sfx.play("legendary" if item.rarity == Item.Rarity.LEGGENDARIO else "rare_drop", global_position)
 	else:
 		for i in 3:
 			var coin := MeshInstance3D.new()
@@ -105,6 +106,7 @@ func interact(p: Player) -> void:
 		return
 	if Game.hero.add_item(item):
 		Game.level.hud.log_pickup(item.item_name, item.color())
+		Sfx.play("pickup")
 		p.inventory_changed.emit()
 		queue_free()
 	else:
@@ -117,6 +119,12 @@ func _on_body_entered(body: Node) -> void:
 
 
 func _take_gold() -> void:
+	if is_queued_for_deletion():
+		return
 	Game.hero.gold += gold
 	Game.level.hud.log_pickup("+%d sesterzi" % gold, Color(1.0, 0.85, 0.3))
+	Sfx.play("gold")
+	var p := Game.level.player
+	if p and p.has_power("cesare"):
+		p.heal(float(p.stats["max_life"]) * 0.02, false)
 	queue_free()

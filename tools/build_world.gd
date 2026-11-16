@@ -4,11 +4,14 @@ extends SceneTree
 ##   scenes/props/*.tscn        oggetti di scena (alberi, colonne, case...) -> da sostituire con modelli Tripo
 ##   scenes/characters/*.tscn   modelli segnaposto delle 4 classi
 ##   scenes/enemies/*.tscn      modelli segnaposto dei nemici
+##   scenes/npcs/*.tscn         modelli segnaposto dei personaggi non giocanti
 ##   scenes/levels/level_01.tscn  la mappa del livello 1, con navmesh già calcolata
+##   (la città di Ostia Nova ha il suo generatore: tools/build_ostia.gd, che riusa questo file)
 ##
 ## Uso (da terminale, nella cartella del progetto):
 ##   Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/build_world.gd
 ## Opzioni dopo "--":  props  models  level   (default: tutto)
+##                     missing  = crea SOLO props e modelli che non esistono ancora (non tocca gli altri)
 ##
 ## ATTENZIONE: rigenerare il livello SOVRASCRIVE level_01.tscn. Quando inizierai a ritoccare la
 ## mappa a mano nell'editor, non rigenerarla più (puoi ancora rigenerare props e modelli).
@@ -118,6 +121,9 @@ func _generate() -> void:
 	var all := args.is_empty()
 	rng.seed = SEED
 	_compute_road()
+	if "missing" in args:
+		_build_props(true)
+		_build_models(true)
 	if all or "props" in args or "level" in args:
 		_build_props()
 	if all or "models" in args:
@@ -452,14 +458,58 @@ func _prop_defs() -> Dictionary:
 			["cyl", Vector3(-1.1, 0.5, 1), Vector3(0.5, 0.15, 0.5), WOOD.darkened(0.3), 0.0, Vector3(0, 0, 90)],
 			["cyl", Vector3(1.1, 0.5, 1), Vector3(0.5, 0.15, 0.5), WOOD.darkened(0.3), 0.0, Vector3(0, 0, 90)]],
 		"col": [["box", Vector3(0, 0.7, 0), Vector3(2.4, 1.4, 3.4)]], "vis": 110.0}
+	# --- Città (Ostia Nova) ---
+	d["bancarella"] = {"parts": [["box", Vector3(0, 0.5, 0), Vector3(3.2, 1.0, 1.4), WOOD],
+			["box", Vector3(-1.5, 1.3, -0.6), Vector3(0.12, 2.6, 0.12), WOOD], ["box", Vector3(1.5, 1.3, -0.6), Vector3(0.12, 2.6, 0.12), WOOD],
+			["box", Vector3(-1.5, 1.1, 0.6), Vector3(0.12, 2.2, 0.12), WOOD], ["box", Vector3(1.5, 1.1, 0.6), Vector3(0.12, 2.2, 0.12), WOOD],
+			["box", Vector3(0, 2.45, 0), Vector3(3.6, 0.08, 1.9), RED, 0.0, Vector3(-12, 0, 0)],
+			["box", Vector3(-0.8, 1.15, 0), Vector3(0.6, 0.3, 0.5), TERRACOTTA], ["box", Vector3(0.2, 1.12, 0.1), Vector3(0.5, 0.25, 0.4), GOLD, 0.5],
+			["sphere", Vector3(1.0, 1.2, -0.1), Vector3(0.22, 0.4, 0), PLASMA, 3.0]],
+		"col": [["box", Vector3(0, 0.6, 0), Vector3(3.2, 1.2, 1.5)]], "vis": 110.0}
+	d["fucina"] = {"parts": [["box", Vector3(0, 0.6, 0), Vector3(2.6, 1.2, 2.0), STONE.darkened(0.2)],
+			["box", Vector3(0, 1.25, 0), Vector3(2.0, 0.1, 1.5), FIRE, 5.0],
+			["box", Vector3(0, 2.8, 0.6), Vector3(1.0, 3.2, 0.8), STONE.darkened(0.3)],
+			["box", Vector3(2.6, 0.4, 0.2), Vector3(0.6, 0.8, 0.5), STONE], ["box", Vector3(2.6, 0.9, 0.2), Vector3(1.1, 0.25, 0.45), METAL.darkened(0.3)],
+			["box", Vector3(-2.5, 2, -1.8), Vector3(0.25, 4, 0.25), WOOD], ["box", Vector3(3.5, 2, -1.8), Vector3(0.25, 4, 0.25), WOOD],
+			["box", Vector3(-2.5, 2, 1.8), Vector3(0.25, 4, 0.25), WOOD], ["box", Vector3(3.5, 2, 1.8), Vector3(0.25, 4, 0.25), WOOD],
+			["box", Vector3(0.5, 4.1, 0), Vector3(6.6, 0.25, 4.2), ROOF.darkened(0.25)]],
+		"col": [["box", Vector3(0, 0.8, 0), Vector3(2.6, 1.6, 2.0)], ["box", Vector3(2.6, 0.5, 0.2), Vector3(1.1, 1.0, 0.5)]],
+		"occ": ["box", Vector3(0.5, 4.1, 0), Vector3(6.6, 0.6, 4.2)], "fade": true, "light": [Vector3(0, 2.0, 0), FIRE, 2.5, 9.0]}
+	d["fontana"] = {"parts": [["cyl", Vector3(0, 0.4, 0), Vector3(3.2, 0.8, 3.3), MARBLE],
+			["cyl", Vector3(0, 0.75, 0), Vector3(2.9, 0.1, 2.9), Color(0.2, 0.5, 0.8), 1.0],
+			["cyl", Vector3(0, 1.4, 0), Vector3(0.4, 1.6, 0.5), MARBLE], ["cyl", Vector3(0, 2.2, 0), Vector3(1.1, 0.2, 0.6), MARBLE],
+			["sphere", Vector3(0, 2.6, 0), Vector3(0.35, 0.7, 0), PLASMA, 4.0]],
+		"col": [["cyl", Vector3(0, 0.5, 0), Vector3(3.3, 1.0, 0)]], "light": [Vector3(0, 2.8, 0), PLASMA, 1.5, 10.0]}
+	var bas := [["box", Vector3(0, 0.3, 0), Vector3(26, 0.6, 16), MARBLE.darkened(0.1)],
+		["box", Vector3(0, 4.5, 1.5), Vector3(24, 8, 12), PLASTER], ["prism", Vector3(0, 9.7, 1.5), Vector3(14, 2.4, 25), ROOF, 0.0, Vector3(0, 90, 0)],
+		["box", Vector3(0, 2.0, -4.55), Vector3(3, 4, 0.1), WOOD.darkened(0.2)], ["box", Vector3(0, 8.3, -5.6), Vector3(24, 0.6, 2.2), MARBLE]]
+	for i in 8:
+		bas.append(["cyl", Vector3(-10.5 + i * 3.0, 4.3, -6.2), Vector3(0.45, 7.4, 0.5), MARBLE])
+	d["basilica"] = {"parts": bas, "col": [["box", Vector3(0, 4, 0.5), Vector3(24.5, 8, 14)]],
+		"occ": ["box", Vector3(0, 8.5, 0.5), Vector3(26, 4, 15)], "fade": true}
+	d["insula"] = {"parts": [["box", Vector3(0, 5, 0), Vector3(12, 10, 10), PLASTER.darkened(0.08)],
+			["box", Vector3(0, 10.2, 0), Vector3(12.4, 0.4, 10.4), ROOF],
+			["box", Vector3(0, 1.4, -5.05), Vector3(2.2, 2.8, 0.1), WOOD], ["box", Vector3(-3.5, 1.6, -5.05), Vector3(2.4, 1.4, 0.1), RED, 0.3],
+			["box", Vector3(-3, 5, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(3, 5, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)],
+			["box", Vector3(-3, 8, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(3, 8, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)],
+			["box", Vector3(0, 6.5, -5.4), Vector3(12, 0.2, 0.8), WOOD]],
+		"col": [["box", Vector3(0, 5, 0), Vector3(12, 10, 10)]], "occ": ["box", Vector3(0, 7, 0), Vector3(12.4, 7, 10.4)], "fade": true}
+	d["cancello"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(10, 7, 0.4), METAL.darkened(0.2)],
+			["box", Vector3(0, 2.0, -0.22), Vector3(9.6, 0.15, 0.05), PLASMA, 3.0], ["box", Vector3(0, 4.5, -0.22), Vector3(9.6, 0.15, 0.05), PLASMA, 3.0],
+			["box", Vector3(0, 3.5, -0.24), Vector3(1.6, 1.6, 0.05), GOLD, 1.0]],
+		"col": [["box", Vector3(0, 3.5, 0), Vector3(10, 7, 0.6)]]}
 	return d
 
 
-func _build_props() -> void:
+func _build_props(only_missing: bool = false) -> void:
 	DirAccess.make_dir_recursive_absolute("res://scenes/props")
 	var defs := _prop_defs()
 	for pname: String in defs:
 		var def: Dictionary = defs[pname]
+		var out_path := "res://scenes/props/%s.tscn" % pname
+		if only_missing and ResourceLoader.exists(out_path):
+			prop_scenes[pname] = load(out_path)
+			continue
 		var root: Node3D
 		if def.has("col") or def.has("script"):
 			var sb := StaticBody3D.new()
@@ -525,12 +575,33 @@ func _build_props() -> void:
 #  MODELLI SEGNAPOSTO (rivolti verso -Z)
 # ==========================================================================================
 
-func _build_models() -> void:
-	DirAccess.make_dir_recursive_absolute("res://scenes/characters")
-	DirAccess.make_dir_recursive_absolute("res://scenes/enemies")
+func _build_models(only_missing: bool = false) -> void:
+	for dir in ["characters", "enemies", "npcs"]:
+		DirAccess.make_dir_recursive_absolute("res://scenes/" + dir)
+	var models := _model_defs()
+	for key: String in models:
+		var out_path := "res://scenes/%s.tscn" % key
+		if only_missing and ResourceLoader.exists(out_path):
+			continue
+		var root := Node3D.new()
+		root.name = "Model"
+		var gfx := Node3D.new()
+		gfx.name = "Graybox"
+		root.add_child(gfx)
+		gfx.owner = root
+		for p: Array in models[key]:
+			var mi := _part(gfx, root, p, 0.0)
+			if (p[3] as Color).a < 1.0:
+				mi.material_override = Fx.new_mat(p[3], float(p[4]) if p.size() > 4 else 0.0, true)
+		_save_scene(root, out_path)
+		root.free()
+	print("Modelli: %d" % models.size())
+
+
+func _model_defs() -> Dictionary:
 	var skin := Color(0.85, 0.65, 0.5)
 	var bronze := Color(0.7, 0.5, 0.25)
-	var models := {
+	return {
 		"characters/legionario": [
 			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), RED],
 			["box", Vector3(0, 1.05, 0), Vector3(0.9, 0.5, 0.6), METAL.lightened(0.2)],
@@ -628,21 +699,48 @@ func _build_models() -> void:
 			["box", Vector3(1.2, 1.8, -0.8), Vector3(0.12, 0.12, 2.2), WOOD],
 			["box", Vector3(1.2, 1.8, -1.8), Vector3(0.2, 1.1, 0.7), FIRE, 2.5],
 		],
+		# --- Personaggi non giocanti ---
+		"npcs/mercante": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.45, 1.6, 0), Color(0.75, 0.55, 0.2)],
+			["box", Vector3(0, 0.95, 0), Vector3(0.95, 0.12, 0.7), Color(0.45, 0.2, 0.55)],
+			["sphere", Vector3(0, 1.78, 0), Vector3(0.27, 0.52, 0), skin],
+			["cyl", Vector3(0, 2.05, 0), Vector3(0.22, 0.25, 0.26), Color(0.45, 0.2, 0.55)],
+			["box", Vector3(0.45, 0.8, 0.1), Vector3(0.3, 0.35, 0.2), Color(0.5, 0.35, 0.2)],
+		],
+		"npcs/fabbro": [
+			["capsule", Vector3(0, 0.9, 0), Vector3(0.5, 1.75, 0), Color(0.5, 0.36, 0.25)],
+			["box", Vector3(0, 0.8, -0.38), Vector3(0.75, 1.1, 0.08), Color(0.25, 0.18, 0.12)],
+			["sphere", Vector3(0, 1.85, 0), Vector3(0.3, 0.55, 0), skin],
+			["box", Vector3(0.55, 1.0, -0.2), Vector3(0.07, 0.7, 0.07), WOOD],
+			["box", Vector3(0.55, 1.4, -0.2), Vector3(0.3, 0.18, 0.18), METAL],
+		],
+		"npcs/prefetto": [
+			["cyl", Vector3(0, 0.8, 0), Vector3(0.32, 1.6, 0.55), Color(0.93, 0.92, 0.88)],
+			["box", Vector3(0.15, 1.05, -0.2), Vector3(0.12, 1.2, 0.3), Color(0.5, 0.1, 0.4), 0.0, Vector3(0, 0, 20)],
+			["sphere", Vector3(0, 1.78, 0), Vector3(0.27, 0.52, 0), skin],
+			["torus", Vector3(0, 1.95, 0), Vector3(0.22, 0.3, 0), GOLD, 0.8],
+		],
+		"npcs/vestale": [
+			["cyl", Vector3(0, 0.8, 0), Vector3(0.28, 1.6, 0.5), Color(0.97, 0.96, 0.93)],
+			["sphere", Vector3(0, 1.75, 0), Vector3(0.25, 0.48, 0), skin],
+			["cyl", Vector3(0, 1.85, 0.05), Vector3(0.3, 0.6, 0.38), Color(0.9, 0.9, 0.95)],
+			["cyl", Vector3(0.35, 1.1, -0.3), Vector3(0.18, 0.12, 0.1), GOLD],
+			["sphere", Vector3(0.35, 1.3, -0.3), Vector3(0.14, 0.3, 0), FIRE, 5.0],
+		],
+		"npcs/guardia": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), Color(0.2, 0.3, 0.5)],
+			["box", Vector3(0, 1.05, 0), Vector3(0.9, 0.5, 0.6), METAL.lightened(0.15)],
+			["sphere", Vector3(0, 1.75, 0), Vector3(0.3, 0.55, 0), METAL.lightened(0.2)],
+			["box", Vector3(0, 2.0, 0.05), Vector3(0.08, 0.22, 0.55), Color(0.2, 0.4, 0.9), 1.0],
+			["cyl", Vector3(0.5, 1.3, -0.1), Vector3(0.04, 2.6, 0.04), WOOD],
+			["cyl", Vector3(0.5, 2.7, -0.1), Vector3(0.0, 0.35, 0.08), PLASMA, 3.0],
+		],
+		"npcs/cittadino": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.4, 1.55, 0), Color(0.72, 0.65, 0.5)],
+			["box", Vector3(0, 0.8, 0), Vector3(0.85, 0.1, 0.62), Color(0.4, 0.3, 0.2)],
+			["sphere", Vector3(0, 1.75, 0), Vector3(0.27, 0.52, 0), skin],
+		],
 	}
-	for key: String in models:
-		var root := Node3D.new()
-		root.name = "Model"
-		var gfx := Node3D.new()
-		gfx.name = "Graybox"
-		root.add_child(gfx)
-		gfx.owner = root
-		for p: Array in models[key]:
-			var mi := _part(gfx, root, p, 0.0)
-			if (p[3] as Color).a < 1.0:
-				mi.material_override = Fx.new_mat(p[3], float(p[4]) if p.size() > 4 else 0.0, true)
-		_save_scene(root, "res://scenes/%s.tscn" % key)
-		root.free()
-	print("Modelli: %d" % models.size())
 
 
 # ==========================================================================================
@@ -759,6 +857,8 @@ func _build_level() -> void:
 	exit.name = "UscitaOstiaNova"
 	exit.position = Vector3(50, 0, -905)
 	exit.set("title", "Ostia Nova")
+	exit.set("target_level", "ostia_nova")
+	exit.set("target_spawn", "DaLazio")
 	var ecs := CollisionShape3D.new()
 	var ebs := BoxShape3D.new()
 	ebs.size = Vector3(10, 4, 4)
@@ -768,6 +868,13 @@ func _build_level() -> void:
 	level_root.add_child(exit)
 	exit.owner = level_root
 	ecs.owner = level_root
+
+	# Punto di arrivo tornando dalla città (porta sud di Ostia Nova)
+	var from_hub := Marker3D.new()
+	from_hub.name = "DaOstia"
+	from_hub.position = Vector3(50, 0, -878)
+	level_root.add_child(from_hub)
+	from_hub.owner = level_root
 
 	print("Calcolo navmesh (può richiedere un po')...")
 	var t0 := Time.get_ticks_msec()

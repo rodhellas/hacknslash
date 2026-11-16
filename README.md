@@ -8,7 +8,7 @@ Motore: **Godot 4.7.2** (GDScript, renderer Forward+). Grafica attuale: **graybo
 
 1. Apri Godot 4.7.2 → *Importa* → seleziona `project.godot`.
 2. Premi **F5**: parte il menu principale (Nuova partita → slot → classe → nome).
-3. Per provare subito il livello senza menu: apri `scenes/levels/level_01.tscn` e premi **F6** (eroe di prova Legionario, salvataggi disattivati).
+3. Per provare subito un livello senza menu: apri `scenes/levels/level_01.tscn` (o `level_02_ostia.tscn`, la città) e premi **F6** (eroe di prova Legionario, salvataggi disattivati).
 
 ## Comandi
 
@@ -19,6 +19,9 @@ Motore: **Godot 4.7.2** (GDScript, renderer Forward+). Grafica attuale: **graybo
 | Clic destro, 1, 2, 3, 4 | Abilità |
 | Q | Pozione (60% vita, ricarica 30 s) |
 | E | Interagisci con l'oggetto più vicino |
+| T | Portale per Ostia Nova (in città clicca il portale per tornare dov'eri) |
+| Clic su un altare attivato | Viaggio rapido verso gli altri altari (anche tra livelli) |
+| Clic destro sullo zaino (con mercante/fabbro aperto) | Vendi / smonta |
 | WASD | Movimento diretto (alternativa al clic) |
 | I / C | Personaggio e inventario |
 | TAB | Mappa grande |
@@ -28,12 +31,17 @@ Motore: **Godot 4.7.2** (GDScript, renderer Forward+). Grafica attuale: **graybo
 ## Cosa c'è
 
 - **4 classi** con 6 abilità ciascuna, sbloccate ai livelli 1, 1, 2, 3, 4, 6: Legionario, Gladiatore, Sagittario, Augure.
-- **Loot stile Diablo**: rarità comune/magico/raro/leggendario, affissi casuali, 9 leggendari, loot "intelligente" per la classe, confronto con l'oggetto indossato.
+- **Loot stile Diablo**: rarità comune/magico/raro/leggendario, affissi casuali, loot "intelligente" per la classe, confronto con l'oggetto indossato.
+- **12 leggendari con poteri** che cambiano il modo di giocare (es. esplosioni sui critici, proiettili perforanti, scudo d'emergenza).
+- **Ostia Nova, la città-hub**: mercante (compra / vendi / riacquista), fabbro (smonta gli oggetti in materiali e forgia oggetti magici, rari e leggendari), prefetto, vestale, guardie e cittadini con dialoghi.
+- **Viaggi**: altari con viaggio rapido tra livelli, portale cittadino (T), uscite che collegano i livelli.
+- **Effetti e audio segnaposto**: particelle per colpi, morti, esplosioni, scie dei proiettili e level up; effetti sonori sintetizzati da codice (sostituibili con file veri in `audio/sfx/`).
 - **9 slot di equipaggiamento**, zaino da 40 caselle, statistiche (Forza/Destrezza/Intelligenza/Vitalità, armatura, critico, velocità d'attacco...).
 - **Nemici a zone** (EncounterZone): compaiono quando ti avvicini, il gruppo si attiva insieme, tornano a casa se scappi. Ci sono gli elite (Campioni, blu) e un boss unico (Brenno, arancione).
 - **Navigazione**: navmesh + evitamento RVO, i nemici aggirano gli ostacoli.
 - **Grafica stile D3**: telecamera fissa verso nord, oggetti che diventano trasparenti quando coprono l'eroe, minimappa + mappa grande, globi vita/risorsa, numeri di danno, nomi del loot colorati e colonne di luce sui rari.
 - **Menu principale con 3 slot di salvataggio** (JSON in `user://saves/`), altari-checkpoint con salvataggio automatico, rinascita all'ultimo altare.
 - **Livello 1 "Campagna di Lazio Prime"**: dalla villa di famiglia alla porta di Ostia Nova, percorso di circa 1150 m (circa 3 minuti a piedi senza combattere), con zone laterali esplorabili.
+- **Livello 2 "Ostia Nova"**: la città-hub (circa 100 × 110 m), raggiunta dall'uscita del livello 1.
 
 Vedi [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) per il design e [CLAUDE.md](CLAUDE.md) per l'architettura del codice.

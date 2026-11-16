@@ -1,8 +1,11 @@
 class_name LevelExit
 extends Area3D
 ## Uscita del livello: quando l'eroe ci entra, il livello è completato.
+## Se target_level è impostato (id in Game.LEVELS) porta a quel livello, nel Marker3D target_spawn;
+## altrimenti mostra il pannello di fine livello.
 
 @export var target_level := ""
+@export var target_spawn := ""
 @export var title := "Ostia Nova"
 
 var _done := false

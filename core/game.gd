@@ -4,17 +4,29 @@ extends Node
 
 const SAVE_DIR := "user://saves"
 const SLOT_COUNT := 3
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 const MENU_SCENE := "res://scenes/main_menu.tscn"
 const LEVELS := {
 	"level_01": "res://scenes/levels/level_01.tscn",
+	"ostia_nova": "res://scenes/levels/level_02_ostia.tscn",
 }
+## Nomi dei livelli (elenco degli altari, portale) nell'ordine della campagna.
+const LEVEL_TITLES := {
+	"level_01": "Campagna di Lazio Prime",
+	"ostia_nova": "Ostia Nova",
+}
+## Città-hub raggiungibile con il portale cittadino (tasto T).
+const HUB := "ostia_nova"
 
 var hero: HeroData
 var current_slot := -1
 var level: Level = null
 ## true = tutte le abilità sbloccate da subito (comodo per provare le classi).
 var debug_unlock_all := false
+## Dove far comparire l'eroe nel prossimo livello: nome di un Marker3D o id di un altare.
+var pending_spawn := ""
+## Oggetti venduti al mercante in questa sessione (si possono ricomprare allo stesso prezzo).
+var buyback: Array = []
 
 
 func _ready() -> void:
@@ -100,6 +112,25 @@ func save_game() -> bool:
 func delete_slot(slot: int) -> void:
 	if FileAccess.file_exists(slot_path(slot)):
 		DirAccess.remove_absolute(slot_path(slot))
+
+
+func level_title(level_id: String) -> String:
+	return String(LEVEL_TITLES.get(level_id, level_id))
+
+
+## Viaggio verso un altro livello. spawn = nome di un Marker3D o id di un altare;
+## pos = posizione esatta (ritorno dal portale). Senza nessuno dei due: PlayerStart / ultimo altare.
+func travel(level_id: String, spawn: String = "", pos: Variant = null) -> void:
+	if hero == null:
+		return
+	if level != null and is_instance_valid(level):
+		level.store_state()
+	hero.level_id = level_id
+	hero.has_position = pos is Vector3
+	if pos is Vector3:
+		hero.position = pos
+	pending_spawn = spawn
+	go_to_level.call_deferred(level_id)
 
 
 func go_to_level(level_id: String) -> void:

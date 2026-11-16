@@ -32,6 +32,8 @@ func break_open(_p: Player) -> void:
 	remove_from_group("interactable")
 	remove_from_group("breakable")
 	Fx.ring(Game.world_root(), global_position, 1.2, Color(0.8, 0.6, 0.4), 0.25)
+	Fx.burst(Game.world_root(), global_position + Vector3(0, 0.5, 0), Color(0.7, 0.38, 0.22), 10, 4.0, 0.15, 0.6, -12.0, 80.0)
+	Sfx.play("break", global_position)
 	if randf() < gold_chance:
 		var lvl := Game.level.area_level if Game.level else 1
 		var d := LootDrop.make_gold(randi_range(2, 6) * lvl)

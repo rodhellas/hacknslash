@@ -32,6 +32,10 @@ var lore_text: RichTextLabel
 var end_panel: Control
 var end_title: Label
 var end_text: Label
+var waypoint_panel: Control
+var waypoint_list: VBoxContainer
+var cast_bar: ProgressBar
+var cast_label: Label
 var _banner_t := 0.0
 var _msg_t := 0.0
 var _warn_t := 0.0
@@ -167,6 +171,31 @@ func _ready() -> void:
 	])
 	end_title = end_panel.find_child("Title", true, false)
 	end_text = end_panel.find_child("Body", true, false)
+	waypoint_panel = _make_panel(root, "Viaggio rapido", "Scegli un altare già attivato.",
+		[["Chiudi", func() -> void: waypoint_panel.visible = false]])
+	waypoint_list = VBoxContainer.new()
+	waypoint_list.add_theme_constant_override("separation", 6)
+	var wbody := waypoint_panel.find_child("Body", true, false) as Label
+	wbody.get_parent().add_child(waypoint_list)
+	wbody.get_parent().move_child(waypoint_list, wbody.get_index() + 1)
+
+	# --- Barra di canalizzazione (portale cittadino) ---
+	var cast_box := VBoxContainer.new()
+	cast_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	cast_box.offset_left = -160
+	cast_box.offset_right = 160
+	cast_box.offset_top = -230
+	cast_box.offset_bottom = -190
+	cast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(cast_box)
+	cast_label = _label(15, Color(0.7, 0.85, 1.0))
+	cast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cast_label.text = "Portale verso %s" % Game.level_title(Game.HUB)
+	cast_box.add_child(cast_label)
+	cast_bar = _bar(Color(0.35, 0.65, 1.0), Vector2(320, 12))
+	cast_box.add_child(cast_bar)
+	cast_box.visible = false
+	cast_bar.set_meta("box", cast_box)
 
 
 func bind(p: Player, l: Level) -> void:
@@ -207,7 +236,12 @@ func _process(delta: float) -> void:
 		sl.cd_total = maxf(float(ab.get("cooldown", 1.0)), 0.01)
 		sl.unaffordable = player.resource < float(ab.get("cost", 0.0))
 	potion_slot.cd_left = maxf(player.potion_cd, 0.0)
-	potion_slot.cd_total = Player.POTION_CD
+	potion_slot.cd_total = player.potion_cooldown()
+	var cast_box: Control = cast_bar.get_meta("box")
+	cast_box.visible = player.portal_t > 0.0
+	if cast_box.visible:
+		cast_bar.max_value = Player.PORTAL_TIME
+		cast_bar.value = Player.PORTAL_TIME - player.portal_t
 
 	# Bersaglio: il nemico sotto il cursore, altrimenti l'ultimo colpito
 	var t: Enemy = null
@@ -286,6 +320,32 @@ func show_lore(title: String, text: String) -> void:
 	lore_title.text = title
 	lore_text.text = text
 	lore_panel.visible = true
+
+
+## Elenco degli altari attivati, raggruppati per livello (viaggio rapido).
+func show_waypoints(current_id: String = "") -> void:
+	for c in waypoint_list.get_children():
+		c.queue_free()
+	var wps: Dictionary = Game.hero.waypoints
+	for lvl: String in Game.LEVEL_TITLES:
+		var ids: Array = []
+		for id: String in wps:
+			if String(wps[id]["level"]) == lvl:
+				ids.append(id)
+		if ids.is_empty():
+			continue
+		var head := _label(18, GOLD)
+		head.text = Game.level_title(lvl)
+		waypoint_list.add_child(head)
+		for id: String in ids:
+			var b := Button.new()
+			b.text = String(wps[id]["title"]) + ("   (sei qui)" if id == current_id else "")
+			b.disabled = id == current_id
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(360, 36)
+			b.pressed.connect(func() -> void: level.travel_to_waypoint(id))
+			waypoint_list.add_child(b)
+	waypoint_panel.visible = true
 
 
 func show_end(title: String, text: String) -> void:

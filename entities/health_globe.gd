@@ -45,5 +45,10 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node) -> void:
 	if body is Player and not (body as Player).dead:
 		var p := body as Player
-		p.heal(float(p.stats["max_life"]) * HEAL_PCT)
+		var vesta := p.has_power("vesta")
+		p.heal(float(p.stats["max_life"]) * HEAL_PCT * (2.0 if vesta else 1.0))
+		if vesta:
+			p.resource = minf(p.resource + float(p.stats["resource_max"]) * 0.2, p.stats["resource_max"])
+		Fx.burst(Game.world_root(), global_position + Vector3(0, 0.6, 0), Color(1.0, 0.2, 0.25), 10, 3.0, 0.1, 0.4, 2.0)
+		Sfx.play("potion", null, -6.0)
 		queue_free()

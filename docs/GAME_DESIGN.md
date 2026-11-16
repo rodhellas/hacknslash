@@ -8,7 +8,10 @@
 
 ## Trama
 **Da scrivere.** Per ora c'è solo lo spunto: il protagonista parte dalla villa di famiglia e deve raggiungere **Ostia Nova**, la città più vicina, per fare qualcosa (ancora da decidere).
-Tutti i punti in cui inserire la storia sono segnati con `[TRAMA]` nei testi dei cartelli del livello 1 e nel testo di fine livello (`exit_text` del nodo radice di `level_01.tscn`).
+Tutti i punti in cui inserire la storia sono segnati con `[TRAMA]`:
+- **dialoghi degli NPC**: tutti in `data/npc_db.gd` (un solo file da modificare);
+- cartelli del livello 1 e della città (`LoreSign`, testo nell'Inspector);
+- `intro_text` del nodo radice di `level_02_ostia.tscn` (mostrato alla prima visita della città).
 
 ## Classi (data/hero_classes.gd)
 | Classe | Statistica | Risorsa | Stile |
@@ -33,7 +36,41 @@ Abilità: clic sinistro (primaria, genera risorsa), clic destro (secondaria), ta
 - Loot intelligente: il 70% degli oggetti è utilizzabile dalla classe e la statistica principale esce più spesso.
 - Restrizioni armi: Legionario gladio/spatha + scudo; Gladiatore gladio/ascia/spatha + pugnale/scudo; Sagittario arco + faretra; Augure scettro + focus.
 - Globi di vita (20% vita) e sesterzi (oro, raccolti automaticamente).
-- **Da fare**: venditori, fabbro, gemme, set, poteri leggendari veri (ora sono solo statistiche).
+- **Poteri leggendari** (`ItemDB.POWERS`): ogni leggendario ha un potere mostrato in arancione nel tooltip. I salvataggi vecchi ricevono il potere in base al nome.
+
+| Leggendario | Slot | Potere |
+|---|---|---|
+| Gladio di Spartaco | arma | uccisione: cura 3% e +5% danni per 5 s (max 5) |
+| Scure di Commodo | arma | i critici esplodono (60% danno arma, 3 m) |
+| Arco di Diana Stellare | arma | i proiettili trapassano tutti i nemici |
+| Lituo di Romolo | arma | uccisione: −1 s a tutte le ricariche |
+| Scutum dell'Ultima Legione | secondaria | sotto il 30% vita: scudo del 30% vita (ogni 60 s) |
+| Elmo di Scipione | elmo | +50% danni contro Campioni e boss |
+| Anello di Cesare | anello | raccogliere sesterzi cura il 2% |
+| Calzari di Mercurio | calzari | dopo un movimento: +30% velocità d'attacco per 4 s |
+| Toga del Pontefice | armatura | 25% di non consumare risorsa |
+| Manicae di Ercole | guanti | attacco principale: 15% onda d'urto (150%) |
+| Bulla di Vesta | amuleto | globi di vita doppi + 20% risorsa |
+| Ocreae di Achille | gambali | pozione: metà ricarica + 2 s di invulnerabilità |
+
+## Economia (data/item_db.gd)
+- **Mercante**: vende 16 oggetti del livello dell'eroe (4 rari, 12 magici), rinnovati a ogni ingresso in città. Prezzo = valore × 5. Valore di vendita = [5, 15, 40, 120] per rarità × (1 + 0,25 × (liv. oggetto − 1)). Riacquisto degli ultimi 12 oggetti venduti allo stesso prezzo di vendita.
+- **Fabbro**: smonta gli oggetti in materiali (comune → rottami di bronzo, magico → rottami + essenza arcana, raro → essenze, leggendario → frammento divino + essenze) e forgia oggetti del livello dell'eroe per la propria classe:
+  magico = 25 sesterzi × livello + 4 rottami; raro = 80 × livello + 8 rottami + 4 essenze; leggendario (casuale) = 300 × livello + 2 frammenti + 10 essenze.
+- **Da fare**: gemme, set, forziere personale (stash).
+
+## Viaggi
+- **Altari**: si attivano avvicinandosi (salvano e diventano il punto di rinascita del loro livello). Cliccandoli si apre il **viaggio rapido** verso tutti gli altari attivati, anche di altri livelli.
+- **Portale cittadino** (T, 1,5 s di canalizzazione, si interrompe muovendosi o subendo danni): porta a Ostia Nova; in città compare il portale per tornare nel punto esatto di partenza. Disponibile dopo aver visitato la città.
+- **Uscite** (`LevelExit`): con `target_level` + `target_spawn` portano a un altro livello (nel Marker3D indicato).
+
+## Livello 2 – Ostia Nova (scenes/levels/level_02_ostia.tscn, città-hub)
+Generata da `tools/build_ostia.gd`. Nord = −Z.
+- **Porta sud** (arrivo dalla campagna; l'uscita riporta al livello 1, vicino alla porta).
+- **Cardo** fino al **Foro**: fontana, portici, **Altare del Foro** (viaggio rapido), **mercato** a ovest (Tito Mercatore), **fucina** a est (Decimo Ferrario).
+- **Basilica** del prefetto Aulo Vetranio a nord del foro; **tempio di Vesta** a nord-est (vestale Lucilla).
+- **Porta del porto** a nord: sbarrata (atto 2).
+- Guardie e cittadini con frasi casuali.
 
 ## Nemici (data/enemy_db.gd)
 Predone, Lupo cibernetico, Drone ribelle (a distanza), Barbaro, Frombolier (a distanza), Bruto (colpo ad area), Lemure (spettro), Legionario rinnegato, **Brenno il Rinnegato** (boss unico: carica + colpo ad area).
@@ -60,8 +97,14 @@ Livello dei nemici: da 1 a 5 lungo il percorso. Ci sono 24 zone di nemici e 8 fo
 - Minimappa (telecamera ortografica) + mappa grande con TAB; le icone sono sul livello visivo 11.
 - Barre della vita sopra i nemici, riquadro del bersaglio in alto, nomi del loot colorati, colonne di luce per rari e leggendari.
 
+## Effetti e audio (segnaposto)
+- `core/fx.gd`: particelle CPU (`burst`, `explosion`, `pillar`, `trail`) e fumetti degli NPC (`popup_speech`).
+- `core/sfx.gd`: 24 effetti sonori **sintetizzati da codice** (nessun file). Per usare un suono vero basta mettere `res://audio/sfx/<nome>.wav` (o `.ogg`): ha la precedenza. Nomi: swing, hit, crit, enemy_die, player_hurt, enemy_attack, cast, projectile, dash, explosion, gold, pickup, rare_drop, legendary, levelup, potion, chest, break, checkpoint, portal, ui_click, coins, anvil, talk. Volume nel menu di pausa (salvato in `user://settings.cfg`).
+- Manca la **musica**.
+
 ## Idee / prossimi passi
-- Scrivere la trama e il livello 2 (Ostia Nova: città hub con NPC, venditori, missioni).
+- Scrivere la trama (dialoghi in `data/npc_db.gd`) e le missioni.
+- Atto 2: il porto di Ostia Nova.
 - Sostituire i modelli segnaposto con quelli di Tripo + animazioni Mixamo.
-- Effetti (particelle, shader), audio e musica.
+- Musica, suoni veri, effetti con shader.
 - Nebbia di guerra sulla mappa, skill alternative/rune come in D3, opzioni grafiche e di rimappatura dei tasti.
