@@ -64,6 +64,8 @@ func _activate(p: Player) -> void:
 	Game.hero.checkpoint_id = checkpoint_id
 	_set_flame(true)
 	if first:
+		Quests.notify("altar", checkpoint_id)
+	if first:
 		Fx.ring(Game.world_root(), global_position, 4.5, Color(0.3, 0.7, 1.0), 0.6)
 		Fx.pillar(Game.world_root(), global_position, Color(0.4, 0.7, 1.0), 8.0, 1.0)
 		Sfx.play("checkpoint", global_position)

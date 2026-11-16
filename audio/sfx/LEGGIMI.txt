@@ -1,0 +1,8 @@
+EFFETTI SONORI
+==============
+Gli effetti sono sintetizzati da codice (core/sfx.gd). Per usare un suono vero metti qui
+un file con lo stesso nome (.wav o .ogg): ha la precedenza su quello sintetizzato.
+
+Nomi: swing, hit, crit, enemy_die, player_hurt, enemy_attack, cast, projectile, dash, explosion,
+gold, pickup, rare_drop, legendary, levelup, potion, chest, break, checkpoint, portal,
+ui_click, coins, anvil, talk

@@ -91,6 +91,9 @@ func _build_main() -> VBoxContainer:
 	v.add_child(_button("Carica partita", func() -> void:
 		slot_mode = "load"
 		_show("slots")))
+	var opts := OptionsMenu.new()
+	add_child(opts)
+	v.add_child(_button("Opzioni", func() -> void: opts.open()))
 	v.add_child(_button("Esci", func() -> void: get_tree().quit()))
 	return v
 

@@ -19,16 +19,21 @@ Design e stato del gioco: `docs/GAME_DESIGN.md`. Panoramica: `README.md`.
 ## Struttura
 ```
 core/       game.gd (autoload "Game": partita, salvataggi, cambio scena, viaggi), hero_data.gd, item.gd,
-            abilities.gd (esecuzione abilità), loot.gd, fx.gd (materiali/effetti/particelle), sfx.gd (suoni), layers.gd
+            abilities.gd (esecuzione abilità), loot.gd, fx.gd (materiali/effetti/particelle), sfx.gd (suoni),
+            music.gd (musica dei livelli), settings.gd (opzioni video/audio/tasti), quests.gd (logica missioni), layers.gd
 data/       hero_classes.gd (classi+abilità), enemy_db.gd, item_db.gd (basi, affissi, leggendari+poteri, drop,
-            prezzi, materiali, ricette del fabbro), npc_db.gd (NPC e TUTTI i loro dialoghi)
+            prezzi, materiali, ricette del fabbro), npc_db.gd (NPC e i loro dialoghi), quest_db.gd (missioni e loro testi)
 entities/   player.gd, enemy.gd, npc.gd, projectile.gd, loot_drop.gd, health_globe.gd
 world/      level.gd (script radice dei livelli), iso_camera.gd, occlusion_fader.gd, encounter_zone.gd (@tool),
-            chest.gd, breakable.gd, checkpoint.gd (altare + viaggio rapido), level_exit.gd, lore_sign.gd, town_portal.gd
-ui/         main_menu.gd, hud.gd, inventory_ui.gd, trade_ui.gd (mercante/fabbro), pause_menu.gd, minimap.gd, globe.gd, skill_slot.gd
+            chest.gd, breakable.gd, checkpoint.gd (altare + viaggio rapido), level_exit.gd, lore_sign.gd, town_portal.gd,
+            stash.gd (forziere personale), quest_gate.gd (cancello che si apre con un flag di missione)
+ui/         main_menu.gd, hud.gd, inventory_ui.gd, trade_ui.gd (mercante/fabbro/forziere), options_menu.gd,
+            pause_menu.gd, minimap.gd, globe.gd, skill_slot.gd
 tools/      build_world.gd (GENERATORE grayboxing: props, modelli, livello 1 + navmesh),
-            build_ostia.gd (generatore della città, estende build_world.gd), test_ostia.gd (test automatico)
-scenes/     main_menu.tscn, levels/level_01.tscn, levels/level_02_ostia.tscn (+ navmesh .res),
+            build_ostia.gd / build_porto.gd (città e porto, estendono build_world.gd),
+            test_ostia.gd / test_atto2.gd (test automatici)
+audio/      music/ e sfx/ (vuote: vedi LEGGIMI.txt; i suoni sono sintetizzati, la musica manca)
+scenes/     main_menu.tscn, levels/level_01.tscn, level_02_ostia.tscn, level_03_porto.tscn (+ navmesh .res),
             props/*.tscn, characters/*.tscn, enemies/*.tscn, npcs/*.tscn
 ```
 - Quasi tutto è **guidato dai dati** (dizionari in `data/`). Per bilanciare, cambia i numeri lì.
@@ -47,8 +52,10 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 ... --script res://tools/build_world.gd -- level    # solo livello 1 (+ navmesh)
 ... --script res://tools/build_world.gd -- missing  # solo props e modelli che non esistono ancora
 ... --script res://tools/build_ostia.gd             # città di Ostia Nova (+ props/modelli NPC mancanti)
+... --script res://tools/build_porto.gd             # livello 3, porto (+ props/modelli mancanti)
 ```
-- `build_ostia.gd` estende `build_world.gd` (riusa `_place`, `_strip`, `_part`...) e sovrascrive `_generate()` e `_allowed()`. Rigenerarla **sovrascrive `level_02_ostia.tscn`**.
+- `build_ostia.gd` e `build_porto.gd` estendono `build_world.gd` (riusano `_place`, `_strip`, `_part`...) e sovrascrivono `_generate()` e `_allowed()`. Rigenerarli **sovrascrive il loro .tscn**. Nuovi props/modelli si aggiungono in `build_world.gd` (`_prop_defs`, `_model_defs`): i generatori creano solo quelli mancanti.
+- Nel porto il mare è a est (`_shore_x`), i bordi sull'acqua sono ostacoli invisibili, quelli sulla terra sono `isolato`/`scogliera`.
 - Il livello 1 ha anche il marker `DaOstia` e l'uscita con `target_level = "ostia_nova"`: sono già nel .tscn e nel generatore.
 - È deterministico (seed 3000). **Rigenerare il livello sovrascrive `level_01.tscn`**: dopo modifiche a mano nell'editor, NON rigenerare il livello (props e modelli sì, ma attenzione: rigenerare un prop sovrascrive le sostituzioni Tripo fatte in quella scena).
 - La navmesh è salvata in `scenes/levels/level_01_navmesh.res`. Se modifichi il livello nell'editor: seleziona il nodo `World` (NavigationRegion3D) → *Bake NavigationMesh*.
@@ -62,6 +69,13 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Ogni altare (`Checkpoint`) registra `hero.waypoints[id] = {level, title}` e `flags["cp_last_<livello>"]` (rinascita per livello).
 - Nel nodo radice: `is_town` (città: portale di ritorno) e `intro_text` (mostrato alla prima visita).
 
+## Missioni (data/quest_db.gd, core/quests.gd)
+- Obiettivi in sequenza: kill, kill_unique, enter, altar, talk, salvage, chest. Eventi inviati con `Quests.notify(tipo, bersaglio)`.
+- Gli NPC prima provano `Quests.talk(npc_id)` (consegna/affida), poi aprono negozio/dialogo. Segni "!" / "?" sopra la testa.
+- `Game.quests_changed` aggiorna HUD (elenco a sinistra, diario J), segni degli NPC e `QuestGate`.
+- Missioni senza `giver` partono da sole (`Quests.start_automatic`, a ogni ingresso in un livello). Obiettivi già fatti in passato vengono saltati (`_check_already`).
+- Il cancello nord di Ostia Nova (`QuestGate`, fuori dal nodo World) si apre col flag `porto_aperto` (missione "Il porto sbarrato").
+
 ## Insidie note (importante)
 - **GDScript tipizzato**: `var x := dict["k"]` è un errore di compilazione ("Cannot infer the type"). Usa `var x: float = ...` oppure `float(...)`.
 - Script lanciati con `--script` (tool/test headless): le classi che citano l'autoload `Game` **non compilano** se sono referenziate staticamente dallo script principale (vengono compilate prima che esista l'autoload). Nei tool/test usa `load("res://...").new()` e variabili non tipizzate. Nel gioco normale non è un problema.
@@ -72,14 +86,17 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - La superficie della navmesh è a **y = 0.5** (non 0); le "isole" sopra gli oggetti da 2 m in su. Le soglie sono a 1.0.
 - Gli script dei nodi girano anche nei generatori (es. `Npc._ready`): non modificare lì proprietà salvate nella scena (rotazione, posizione), altrimenti finiscono nel .tscn.
 - Timer con lambda: usa `nodo.create_tween().tween_callback(...).set_delay(t)` invece di `get_tree().create_timer()`, così il callback non parte se il nodo sparisce cambiando livello.
-- `Sfx.play` non fa nulla in headless.
+- `Sfx.play` / `Music.play` non fanno nulla in headless; `DisplayServer.keyboard_get_keycode_from_physical` non è supportato in headless.
+- I nemici bloccano fisicamente l'eroe: nei test che camminano tra i nemici bisogna "combattere" (vedi `_walk_to(..., fight)` in test_atto2.gd).
 
 ## Test
 - Controllo veloce di compilazione: `--headless --import --path .`
 - **`tools/test_ostia.gd`** (41 controlli): `--headless --path . --fixed-fps 60 --script res://tools/test_ostia.gd`. Uscita del livello 1 → città, NPC, altare, mercante (compra/vendi/riacquista), fabbro (smonta/forgia), poteri leggendari, viaggio rapido, portale, salvataggio. Usa e cancella lo slot 3.
+- **`tools/test_atto2.gd`** (53 controlli): missioni dell'atto 1 e 2, segni degli NPC, cancello, forziere personale, porto percorso a piedi fino al faro, Vulso e rinforzi, portale, diario, rimappatura tasti, salvataggio. Ripristina il forziere personale vero.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 
 ## Stato (16-11-2026)
 Fatto: menu + 3 slot di salvataggio, 4 classi complete, loot/equipaggiamento/inventario, nemici a zone con navmesh e RVO, elite e boss, grafica stile D3 (trasparenza, minimappa, HUD a globi), livello 1 in grayboxing (circa 1150 m).
 Fatto il 16-11: città-hub Ostia Nova (livello 2) con 11 NPC, mercante e fabbro (sesterzi, materiali, forgia), 12 leggendari con poteri, viaggio rapido dagli altari, portale cittadino (T), particelle ed effetti sonori sintetizzati, volume nel menu di pausa, salvataggi versione 2 (compatibili con i vecchi).
-Da fare: trama (dialoghi in `data/npc_db.gd`, segnaposto `[TRAMA]`), atto 2 (porto), musica e suoni veri, modelli Tripo, gemme/set/stash, bilanciamento dell'economia.
+Fatto il 16-11 (2): missioni (6, atti 1-2) con diario e segni sugli NPC, livello 3 "Porto di Ostia Nova" (circa 560 m, 20 zone, boss Vulso il Corsaro che chiama rinforzi, 5 nuovi nemici), forziere personale condiviso, opzioni (video, audio, rimappatura tasti) dal menu principale e dalla pausa, aggancio per la musica.
+Da fare: trama (testi in `data/quest_db.gd` e `data/npc_db.gd`, segnaposto `[TRAMA]`), musica e suoni veri, modelli Tripo, gemme/set, atto 3, bilanciamento.

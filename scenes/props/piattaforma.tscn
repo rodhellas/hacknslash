@@ -1,0 +1,62 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tp1gc"]
+albedo_color = Color(0.35999998, 0.378, 0.414, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_gmn5l"]
+top_radius = 7.0
+bottom_radius = 7.0
+height = 0.1
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3m7hk"]
+albedo_color = Color(0.2, 0.9, 1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.2, 0.9, 1, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="TorusMesh" id="TorusMesh_3op71"]
+inner_radius = 6.2
+outer_radius = 6.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m3ism"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.72, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vf2c4"]
+size = Vector3(6, 0.02, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_yoqc6"]
+size = Vector3(0.6, 0.02, 6)
+
+[node name="Piattaforma" type="Node3D" unique_id=920953950]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=340457917]
+
+[node name="cyl_0" type="MeshInstance3D" parent="Graybox" unique_id=247870675]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+material_override = SubResource("StandardMaterial3D_tp1gc")
+mesh = SubResource("CylinderMesh_gmn5l")
+
+[node name="torus_1" type="MeshInstance3D" parent="Graybox" unique_id=2053380681]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
+material_override = SubResource("StandardMaterial3D_3m7hk")
+cast_shadow = 0
+mesh = SubResource("TorusMesh_3op71")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=1370939871]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, 0)
+material_override = SubResource("StandardMaterial3D_m3ism")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_vf2c4")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=43739702]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, 0)
+material_override = SubResource("StandardMaterial3D_m3ism")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_yoqc6")

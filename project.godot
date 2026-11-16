@@ -86,6 +86,10 @@ town_portal={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":84)]
 }
+quest_log={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":74)]
+}
 pause={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":4194305)]

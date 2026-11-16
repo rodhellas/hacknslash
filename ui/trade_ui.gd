@@ -1,8 +1,9 @@
 class_name TradeUI
 extends CanvasLayer
-## Pannello a sinistra per gli NPC con un mestiere (l'inventario si apre a destra):
+## Pannello a sinistra (l'inventario si apre a destra) per:
 ##   Mercante: compra (clic sulla merce), vendi (clic destro su un oggetto dello zaino), riacquista.
 ##   Fabbro:   smonta (clic destro su un oggetto dello zaino) e forgia nuovi oggetti con i materiali.
+##   Forziere personale (stash): clic = riprendi nello zaino, clic destro sullo zaino = deposita.
 ## Prezzi, materiali e ricette sono in data/item_db.gd (SELL_VALUE, BUY_MULT, salvage_yield, RECIPES).
 
 const STOCK_SIZE := 16
@@ -11,7 +12,9 @@ const CLOSE_DIST := 8.0
 
 var player: Player
 var inv: InventoryUI
-var npc: Npc = null
+## Chi ha aperto il pannello (NPC o forziere): se l'eroe si allontana, il pannello si chiude.
+var source: Node3D = null
+var source_name := ""
 var mode := ""
 var is_open := false
 var panel: PanelContainer
@@ -73,9 +76,11 @@ func bind(p: Player, inventory: InventoryUI) -> void:
 			refresh.call_deferred())
 
 
-func open(n: Npc) -> void:
-	npc = n
-	mode = String(n.data["role"])
+## mode: "vendor", "smith" o "stash".
+func open(src: Node3D, p_mode: String, p_title: String) -> void:
+	source = src
+	source_name = p_title
+	mode = p_mode
 	_tab = "merce"
 	is_open = true
 	panel.visible = true
@@ -87,7 +92,7 @@ func close() -> void:
 		return
 	is_open = false
 	panel.visible = false
-	npc = null
+	source = null
 	if inv:
 		inv.hide_tooltip()
 
@@ -95,8 +100,8 @@ func close() -> void:
 func _process(_delta: float) -> void:
 	if not is_open:
 		return
-	if npc == null or not is_instance_valid(npc) or player.dead \
-			or player.global_position.distance_to(npc.global_position) > CLOSE_DIST:
+	if source == null or not is_instance_valid(source) or player.dead \
+			or player.global_position.distance_to(source.global_position) > CLOSE_DIST:
 		close()
 
 
@@ -106,11 +111,14 @@ func refresh() -> void:
 	for c in content.get_children():
 		content.remove_child(c)
 		c.queue_free()
-	title.text = String(npc.data["name"])
+	title.text = source_name
 	gold_label.text = "%d sesterzi" % player.hero.gold
 	if mode == "vendor":
 		subtitle.text = "Clic su un oggetto: compra.   Clic destro su un oggetto del tuo zaino: vendi."
 		_build_vendor()
+	elif mode == "stash":
+		subtitle.text = "Clic: riprendi nello zaino.   Clic destro su un oggetto dello zaino: deposita.\nIl forziere è condiviso da tutti i tuoi eroi."
+		_build_stash()
 	else:
 		subtitle.text = "Clic destro su un oggetto del tuo zaino: smontalo per ottenere materiali."
 		_build_smith()
@@ -118,10 +126,65 @@ func refresh() -> void:
 
 ## Chiamato dall'inventario con il clic destro su un oggetto dello zaino.
 func on_bag_right_click(index: int) -> void:
-	if mode == "vendor":
-		_sell(index)
-	else:
-		_salvage(index)
+	match mode:
+		"vendor": _sell(index)
+		"stash": _deposit(index)
+		_: _salvage(index)
+
+
+# --- Forziere personale -----------------------------------------------------------------------
+
+func _build_stash() -> void:
+	var items := Game.stash()
+	var grid := GridContainer.new()
+	grid.columns = 8
+	grid.add_theme_constant_override("h_separation", 4)
+	grid.add_theme_constant_override("v_separation", 4)
+	content.add_child(grid)
+	var used := 0
+	for i in items.size():
+		var it: Item = items[i]
+		var b := InventoryUI.make_slot_button(Vector2(60, 60))
+		InventoryUI.paint_slot(b, it, "", it == null or player.hero.can_equip(it))
+		if it != null:
+			used += 1
+			b.gui_input.connect(_on_stash_input.bind(i))
+			b.mouse_entered.connect(func() -> void:
+				inv.show_tooltip(it.tooltip_bbcode(player.hero.equipment.get(it.slot), player.hero.can_equip(it)), true))
+			b.mouse_exited.connect(inv.hide_tooltip)
+		grid.add_child(b)
+	content.add_child(_label(14, Color(0.7, 0.65, 0.55), "%d / %d caselle occupate" % [used, items.size()]))
+
+
+func _on_stash_input(event: InputEvent, index: int) -> void:
+	if not (event is InputEventMouseButton and event.pressed):
+		return
+	var items := Game.stash()
+	var it: Item = items[index]
+	if it == null:
+		return
+	if not player.hero.add_item(it):
+		Game.level.hud.show_warning("Inventario pieno")
+		return
+	items[index] = null
+	Sfx.play("pickup")
+	inv.hide_tooltip()
+	_after_change()
+
+
+func _deposit(index: int) -> void:
+	var it: Item = player.hero.inventory[index]
+	if it == null:
+		return
+	var items := Game.stash()
+	var free := items.find(null)
+	if free < 0:
+		Game.level.hud.show_warning("Il forziere è pieno")
+		return
+	items[free] = it
+	player.hero.inventory[index] = null
+	Sfx.play("chest", null, -6.0)
+	_after_change()
 
 
 # --- Mercante ---------------------------------------------------------------------------------
@@ -177,7 +240,7 @@ func _build_vendor() -> void:
 
 
 func _get_stock() -> Array:
-	var key := npc.get_instance_id()
+	var key := source.get_instance_id()
 	if not _stock.has(key):
 		var list: Array = []
 		var lvl := player.hero.level
@@ -319,6 +382,7 @@ func _salvage(index: int, notify: bool = true) -> Dictionary:
 	for m: String in got:
 		player.hero.add_material(m, int(got[m]))
 	player.hero.inventory[index] = null
+	Quests.notify("salvage")
 	if notify:
 		_log_materials(got)
 		Sfx.play("anvil", null, -4.0)
@@ -374,8 +438,8 @@ func _craft(rid: String) -> void:
 	Sfx.play("anvil")
 	if it.rarity == Item.Rarity.LEGGENDARIO:
 		Sfx.play("legendary")
-	if npc:
-		Fx.burst(Game.world_root(), npc.global_position + Vector3(0, 1.2, 0), Color(1.0, 0.6, 0.2), 24, 5.0, 0.08, 0.6, -6.0, 60.0)
+	if source:
+		Fx.burst(Game.world_root(), source.global_position + Vector3(0, 1.2, 0), Color(1.0, 0.6, 0.2), 24, 5.0, 0.08, 0.6, -6.0, 60.0)
 	Game.level.hud.log_pickup("Forgiato: %s" % it.item_name, it.color())
 	_after_change()
 

@@ -10,7 +10,7 @@ extends "res://tools/build_world.gd"
 ## Pianta (nord = −Z):
 ##   porta sud (z 52, uscita verso la campagna) → cardo → FORO (fontana, altare, mercato a ovest,
 ##   fucina a est) → basilica del prefetto (nord) ; tempio di Vesta a nord-est ; porta del porto
-##   (nord, sbarrata: atto 2).
+##   (nord: il cancello si apre con la missione "Il porto sbarrato" e porta al livello 3).
 
 const HALF_X := 48.0
 const Z_N := -58.0
@@ -30,7 +30,7 @@ func _generate() -> void:
 
 
 func _allowed(p: Vector2) -> bool:
-	return absf(p.x) <= HALF_X + 2.0 and p.y >= Z_N - 2.0 and p.y <= Z_S + 10.0
+	return absf(p.x) <= HALF_X + 2.0 and p.y >= Z_N - 12.0 and p.y <= Z_S + 10.0
 
 
 func _build_ostia() -> void:
@@ -51,7 +51,8 @@ func _build_ostia() -> void:
 	_temple(places)
 	_city_npcs(_group(region, "Abitanti"))
 
-	for m: Array in [["PlayerStart", Vector3(0, 0, 42)], ["DaLazio", Vector3(0, 0, 42)], ["PortaleArrivo", Vector3(-6, 0, 18)]]:
+	for m: Array in [["PlayerStart", Vector3(0, 0, 42)], ["DaLazio", Vector3(0, 0, 42)], ["PortaleArrivo", Vector3(-6, 0, 18)],
+			["DalPorto", Vector3(0, 0, Z_N + 9)]]:
 		var mk := Marker3D.new()
 		mk.name = m[0]
 		mk.position = m[1]
@@ -73,6 +74,32 @@ func _build_ostia() -> void:
 	level_root.add_child(exit)
 	exit.owner = level_root
 	ecs.owner = level_root
+
+	var exit2: Area3D = load("res://world/level_exit.gd").new()
+	exit2.name = "UscitaPorto"
+	exit2.position = Vector3(0, 0, Z_N - 6)
+	exit2.set("title", "Porto di Ostia Nova")
+	exit2.set("target_level", "level_03_porto")
+	exit2.set("target_spawn", "DaOstia")
+	var ecs2 := CollisionShape3D.new()
+	var ebs2 := BoxShape3D.new()
+	ebs2.size = Vector3(12, 4, 3)
+	ecs2.shape = ebs2
+	ecs2.position.y = 2
+	exit2.add_child(ecs2)
+	level_root.add_child(exit2)
+	exit2.owner = level_root
+	ecs2.owner = level_root
+
+	# Cancello del porto: FUORI dal nodo World (la navmesh ci passa sotto; si apre con la missione)
+	var gates := Node3D.new()
+	gates.name = "Cancelli"
+	level_root.add_child(gates)
+	gates.owner = level_root
+	var gate := _place("cancello", gates, Vector2(0, Z_N))
+	gate.set_script(load("res://world/quest_gate.gd"))
+	gate.set("flag", "porto_aperto")
+	gate.set("locked_text", "Il cancello del porto è sbarrato. Solo il prefetto può farlo aprire.")
 
 	print("Calcolo navmesh...")
 	var nm := NavigationMesh.new()
@@ -117,9 +144,10 @@ func _city_ground(region: Node3D) -> void:
 	# Suolo calpestabile: dentro le mura + piazzale fuori dalla porta sud
 	_ground_box(ground, "Suolo", Vector3(0, -0.5, (Z_N + Z_S) * 0.5), Vector3(HALF_X * 2.0 + 2.0, 1, Z_S - Z_N + 2.0), PAVE)
 	_ground_box(ground, "Piazzale", Vector3(0, -0.5, Z_S + 6.0), Vector3(14, 1, 12), STREET.darkened(0.1))
+	_ground_box(ground, "PiazzaleNord", Vector3(0, -0.5, Z_N - 6.0), Vector3(14, 1, 12), STREET.darkened(0.1))
 	# Strade e foro (solo grafica)
 	_strip(ground, Vector2(0, Z_S + 12.0), Vector2(0, -18), 8.0, 0.02, 0.04, STREET)
-	_strip(ground, Vector2(0, -38), Vector2(0, Z_N), 8.0, 0.02, 0.04, STREET)
+	_strip(ground, Vector2(0, -38), Vector2(0, Z_N - 12.0), 8.0, 0.02, 0.04, STREET)
 	_strip(ground, Vector2(-HALF_X, -2), Vector2(HALF_X, -2), 6.0, 0.015, 0.03, STREET.darkened(0.05))
 	_strip(ground, Vector2(-21, -2), Vector2(21, -2), 32.0, 0.03, 0.04, FORUM)
 	# Bordi del piazzale esterno: niente "vuoto" ai lati della porta
@@ -127,6 +155,10 @@ func _city_ground(region: Node3D) -> void:
 		_blocker(ground, Vector3(x, 1.5, Z_S + 6.0), Vector3(1.0, 3, 12))
 		_place("muro_rovina", ground, Vector2(x, Z_S + 6.0), 90.0)
 	_blocker(ground, Vector3(0, 1.5, Z_S + 12.5), Vector3(16, 3, 1))
+	for x: float in [-7.5, 7.5]:
+		_blocker(ground, Vector3(x, 1.5, Z_N - 6.0), Vector3(1.0, 3, 12))
+		_place("muro_rovina", ground, Vector2(x, Z_N - 6.0), 90.0)
+	_blocker(ground, Vector3(0, 1.5, Z_N - 12.5), Vector3(16, 3, 1))
 
 
 func _ground_box(parent: Node, n: String, pos: Vector3, size: Vector3, col: Color) -> void:
@@ -181,11 +213,10 @@ func _city_walls(region: Node3D) -> void:
 		z += 8.0
 	_place("porta_citta", g, Vector2(0, Z_S))
 	_place("porta_citta", g, Vector2(0, Z_N))
-	_place("cancello", g, Vector2(0, Z_N))
 	_place("stendardo", g, Vector2(-9, Z_S - 5))
 	_place("stendardo", g, Vector2(9, Z_S - 5))
 	_place("cartello", g, Vector2(7, Z_N + 6), 0.0, 1.0, {"title": "Porto di Ostia Nova",
-		"text": "Il cancello verso il porto è sbarrato per ordine del prefetto.\n\n[TRAMA: atto 2 — il porto, le navette per Nova Roma.]"})
+		"text": "Oltre questo cancello c'è il porto di Ostia Nova. Si apre solo per ordine del prefetto.\n\n[TRAMA: atto 2 — il porto, le navette per Nova Roma.]"})
 
 
 # --- Foro ------------------------------------------------------------------------------------------
@@ -205,6 +236,7 @@ func _forum(parent: Node) -> void:
 	_place("statua", g, Vector2(-9, -16), 180.0)
 	_place("statua", g, Vector2(9, -16), 180.0)
 	_place("altare", g, Vector2(8, 8), 0.0, 1.0, {"checkpoint_id": "ostia_foro", "title": "Altare del Foro"})
+	_place("scrigno", g, Vector2(-8, 9))
 
 	# Mercato (lato ovest)
 	var m := _group(parent, "Mercato")

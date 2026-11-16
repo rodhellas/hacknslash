@@ -12,6 +12,8 @@ extends Node3D
 @export var is_town := false
 ## Testo mostrato la prima volta che si entra nel livello (vuoto = nessuno).
 @export_multiline var intro_text := ""
+## Musica del livello: percorso di un file audio. Vuoto = res://audio/music/<level_id>.ogg se esiste.
+@export_file("*.ogg", "*.mp3", "*.wav") var music := ""
 
 var player: Player
 var camera: IsoCamera
@@ -79,6 +81,10 @@ func _ready() -> void:
 	Game.hero.flags["visited_" + level_id] = true
 	if first_visit and intro_text != "":
 		hud.show_lore(level_title, intro_text)
+	Quests.start_automatic()
+	Quests.notify("enter", level_id)
+	Music.play_level(level_id, music)
+	Settings.apply_to_level(self)
 	# Salva subito dopo un cambio di livello (così il salvataggio sa dove si trova l'eroe)
 	Game.save_game.call_deferred()
 
@@ -138,10 +144,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		inventory_ui.toggle()
 	elif event.is_action_pressed("map"):
 		hud.minimap.toggle_big()
+	elif event.is_action_pressed("quest_log"):
+		hud.toggle_quest_log()
 
 
 ## Chiude il pannello aperto più in alto (ESC). Ritorna false se non c'era niente da chiudere.
 func close_top_panel() -> bool:
+	if hud.quest_log.visible:
+		hud.quest_log.visible = false
+		return true
 	if hud.waypoint_panel.visible:
 		hud.waypoint_panel.visible = false
 		return true
@@ -159,7 +170,12 @@ func close_top_panel() -> bool:
 
 
 func open_trade(npc: Npc) -> void:
-	trade_ui.open(npc)
+	trade_ui.open(npc, String(npc.data["role"]), String(npc.data["name"]))
+	inventory_ui.open()
+
+
+func open_stash(source: Node3D) -> void:
+	trade_ui.open(source, "stash", "Forziere personale")
 	inventory_ui.open()
 
 

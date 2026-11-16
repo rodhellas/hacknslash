@@ -21,12 +21,15 @@ Motore: **Godot 4.7.2** (GDScript, renderer Forward+). Grafica attuale: **graybo
 | E | Interagisci con l'oggetto più vicino |
 | T | Portale per Ostia Nova (in città clicca il portale per tornare dov'eri) |
 | Clic su un altare attivato | Viaggio rapido verso gli altri altari (anche tra livelli) |
-| Clic destro sullo zaino (con mercante/fabbro aperto) | Vendi / smonta |
+| Clic destro sullo zaino (con mercante/fabbro/forziere aperto) | Vendi / smonta / deposita |
+| J | Diario delle missioni |
 | WASD | Movimento diretto (alternativa al clic) |
 | I / C | Personaggio e inventario |
 | TAB | Mappa grande |
 | Rotellina | Zoom |
-| ESC | Pausa (salva, comandi, menu) |
+| ESC | Pausa (salva, comandi, opzioni, menu) |
+
+I tasti si possono cambiare in **Opzioni > Comandi** (dal menu principale o dalla pausa).
 
 ## Cosa c'è
 
@@ -35,6 +38,9 @@ Motore: **Godot 4.7.2** (GDScript, renderer Forward+). Grafica attuale: **graybo
 - **12 leggendari con poteri** che cambiano il modo di giocare (es. esplosioni sui critici, proiettili perforanti, scudo d'emergenza).
 - **Ostia Nova, la città-hub**: mercante (compra / vendi / riacquista), fabbro (smonta gli oggetti in materiali e forgia oggetti magici, rari e leggendari), prefetto, vestale, guardie e cittadini con dialoghi.
 - **Viaggi**: altari con viaggio rapido tra livelli, portale cittadino (T), uscite che collegano i livelli.
+- **Missioni** con obiettivi in sequenza, ricompense, diario (J) e segni "!" / "?" sopra gli NPC: 6 missioni tra atto 1 e atto 2 (testi segnaposto).
+- **Forziere personale** in città, condiviso da tutti gli eroi.
+- **Opzioni**: schermo intero, V-Sync, ombre, SSAO, bagliore, antialiasing, risoluzione 3D, volumi, rimappatura dei tasti.
 - **Effetti e audio segnaposto**: particelle per colpi, morti, esplosioni, scie dei proiettili e level up; effetti sonori sintetizzati da codice (sostituibili con file veri in `audio/sfx/`).
 - **9 slot di equipaggiamento**, zaino da 40 caselle, statistiche (Forza/Destrezza/Intelligenza/Vitalità, armatura, critico, velocità d'attacco...).
 - **Nemici a zone** (EncounterZone): compaiono quando ti avvicini, il gruppo si attiva insieme, tornano a casa se scappi. Ci sono gli elite (Campioni, blu) e un boss unico (Brenno, arancione).
@@ -43,5 +49,6 @@ Motore: **Godot 4.7.2** (GDScript, renderer Forward+). Grafica attuale: **graybo
 - **Menu principale con 3 slot di salvataggio** (JSON in `user://saves/`), altari-checkpoint con salvataggio automatico, rinascita all'ultimo altare.
 - **Livello 1 "Campagna di Lazio Prime"**: dalla villa di famiglia alla porta di Ostia Nova, percorso di circa 1150 m (circa 3 minuti a piedi senza combattere), con zone laterali esplorabili.
 - **Livello 2 "Ostia Nova"**: la città-hub (circa 100 × 110 m), raggiunta dall'uscita del livello 1.
+- **Livello 3 "Porto di Ostia Nova"** (atto 2): magazzini, moli, cantieri navali, spazioporto e faro; pirati cilici, automi portuali, granchi meccanici e il boss Vulso il Corsaro. Si apre con la missione del prefetto.
 
 Vedi [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) per il design e [CLAUDE.md](CLAUDE.md) per l'architettura del codice.

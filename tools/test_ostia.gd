@@ -133,6 +133,10 @@ func _run() -> void:
 	print("\n== 4. Fabbro")
 	game.level.close_top_panel()
 	await _walk_interact(by_id["fabbro"])
+	# Il primo clic affida la missione "Ferri del mestiere" (vedi test_atto2.gd), il secondo apre la fucina
+	_check(game.level.hud.lore_panel.visible, "il fabbro affida prima la sua missione")
+	game.level.hud.lore_panel.visible = false
+	await _walk_interact(by_id["fabbro"])
 	_check(trade.is_open and trade.mode == "smith", "il pannello del fabbro si apre")
 	var ItemS: GDScript = load("res://core/item.gd")
 	for r in [0, 1, 2, 3]:

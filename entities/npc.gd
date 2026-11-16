@@ -12,6 +12,7 @@ extends StaticBody3D
 var data: Dictionary = {}
 var model: Node3D
 var _bark_cd := 0.0
+var _marker: Label3D
 
 
 func _ready() -> void:
@@ -46,6 +47,23 @@ func _ready() -> void:
 	if role != "talk" or String(data["text"]) != "":
 		Fx.minimap_icon(self, NpcDB.ROLE_COLORS.get(role, Color.WHITE), 1.4, "square")
 	_bark_cd = randf_range(2.0, 8.0)
+	_marker = Label3D.new()
+	_marker.font_size = 110
+	_marker.outline_size = 14
+	_marker.pixel_size = 0.01
+	_marker.modulate = Color(1.0, 0.82, 0.2)
+	_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_marker.no_depth_test = true
+	_marker.position.y = 3.5
+	add_child(_marker)
+	Game.quests_changed.connect(_update_marker)
+	_update_marker()
+
+
+## "!" = ha una missione da affidare, "?" = aspetta che torni da lui.
+func _update_marker() -> void:
+	if _marker != null and Game.hero != null:
+		_marker.text = Quests.npc_marker(npc_id)
 
 
 func interact_name() -> String:
@@ -59,6 +77,11 @@ func can_interact() -> bool:
 func interact(p: Player) -> void:
 	_face(p.global_position)
 	Sfx.play("talk", global_position)
+	# Prima i dialoghi delle missioni (affidare / consegnare), poi il mestiere
+	var qt := Quests.talk(npc_id)
+	if qt != "":
+		Game.level.hud.show_lore(String(data["name"]), qt)
+		return
 	match String(data["role"]):
 		"vendor", "smith":
 			_bark()

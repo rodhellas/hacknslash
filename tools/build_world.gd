@@ -494,6 +494,48 @@ func _prop_defs() -> Dictionary:
 			["box", Vector3(-3, 8, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(3, 8, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)],
 			["box", Vector3(0, 6.5, -5.4), Vector3(12, 0.2, 0.8), WOOD]],
 		"col": [["box", Vector3(0, 5, 0), Vector3(12, 10, 10)]], "occ": ["box", Vector3(0, 7, 0), Vector3(12.4, 7, 10.4)], "fade": true}
+	d["scrigno"] = {"parts": [["box", Vector3(0, 0.45, 0), Vector3(1.8, 0.9, 1.1), Color(0.2, 0.28, 0.45)],
+			["box", Vector3(0, 1.0, 0), Vector3(1.85, 0.25, 1.15), GOLD, 0.4, Vector3.ZERO, "Lid"],
+			["box", Vector3(0, 0.6, -0.57), Vector3(0.35, 0.35, 0.05), PLASMA, 3.0],
+			["box", Vector3(0, 0.05, 0), Vector3(2.4, 0.1, 1.6), MARBLE]],
+		"col": [["box", Vector3(0, 0.6, 0), Vector3(1.8, 1.2, 1.1)]], "script": "res://world/stash.gd"}
+	# --- Porto (atto 2) ---
+	d["magazzino"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(16, 7, 10), Color(0.6, 0.5, 0.4)],
+			["prism", Vector3(0, 8.2, 0), Vector3(10.6, 2.4, 16.4), ROOF.darkened(0.15), 0.0, Vector3(0, 90, 0)],
+			["box", Vector3(0, 2.4, -5.05), Vector3(5, 4.8, 0.1), WOOD.darkened(0.25)],
+			["box", Vector3(-6, 5, -5.05), Vector3(1.5, 1, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(6, 5, -5.05), Vector3(1.5, 1, 0.1), Color(0.15, 0.2, 0.3)]],
+		"col": [["box", Vector3(0, 3.5, 0), Vector3(16, 7, 10)]], "occ": ["box", Vector3(0, 7.5, 0), Vector3(16.4, 3, 10.6)], "fade": true}
+	d["gru"] = {"parts": [["box", Vector3(0, 0.4, 0), Vector3(3, 0.8, 3), METAL.darkened(0.2)],
+			["box", Vector3(0, 7.5, 0), Vector3(1.2, 14, 1.2), Color(0.85, 0.65, 0.15)],
+			["box", Vector3(3.5, 14.5, 0), Vector3(14, 0.9, 0.9), Color(0.85, 0.65, 0.15)],
+			["box", Vector3(-3.5, 13.8, 0), Vector3(2, 1.6, 1.6), METAL.darkened(0.3)],
+			["cyl", Vector3(9.5, 11, 0), Vector3(0.04, 7, 0.04), METAL], ["box", Vector3(9.5, 7.3, 0), Vector3(0.6, 0.5, 0.3), METAL.darkened(0.3)],
+			["sphere", Vector3(10.4, 14.5, 0), Vector3(0.25, 0.5, 0), Color(1, 0.2, 0.1), 5.0]],
+		"col": [["box", Vector3(0, 3, 0), Vector3(3, 6, 3)]], "occ": ["box", Vector3(3.5, 12, 0), Vector3(15, 6, 1.5)], "fade": true}
+	d["nave"] = {"parts": [["box", Vector3(0, 1.0, 0), Vector3(7, 3, 22), WOOD.darkened(0.35)],
+			["prism", Vector3(0, 1.0, -12.5), Vector3(7, 3, 3), WOOD.darkened(0.35), 0.0, Vector3(90, 0, 0)],
+			["box", Vector3(0, 2.55, 0), Vector3(6.6, 0.15, 21), WOOD.lightened(0.1)],
+			["cyl", Vector3(0, 9, -2), Vector3(0.25, 13, 0.3), WOOD.darkened(0.2)],
+			["box", Vector3(0, 10, -2.4), Vector3(9, 7, 0.1), Color(0.75, 0.2, 0.15)],
+			["box", Vector3(0, 3.6, 8), Vector3(5, 2, 4), WOOD.darkened(0.2)],
+			["box", Vector3(3.55, 1.6, 0), Vector3(0.05, 0.3, 18), PLASMA, 3.0]],
+		"col": [["box", Vector3(0, 1.5, 0), Vector3(7, 3, 24)]], "occ": ["box", Vector3(0, 9, -2), Vector3(9, 8, 2)], "fade": true}
+	d["pila_casse"] = {"parts": [["box", Vector3(-0.6, 0.6, 0), Vector3(1.2, 1.2, 1.2), WOOD], ["box", Vector3(0.65, 0.6, 0.1), Vector3(1.2, 1.2, 1.2), WOOD.darkened(0.1)],
+			["box", Vector3(0, 1.8, 0), Vector3(1.2, 1.2, 1.2), WOOD.lightened(0.08), 0.0, Vector3(0, 15, 0)], ["box", Vector3(0, 0.6, -1.2), Vector3(1.0, 1.2, 1.0), Color(0.3, 0.45, 0.55)]],
+		"col": [["box", Vector3(0, 1.2, -0.3), Vector3(2.6, 2.4, 2.4)]], "fade": true, "vis": 110.0}
+	d["piattaforma"] = {"parts": [["cyl", Vector3(0, 0.05, 0), Vector3(7, 0.1, 7), METAL.darkened(0.1)],
+			["torus", Vector3(0, 0.12, 0), Vector3(6.2, 6.6, 0), PLASMA, 3.0], ["box", Vector3(0, 0.11, 0), Vector3(6, 0.02, 0.6), GOLD, 1.0],
+			["box", Vector3(0, 0.11, 0), Vector3(0.6, 0.02, 6), GOLD, 1.0]]}
+	d["faro"] = {"parts": [["cyl", Vector3(0, 1.5, 0), Vector3(4, 3, 4.4), STONE],
+			["cyl", Vector3(0, 12, 0), Vector3(2.0, 18, 2.8), MARBLE], ["cyl", Vector3(0, 21.5, 0), Vector3(2.4, 1, 2.4), STONE],
+			["sphere", Vector3(0, 23, 0), Vector3(1.4, 2.6, 0), Color(1.0, 0.85, 0.4), 6.0], ["cyl", Vector3(0, 24.6, 0), Vector3(0, 1.6, 2.2), ROOF]],
+		"col": [["cyl", Vector3(0, 5, 0), Vector3(4.4, 10, 0)]], "occ": ["box", Vector3(0, 14, 0), Vector3(5, 18, 5)], "fade": true,
+		"light": [Vector3(0, 23, 0), Color(1.0, 0.85, 0.4), 4.0, 40.0]}
+	d["bitta"] = {"parts": [["cyl", Vector3(0, 0.4, 0), Vector3(0.3, 0.8, 0.35), METAL.darkened(0.3)], ["cyl", Vector3(0, 0.85, 0), Vector3(0.42, 0.12, 0.42), METAL.darkened(0.3)]],
+		"col": [["cyl", Vector3(0, 0.45, 0), Vector3(0.4, 0.9, 0)]], "vis": 90.0}
+	d["isolato"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(8.2, 7, 8.2), PLASTER.darkened(0.2)],
+			["box", Vector3(1.5, 7.6, -1), Vector3(5, 1.4, 5), ROOF.darkened(0.1)], ["box", Vector3(-2, 8.2, 2), Vector3(3.5, 2.4, 3.5), PLASTER.darkened(0.25)]],
+		"col": [["box", Vector3(0, 3, 0), Vector3(8, 6, 8)]], "fade": true}
 	d["cancello"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(10, 7, 0.4), METAL.darkened(0.2)],
 			["box", Vector3(0, 2.0, -0.22), Vector3(9.6, 0.15, 0.05), PLASMA, 3.0], ["box", Vector3(0, 4.5, -0.22), Vector3(9.6, 0.15, 0.05), PLASMA, 3.0],
 			["box", Vector3(0, 3.5, -0.24), Vector3(1.6, 1.6, 0.05), GOLD, 1.0]],
@@ -698,6 +740,46 @@ func _model_defs() -> Dictionary:
 			["cyl", Vector3(0.55, 3.8, 0), Vector3(0, 0.8, 0.16), MARBLE, 0.0, Vector3(0, 0, -45)],
 			["box", Vector3(1.2, 1.8, -0.8), Vector3(0.12, 0.12, 2.2), WOOD],
 			["box", Vector3(1.2, 1.8, -1.8), Vector3(0.2, 1.1, 0.7), FIRE, 2.5],
+		],
+		# --- Nemici del porto (atto 2) ---
+		"enemies/pirata": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.7, 0), Color(0.18, 0.3, 0.35)],
+			["box", Vector3(0, 0.75, 0), Vector3(0.88, 0.2, 0.62), Color(0.55, 0.12, 0.1)],
+			["sphere", Vector3(0, 1.8, 0), Vector3(0.28, 0.52, 0), skin],
+			["sphere", Vector3(0, 1.9, 0.02), Vector3(0.3, 0.4, 0), Color(0.75, 0.12, 0.1)],
+			["box", Vector3(0.5, 0.95, -0.5), Vector3(0.06, 0.12, 0.9), PLASMA, 3.0, Vector3(0, 0, 0)],
+		],
+		"enemies/arpionatore": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.7, 0), Color(0.3, 0.25, 0.2)],
+			["sphere", Vector3(0, 1.8, 0), Vector3(0.28, 0.52, 0), skin],
+			["box", Vector3(0, 2.0, 0), Vector3(0.6, 0.08, 0.6), Color(0.2, 0.2, 0.22)],
+			["box", Vector3(0.35, 1.2, -0.5), Vector3(0.14, 0.14, 1.4), METAL],
+			["box", Vector3(0.35, 1.2, -1.25), Vector3(0.08, 0.3, 0.2), Color(0.3, 0.9, 0.8), 3.0],
+		],
+		"enemies/granchio": [
+			["sphere", Vector3(0, 0.45, 0), Vector3(0.55, 0.5, 0), Color(0.75, 0.35, 0.15)],
+			["box", Vector3(-0.45, 0.45, -0.55), Vector3(0.25, 0.2, 0.4), METAL], ["box", Vector3(0.45, 0.45, -0.55), Vector3(0.25, 0.2, 0.4), METAL],
+			["box", Vector3(0, 0.62, -0.42), Vector3(0.3, 0.06, 0.06), Color(0.3, 1, 0.9), 4.0],
+			["box", Vector3(-0.6, 0.2, 0.1), Vector3(0.5, 0.06, 0.06), METAL, 0.0, Vector3(0, 0, -30)],
+			["box", Vector3(0.6, 0.2, 0.1), Vector3(0.5, 0.06, 0.06), METAL, 0.0, Vector3(0, 0, 30)],
+		],
+		"enemies/automa": [
+			["box", Vector3(0, 1.0, 0), Vector3(1.2, 1.2, 0.9), METAL.darkened(0.1)],
+			["box", Vector3(0, 2.0, 0), Vector3(1.8, 1.1, 1.2), Color(0.85, 0.65, 0.15)],
+			["box", Vector3(0, 2.8, -0.1), Vector3(0.7, 0.5, 0.6), METAL],
+			["box", Vector3(0, 2.85, -0.42), Vector3(0.45, 0.1, 0.05), Color(1, 0.8, 0.1), 5.0],
+			["box", Vector3(-1.15, 1.6, -0.2), Vector3(0.45, 1.6, 0.45), METAL.darkened(0.2)],
+			["box", Vector3(1.15, 1.6, -0.2), Vector3(0.45, 1.6, 0.45), METAL.darkened(0.2)],
+			["box", Vector3(-0.35, 0.3, 0), Vector3(0.4, 0.6, 0.5), METAL.darkened(0.3)], ["box", Vector3(0.35, 0.3, 0), Vector3(0.4, 0.6, 0.5), METAL.darkened(0.3)],
+		],
+		"enemies/vulso": [
+			["capsule", Vector3(0, 1.5, 0), Vector3(0.95, 3.0, 0), Color(0.55, 0.1, 0.12)],
+			["box", Vector3(0, 1.0, 0), Vector3(2.0, 0.3, 1.4), Color(0.2, 0.15, 0.1)],
+			["sphere", Vector3(0, 3.2, 0), Vector3(0.45, 0.85, 0), skin],
+			["box", Vector3(0.2, 3.3, -0.42), Vector3(0.22, 0.18, 0.05), Color(0.05, 0.05, 0.05)],
+			["prism", Vector3(0, 3.75, 0), Vector3(1.6, 0.6, 1.0), Color(0.12, 0.1, 0.1)],
+			["box", Vector3(1.15, 1.8, -1.0), Vector3(0.1, 0.25, 2.0), PLASMA, 4.0],
+			["sphere", Vector3(-1.0, 2.4, 0), Vector3(0.35, 0.6, 0), GOLD, 0.5],
 		],
 		# --- Personaggi non giocanti ---
 		"npcs/mercante": [

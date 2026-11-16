@@ -36,6 +36,9 @@ var waypoint_panel: Control
 var waypoint_list: VBoxContainer
 var cast_bar: ProgressBar
 var cast_label: Label
+var quest_tracker: RichTextLabel
+var quest_log: Control
+var quest_log_text: RichTextLabel
 var _banner_t := 0.0
 var _msg_t := 0.0
 var _warn_t := 0.0
@@ -179,6 +182,33 @@ func _ready() -> void:
 	wbody.get_parent().add_child(waypoint_list)
 	wbody.get_parent().move_child(waypoint_list, wbody.get_index() + 1)
 
+	# --- Missioni: elenco a sinistra e diario (J) ---
+	quest_tracker = RichTextLabel.new()
+	quest_tracker.bbcode_enabled = true
+	quest_tracker.fit_content = true
+	quest_tracker.scroll_active = false
+	quest_tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	quest_tracker.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	quest_tracker.offset_left = 16
+	quest_tracker.offset_top = 16
+	quest_tracker.custom_minimum_size = Vector2(360, 0)
+	quest_tracker.add_theme_font_size_override("normal_font_size", 15)
+	quest_tracker.add_theme_font_size_override("bold_font_size", 17)
+	quest_tracker.add_theme_constant_override("outline_size", 5)
+	quest_tracker.add_theme_color_override("font_outline_color", Color.BLACK)
+	root.add_child(quest_tracker)
+	quest_log = _make_panel(root, "Diario delle missioni", "", [["Chiudi", func() -> void: quest_log.visible = false]])
+	var qbody := quest_log.find_child("Body", true, false) as Label
+	quest_log_text = RichTextLabel.new()
+	quest_log_text.bbcode_enabled = true
+	quest_log_text.fit_content = true
+	quest_log_text.custom_minimum_size = Vector2(620, 0)
+	quest_log_text.add_theme_font_size_override("normal_font_size", 16)
+	qbody.get_parent().add_child(quest_log_text)
+	qbody.get_parent().move_child(quest_log_text, qbody.get_index())
+	qbody.queue_free()
+	Game.quests_changed.connect(update_quests)
+
 	# --- Barra di canalizzazione (portale cittadino) ---
 	var cast_box := VBoxContainer.new()
 	cast_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -210,6 +240,7 @@ func bind(p: Player, l: Level) -> void:
 		(slots[s] as SkillSlot).set_ability(ab, HeroClasses.SLOT_KEYS[s])
 	p.xp_changed.connect(func(_a: int, _b: int, _c: int) -> void: _update_xp())
 	_update_xp()
+	update_quests()
 
 
 func _update_xp() -> void:
@@ -320,6 +351,44 @@ func show_lore(title: String, text: String) -> void:
 	lore_title.text = title
 	lore_text.text = text
 	lore_panel.visible = true
+
+
+## Missioni attive in alto a sinistra (obiettivo corrente).
+func update_quests() -> void:
+	if Game.hero == null:
+		return
+	var t := ""
+	for id: String in Quests.active_ids():
+		var q := QuestDB.get_data(id)
+		t += "[b][color=#f2c75a]%s[/color][/b]\n[color=#e8e0d0]• %s[/color]\n" % [q["title"], Quests.step_text(id)]
+	if t != "":
+		t += "[color=#888888][font_size=12]J: diario delle missioni[/font_size][/color]"
+	quest_tracker.text = t
+	if quest_log.visible:
+		_fill_quest_log()
+
+
+func toggle_quest_log() -> void:
+	quest_log.visible = not quest_log.visible
+	if quest_log.visible:
+		_fill_quest_log()
+
+
+func _fill_quest_log() -> void:
+	var active := ""
+	var done := ""
+	for id: String in QuestDB.ORDER:
+		var q := QuestDB.get_data(id)
+		match Quests.state(id):
+			"active":
+				active += "[b][color=#f2c75a]%s[/color][/b]  [color=#888888](atto %d)[/color]\n%s\n[color=#9fd0ff]Obiettivo: %s[/color]\n\n" % [
+					q["title"], int(q.get("act", 1)), q.get("desc", ""), Quests.step_text(id)]
+			"done":
+				done += "[color=#8a8a8a]✔ %s[/color]\n" % q["title"]
+	var t := "[font_size=19][color=#c8a050]In corso[/color][/font_size]\n" + (active if active != "" else "Nessuna missione in corso.\n\n")
+	if done != "":
+		t += "[font_size=19][color=#c8a050]Completate[/color][/font_size]\n" + done
+	quest_log_text.text = t
 
 
 ## Elenco degli altari attivati, raggruppati per livello (viaggio rapido).

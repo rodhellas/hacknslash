@@ -9,6 +9,7 @@ extends RefCounted
 ##   aggro           distanza a cui ti nota
 ##   ranged          spara proiettili invece di colpire in mischia
 ##   special         "slam" (colpo ad area), "charge" (carica a distanza)
+##   summon          tipo di nemico che chiama in aiuto (summon_count alla volta, ogni summon_cd secondi)
 ##   model           scena del modello 3D (sostituibile con quello di Tripo)
 
 const DATA := {
@@ -46,6 +47,31 @@ const DATA := {
 	"rinnegato": {
 		"name": "Legionario rinnegato", "hp": 70.0, "damage": 12.0, "speed": 4.2, "range": 2.2, "windup": 0.55, "cooldown": 1.2,
 		"radius": 0.5, "height": 1.9, "xp": 22, "aggro": 12.0, "knock_resist": 0.6, "model": "res://scenes/enemies/rinnegato.tscn",
+	},
+	# --- Atto 2: porto di Ostia Nova ---
+	"pirata": {
+		"name": "Pirata cilicio", "hp": 60.0, "damage": 11.0, "speed": 5.0, "range": 1.9, "windup": 0.4, "cooldown": 1.0,
+		"radius": 0.45, "height": 1.8, "xp": 18, "aggro": 12.0, "model": "res://scenes/enemies/pirata.tscn",
+	},
+	"arpionatore": {
+		"name": "Arpionatore", "hp": 42.0, "damage": 10.0, "speed": 4.0, "range": 13.0, "windup": 0.7, "cooldown": 1.7,
+		"radius": 0.45, "height": 1.8, "xp": 18, "aggro": 15.0, "ranged": true, "proj_speed": 18.0,
+		"proj_color": Color(0.3, 0.9, 0.8), "model": "res://scenes/enemies/arpionatore.tscn",
+	},
+	"granchio": {
+		"name": "Granchio meccanico", "hp": 20.0, "damage": 6.0, "speed": 6.4, "range": 1.4, "windup": 0.25, "cooldown": 0.8,
+		"radius": 0.5, "height": 0.7, "xp": 7, "aggro": 12.0, "model": "res://scenes/enemies/granchio.tscn",
+	},
+	"automa": {
+		"name": "Automa portuale", "hp": 230.0, "damage": 24.0, "speed": 2.6, "range": 2.8, "windup": 0.9, "cooldown": 1.7,
+		"radius": 0.9, "height": 2.8, "xp": 55, "aggro": 10.0, "special": "slam", "slam_radius": 3.4,
+		"knock_resist": 0.2, "interruptible": false, "model": "res://scenes/enemies/automa.tscn",
+	},
+	"vulso": {
+		"name": "Vulso il Corsaro", "hp": 1500.0, "damage": 28.0, "speed": 3.9, "range": 3.0, "windup": 0.75, "cooldown": 1.3,
+		"radius": 1.0, "height": 3.1, "xp": 800, "aggro": 18.0, "unique": true, "special": "charge", "slam_radius": 3.6,
+		"summon": "pirata", "summon_count": 3, "summon_cd": 14.0,
+		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/vulso.tscn",
 	},
 	"brenno": {
 		"name": "Brenno il Rinnegato", "hp": 900.0, "damage": 24.0, "speed": 3.6, "range": 3.2, "windup": 0.8, "cooldown": 1.4,

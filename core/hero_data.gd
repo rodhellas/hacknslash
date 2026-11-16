@@ -22,6 +22,7 @@ var flags: Dictionary = {}       # forzieri aperti, boss uccisi, altari attivati
 var play_time := 0.0
 var materials: Dictionary = {}   # materiali del fabbro: "rottami", "essenza", "frammento"
 var waypoints: Dictionary = {}   # altari attivati (viaggio rapido): id -> {"level": id livello, "title": nome}
+var quests: Dictionary = {}      # missioni: id -> {"state": "active"/"done", "step": int, "count": int}
 
 ## Altari del livello 1 nei salvataggi fatti prima del viaggio rapido.
 const LEGACY_WAYPOINTS := {
@@ -155,7 +156,7 @@ func to_dict() -> Dictionary:
 		"inventory": inv, "equipment": eq, "level_id": level_id,
 		"position": [position.x, position.y, position.z], "has_position": has_position,
 		"checkpoint_id": checkpoint_id, "flags": flags, "play_time": play_time,
-		"materials": materials, "waypoints": waypoints,
+		"materials": materials, "waypoints": waypoints, "quests": quests,
 	}
 
 
@@ -185,6 +186,10 @@ static func from_dict(d: Dictionary) -> HeroData:
 	for k: String in mats:
 		h.materials[k] = int(mats[k])
 	h.waypoints = d.get("waypoints", {})
+	var qs: Dictionary = d.get("quests", {})
+	for id: String in qs:
+		var q: Dictionary = qs[id]
+		h.quests[id] = {"state": String(q.get("state", "active")), "step": int(q.get("step", 0)), "count": int(q.get("count", 0))}
 	# Salvataggi vecchi: gli altari attivati erano solo flag "cp_<id>" del livello 1
 	for k: String in h.flags.keys():
 		if k.begins_with("cp_") and not k.begins_with("cp_last_"):

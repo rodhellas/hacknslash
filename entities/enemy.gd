@@ -40,6 +40,7 @@ var _wander_timer := 0.0
 var _wander_target := Vector3.INF
 var _sleep_check := 0.0
 var _asleep := false
+var _summon_cd := 5.0
 
 var model: Node3D
 var nav: NavigationAgent3D
@@ -228,6 +229,7 @@ func _physics_process(delta: float) -> void:
 		slow_mult = 1.0
 	state_timer -= delta
 	special_cd -= delta
+	_summon_cd -= delta
 	var spd := speed * slow_mult
 	var desired := Vector3.ZERO
 
@@ -240,6 +242,8 @@ func _physics_process(delta: float) -> void:
 		State.CHASE:
 			if p.dead or (global_position.distance_to(home) > LEASH and dist > 10.0):
 				_go_home()
+			elif data.has("summon") and _summon_cd <= 0.0:
+				_summon()
 			elif _can_charge(dist):
 				_start_windup("charge")
 			elif dist <= attack_range() * 0.95:
@@ -338,6 +342,22 @@ func _start_windup(kind: String) -> void:
 	Fx.set_base_overlay(model, Color(1.0, 0.45, 0.0, 0.45))
 	if not bool(data.get("ranged", false)):
 		Sfx.play("enemy_attack", global_position, -8.0, 0.2)
+
+
+## Il boss chiama rinforzi attorno a sé.
+func _summon() -> void:
+	_summon_cd = float(data.get("summon_cd", 15.0))
+	var container: Node = Game.level.enemies_root if Game.level else get_parent()
+	var n := int(data.get("summon_count", 2))
+	Fx.popup_speech(self, "A me, ciurma!", float(data["height"]) + 1.2, 2.0)
+	Fx.ring(Game.world_root(), global_position, 6.0, Color(1.0, 0.5, 0.1), 0.5)
+	for i in n:
+		var a := TAU * i / n + randf() * 0.5
+		var e := Enemy.create(String(data["summon"]), level)
+		e.position = global_position + Vector3(cos(a), 0, sin(a)) * 4.0
+		container.add_child(e)
+		Fx.burst(Game.world_root(), e.position + Vector3(0, 1, 0), Color(0.3, 0.8, 1.0), 12, 4.0, 0.12, 0.5, 0.0)
+		e.aggro()
 
 
 func aggro() -> void:
@@ -439,6 +459,9 @@ func _die() -> void:
 		p.on_enemy_killed(self)
 	if unique and Game.hero:
 		Game.hero.flags["unique_" + type_id] = true
+	Quests.notify("kill", type_id)
+	if unique:
+		Quests.notify("kill_unique", type_id)
 	Loot.on_enemy_killed(self)
 	var tw := create_tween()
 	tw.tween_property(model, "rotation:x", deg_to_rad(-90.0), 0.25)

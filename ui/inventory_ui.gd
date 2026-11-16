@@ -157,7 +157,7 @@ func refresh() -> void:
 	mats_label.text = m
 	var hint := "Clic: equipaggia / togli    Shift+clic: getta a terra    I / C: chiudi"
 	if trade != null and trade.is_open:
-		hint = "Clic destro: %s    Clic: equipaggia    I / C: chiudi" % ("VENDI" if trade.mode == "vendor" else "SMONTA")
+		hint = "Clic destro: %s    Clic: equipaggia    I / C: chiudi" % {"vendor": "VENDI", "stash": "DEPOSITA"}.get(trade.mode, "SMONTA")
 	hint_label.text = hint
 	for slot: String in equip_buttons:
 		var it: Item = h.equipment.get(slot)
@@ -255,8 +255,10 @@ func _on_hover_bag(index: int) -> void:
 	if trade != null and trade.is_open:
 		if trade.mode == "vendor":
 			t += "\n[color=#f2c75a]Valore: %d sesterzi (clic destro per vendere)[/color]" % ItemDB.sell_value(it)
-		else:
+		elif trade.mode == "smith":
 			t += "\n[color=#f2c75a]Clic destro per smontare[/color]"
+		else:
+			t += "\n[color=#f2c75a]Clic destro per depositare nel forziere[/color]"
 	_show_tooltip(t)
 
 

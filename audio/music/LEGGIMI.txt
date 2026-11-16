@@ -1,0 +1,11 @@
+MUSICA DEI LIVELLI
+==================
+Metti qui i brani (.ogg consigliato, oppure .mp3 / .wav) con il nome dell'id del livello:
+
+  level_01.ogg         Campagna di Lazio Prime
+  ostia_nova.ogg       Ostia Nova (città)
+  level_03_porto.ogg   Porto di Ostia Nova
+
+Il brano parte da solo entrando nel livello, va in loop e si dissolve nel successivo.
+In alternativa imposta il campo "music" nel nodo radice del livello (Inspector).
+Volume: Opzioni > Audio.

@@ -1,0 +1,147 @@
+class_name Settings
+extends RefCounted
+## Impostazioni del giocatore (video, audio, tasti), salvate in user://settings.cfg.
+## Caricate all'avvio da Game._ready(); le opzioni grafiche dell'ambiente (ombre, SSAO, bagliore)
+## vengono applicate a ogni livello da Level._ready().
+
+const PATH := "user://settings.cfg"
+
+const VIDEO_DEFAULTS := {
+	"fullscreen": false, "vsync": true, "shadows": true, "ssao": true, "glow": true, "msaa": 2, "scale": 1.0,
+}
+
+## Azioni rimappabili, nell'ordine mostrato nelle opzioni.
+const ACTIONS := [
+	["move_up", "Muovi su"], ["move_down", "Muovi giù"], ["move_left", "Muovi a sinistra"], ["move_right", "Muovi a destra"],
+	["primary", "Muovi / attacca"], ["secondary", "Abilità (clic destro)"], ["force_stand", "Attacca sul posto"],
+	["skill_1", "Abilità 1"], ["skill_2", "Abilità 2"], ["skill_3", "Abilità 3"], ["skill_4", "Abilità 4"],
+	["potion", "Pozione"], ["interact", "Interagisci"], ["town_portal", "Portale cittadino"],
+	["inventory", "Inventario"], ["map", "Mappa"], ["quest_log", "Diario missioni"],
+]
+
+static var video: Dictionary = VIDEO_DEFAULTS.duplicate()
+
+
+static func load_and_apply() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(PATH) != OK:
+		return
+	for k: String in VIDEO_DEFAULTS:
+		video[k] = cfg.get_value("video", k, VIDEO_DEFAULTS[k])
+	Sfx.volume_db = float(cfg.get_value("audio", "sfx_db", Sfx.volume_db))
+	Music.volume_db = float(cfg.get_value("audio", "music_db", Music.volume_db))
+	if cfg.has_section("controls"):
+		for a: Array in ACTIONS:
+			if cfg.has_section_key("controls", a[0]):
+				var ev := deserialize(String(cfg.get_value("controls", a[0])))
+				if ev != null:
+					InputMap.action_erase_events(a[0])
+					InputMap.action_add_event(a[0], ev)
+	apply_video()
+
+
+static func save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(PATH)
+	for k: String in video:
+		cfg.set_value("video", k, video[k])
+	cfg.set_value("audio", "sfx_db", Sfx.volume_db)
+	cfg.set_value("audio", "music_db", Music.volume_db)
+	if cfg.has_section("controls"):
+		cfg.erase_section("controls")
+	for a: Array in ACTIONS:
+		var evs := InputMap.action_get_events(a[0])
+		if not evs.is_empty() and _differs_from_default(a[0]):
+			cfg.set_value("controls", a[0], serialize(evs[0]))
+	cfg.save(PATH)
+
+
+static func apply_video() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if video["fullscreen"] else DisplayServer.WINDOW_MODE_WINDOWED)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if video["vsync"] else DisplayServer.VSYNC_DISABLED)
+	var vp := tree.root
+	match int(video["msaa"]):
+		0: vp.msaa_3d = Viewport.MSAA_DISABLED
+		4: vp.msaa_3d = Viewport.MSAA_4X
+		_: vp.msaa_3d = Viewport.MSAA_2X
+	vp.scaling_3d_scale = clampf(float(video["scale"]), 0.5, 1.0)
+	if Game.level != null and is_instance_valid(Game.level):
+		apply_to_level(Game.level)
+
+
+## Ombre, SSAO e bagliore dell'ambiente del livello.
+static func apply_to_level(level: Node) -> void:
+	for we: WorldEnvironment in level.find_children("*", "WorldEnvironment", false, false):
+		if we.environment:
+			we.environment.ssao_enabled = bool(video["ssao"])
+			we.environment.glow_enabled = bool(video["glow"])
+	for l: DirectionalLight3D in level.find_children("*", "DirectionalLight3D", false, false):
+		l.shadow_enabled = bool(video["shadows"])
+
+
+static func reset_controls() -> void:
+	InputMap.load_from_project_settings()
+
+
+## Testo del tasto assegnato a un'azione (es. "W", "Mouse sinistro").
+static func event_text(action: String) -> String:
+	var evs := InputMap.action_get_events(action)
+	if evs.is_empty():
+		return "—"
+	return describe(evs[0])
+
+
+static func describe(ev: InputEvent) -> String:
+	if ev is InputEventKey:
+		var k := ev as InputEventKey
+		var code := k.physical_keycode if k.physical_keycode != KEY_NONE else k.keycode
+		if k.physical_keycode != KEY_NONE and DisplayServer.get_name() != "headless":
+			code = DisplayServer.keyboard_get_keycode_from_physical(k.physical_keycode)
+		return OS.get_keycode_string(code)
+	if ev is InputEventMouseButton:
+		match (ev as InputEventMouseButton).button_index:
+			MOUSE_BUTTON_LEFT: return "Mouse sinistro"
+			MOUSE_BUTTON_RIGHT: return "Mouse destro"
+			MOUSE_BUTTON_MIDDLE: return "Mouse centrale"
+			MOUSE_BUTTON_WHEEL_UP: return "Rotellina su"
+			MOUSE_BUTTON_WHEEL_DOWN: return "Rotellina giù"
+		return "Mouse %d" % (ev as InputEventMouseButton).button_index
+	return ev.as_text()
+
+
+static func serialize(ev: InputEvent) -> String:
+	if ev is InputEventKey:
+		return "k:%d" % (ev as InputEventKey).physical_keycode
+	if ev is InputEventMouseButton:
+		return "m:%d" % (ev as InputEventMouseButton).button_index
+	return ""
+
+
+static func deserialize(s: String) -> InputEvent:
+	var parts := s.split(":")
+	if parts.size() != 2:
+		return null
+	if parts[0] == "k":
+		var k := InputEventKey.new()
+		k.physical_keycode = int(parts[1]) as Key
+		return k
+	if parts[0] == "m":
+		var m := InputEventMouseButton.new()
+		m.button_index = int(parts[1]) as MouseButton
+		return m
+	return null
+
+
+static func _differs_from_default(action: String) -> bool:
+	var def: Dictionary = ProjectSettings.get_setting("input/" + action, {})
+	var def_events: Array = def.get("events", [])
+	var cur := InputMap.action_get_events(action)
+	if def_events.size() != cur.size():
+		return true
+	for i in cur.size():
+		if serialize(cur[i]) != serialize(def_events[i]):
+			return true
+	return false

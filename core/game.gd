@@ -1,4 +1,7 @@
 extends Node
+
+## Emesso quando cambia lo stato di una missione (HUD, segni sopra gli NPC, cancelli).
+signal quests_changed
 ## Autoload "Game": partita corrente, salvataggi su file e cambio di scena.
 ## I salvataggi sono file JSON in user://saves/ (su Windows: %APPDATA%/Godot/app_userdata/Legio 3000/saves).
 
@@ -9,14 +12,19 @@ const MENU_SCENE := "res://scenes/main_menu.tscn"
 const LEVELS := {
 	"level_01": "res://scenes/levels/level_01.tscn",
 	"ostia_nova": "res://scenes/levels/level_02_ostia.tscn",
+	"level_03_porto": "res://scenes/levels/level_03_porto.tscn",
 }
 ## Nomi dei livelli (elenco degli altari, portale) nell'ordine della campagna.
 const LEVEL_TITLES := {
 	"level_01": "Campagna di Lazio Prime",
 	"ostia_nova": "Ostia Nova",
+	"level_03_porto": "Porto di Ostia Nova",
 }
 ## Città-hub raggiungibile con il portale cittadino (tasto T).
 const HUB := "ostia_nova"
+## Forziere personale: condiviso da tutti gli eroi (come in Diablo), salvato a parte.
+const STASH_PATH := "user://stash.json"
+const STASH_SIZE := 60
 
 var hero: HeroData
 var current_slot := -1
@@ -27,10 +35,13 @@ var debug_unlock_all := false
 var pending_spawn := ""
 ## Oggetti venduti al mercante in questa sessione (si possono ricomprare allo stesso prezzo).
 var buyback: Array = []
+var _stash: Array = []
+var _stash_loaded := false
 
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	Settings.load_and_apply()
 
 
 func _process(delta: float) -> void:
@@ -106,7 +117,33 @@ func save_game() -> bool:
 		push_error("Impossibile salvare: %s" % error_string(FileAccess.get_open_error()))
 		return false
 	f.store_string(JSON.stringify(data, "\t"))
+	save_stash()
 	return true
+
+
+## Oggetti del forziere personale (Item o null), caricati dal disco la prima volta.
+func stash() -> Array:
+	if not _stash_loaded:
+		_stash_loaded = true
+		_stash.resize(STASH_SIZE)
+		if FileAccess.file_exists(STASH_PATH):
+			var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(STASH_PATH))
+			if parsed is Array:
+				for i in mini((parsed as Array).size(), STASH_SIZE):
+					if parsed[i] is Dictionary:
+						_stash[i] = Item.from_dict(parsed[i])
+	return _stash
+
+
+func save_stash() -> void:
+	if not _stash_loaded:
+		return
+	var out: Array = []
+	for it: Variant in _stash:
+		out.append((it as Item).to_dict() if it != null else null)
+	var f := FileAccess.open(STASH_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(out))
 
 
 func delete_slot(slot: int) -> void:

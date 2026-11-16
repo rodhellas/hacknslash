@@ -35,6 +35,7 @@ func interact(_p: Player) -> void:
 	opened = true
 	if Game.hero and flag_id != "":
 		Game.hero.flags[flag_id] = true
+	Quests.notify("chest", flag_id)
 	_open_visual(true)
 	Sfx.play("chest", global_position)
 	Fx.burst(Game.world_root(), global_position + Vector3(0, 1.0, 0), Color(1.0, 0.85, 0.35), 20 if rich else 10, 5.0, 0.1, 0.6, -4.0, 40.0)

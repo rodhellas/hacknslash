@@ -7,7 +7,7 @@
 - L'idea iniziale (Bud Spencer e Terence Hill nel mondo di Star Wars) è stata **scartata**: tutto deve restare originale.
 
 ## Trama
-**Da scrivere.** Per ora c'è solo lo spunto: il protagonista parte dalla villa di famiglia e deve raggiungere **Ostia Nova**, la città più vicina, per fare qualcosa (ancora da decidere).
+**Da scrivere.** I testi delle missioni sono in `data/quest_db.gd`. Per ora c'è solo lo spunto: il protagonista parte dalla villa di famiglia e deve raggiungere **Ostia Nova**, la città più vicina, per fare qualcosa (ancora da decidere).
 Tutti i punti in cui inserire la storia sono segnati con `[TRAMA]`:
 - **dialoghi degli NPC**: tutti in `data/npc_db.gd` (un solo file da modificare);
 - cartelli del livello 1 e della città (`LoreSign`, testo nell'Inspector);
@@ -57,7 +57,8 @@ Abilità: clic sinistro (primaria, genera risorsa), clic destro (secondaria), ta
 - **Mercante**: vende 16 oggetti del livello dell'eroe (4 rari, 12 magici), rinnovati a ogni ingresso in città. Prezzo = valore × 5. Valore di vendita = [5, 15, 40, 120] per rarità × (1 + 0,25 × (liv. oggetto − 1)). Riacquisto degli ultimi 12 oggetti venduti allo stesso prezzo di vendita.
 - **Fabbro**: smonta gli oggetti in materiali (comune → rottami di bronzo, magico → rottami + essenza arcana, raro → essenze, leggendario → frammento divino + essenze) e forgia oggetti del livello dell'eroe per la propria classe:
   magico = 25 sesterzi × livello + 4 rottami; raro = 80 × livello + 8 rottami + 4 essenze; leggendario (casuale) = 300 × livello + 2 frammenti + 10 essenze.
-- **Da fare**: gemme, set, forziere personale (stash).
+- **Forziere personale** (in città, accanto all'altare del Foro): 60 caselle, condiviso da tutti gli eroi (`user://stash.json`).
+- **Da fare**: gemme, set.
 
 ## Viaggi
 - **Altari**: si attivano avvicinandosi (salvano e diventano il punto di rinascita del loro livello). Cliccandoli si apre il **viaggio rapido** verso tutti gli altari attivati, anche di altri livelli.
@@ -97,14 +98,34 @@ Livello dei nemici: da 1 a 5 lungo il percorso. Ci sono 24 zone di nemici e 8 fo
 - Minimappa (telecamera ortografica) + mappa grande con TAB; le icone sono sul livello visivo 11.
 - Barre della vita sopra i nemici, riquadro del bersaglio in alto, nomi del loot colorati, colonne di luce per rari e leggendari.
 
+## Missioni (data/quest_db.gd)
+| Missione | Atto | Chi la affida | Obiettivi | Ricompensa |
+|---|---|---|---|---|
+| Verso Ostia Nova | 1 | (automatica) | uccidi Brenno → entra a Ostia Nova → parla col prefetto | 400 PE, 300 sesterzi |
+| Ferri del mestiere | 1 | fabbro | smonta 3 oggetti → torna dal fabbro | 150 sesterzi, 3 essenze |
+| Il fuoco tremante | 1 | vestale | 12 lemuri → torna dalla vestale | 350 PE, oggetto raro |
+| Il porto sbarrato | 2 | prefetto | entra nel porto → altare dei cantieri → uccidi Vulso → torna dal prefetto | 1500 PE, 800 sesterzi, leggendario |
+| Merce rubata | 2 | mercante | forziere del magazzino del sale → torna dal mercante | 600 sesterzi, oggetto raro |
+| Ripulire i moli | 2 | guardia | 30 pirati → torna da una guardia | 800 PE, 400 sesterzi |
+
+## Livello 3 – Porto di Ostia Nova (scenes/levels/level_03_porto.tscn, atto 2)
+Generato da `tools/build_porto.gd`. Nord = −Z, il mare è a est. Percorso di circa 560 m, nemici di livello 6-9, 20 zone, 6 forzieri, 3 altari.
+1. **Porta del porto** (arrivo dal cancello nord di Ostia Nova; l'uscita riporta in città). Altare di Nettuno.
+2. **Magazzini** lungo la strada; deviazione a ovest: **magazzino del sale** (forziere della missione "Merce rubata", Campioni). A est il primo **molo** con nave ormeggiata.
+3. **Cantieri navali**: gru sulla riva, **Altare di Minerva**; deviazione a ovest: nave in costruzione e automi. Secondo molo con forziere in punta.
+4. **Spazioporto**: piattaforme di atterraggio, navetta corsara, droni, **Altare di Mercurio**. Terzo molo con granchi meccanici.
+5. **Faro**: covo di **Vulso il Corsaro** (carica, colpo ad area, ogni 14 s chiama 3 pirati).
+
+Nuovi nemici: Pirata cilicio (mischia), Arpionatore (a distanza), Granchio meccanico (piccolo e veloce, in gruppo), Automa portuale (pesante, colpo ad area).
+
 ## Effetti e audio (segnaposto)
 - `core/fx.gd`: particelle CPU (`burst`, `explosion`, `pillar`, `trail`) e fumetti degli NPC (`popup_speech`).
 - `core/sfx.gd`: 24 effetti sonori **sintetizzati da codice** (nessun file). Per usare un suono vero basta mettere `res://audio/sfx/<nome>.wav` (o `.ogg`): ha la precedenza. Nomi: swing, hit, crit, enemy_die, player_hurt, enemy_attack, cast, projectile, dash, explosion, gold, pickup, rare_drop, legendary, levelup, potion, chest, break, checkpoint, portal, ui_click, coins, anvil, talk. Volume nel menu di pausa (salvato in `user://settings.cfg`).
-- Manca la **musica**.
+- **Musica**: nessun brano incluso. Basta mettere `audio/music/<id livello>.ogg` (vedi `audio/music/LEGGIMI.txt`); dissolvenza tra i livelli, volume in Opzioni.
 
 ## Idee / prossimi passi
 - Scrivere la trama (dialoghi in `data/npc_db.gd`) e le missioni.
-- Atto 2: il porto di Ostia Nova.
+- Atto 3 (dopo il faro).
 - Sostituire i modelli segnaposto con quelli di Tripo + animazioni Mixamo.
 - Musica, suoni veri, effetti con shader.
 - Nebbia di guerra sulla mappa, skill alternative/rune come in D3, opzioni grafiche e di rimappatura dei tasti.

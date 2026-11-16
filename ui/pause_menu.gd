@@ -6,16 +6,18 @@ const CONTROLS := """[b]Movimento[/b]: clic sinistro sul terreno (tieni premuto 
 [b]Attacco[/b]: clic sinistro su un nemico (tieni premuto per continuare)
 [b]Attacca sul posto[/b]: Shift + clic sinistro
 [b]Abilità[/b]: clic destro, tasti 1 - 2 - 3 - 4
-[b]Pozione[/b]: Q        [b]Interagisci / raccogli[/b]: clic o E
+[b]Pozione[/b]: Q        [b]Interagisci / raccogli[/b]: clic o E        [b]Diario missioni[/b]: J
 [b]Portale per Ostia Nova[/b]: T (in città clicca il portale per tornare indietro)
 [b]Viaggio rapido[/b]: clicca un altare già attivato
-[b]Mercante / fabbro[/b]: clic destro su un oggetto dello zaino per vendere / smontare
+[b]Mercante / fabbro / forziere[/b]: clic destro su un oggetto dello zaino per vendere / smontare / depositare
+I tasti si cambiano in Opzioni > Comandi.
 [b]Inventario[/b]: I o C        [b]Mappa[/b]: TAB        [b]Zoom[/b]: rotellina
 [b]Pausa[/b]: ESC"""
 
 var root: Control
 var info: Label
 var controls: RichTextLabel
+var options: OptionsMenu
 
 
 func _ready() -> void:
@@ -47,6 +49,7 @@ func _ready() -> void:
 		["Riprendi", close],
 		["Salva partita", _save],
 		["Comandi", func() -> void: controls.visible = not controls.visible],
+		["Opzioni", func() -> void: options.open()],
 		["Salva e torna al menu", func() -> void: Game.quit_to_menu(true)],
 		["Esci dal gioco", func() -> void:
 			Game.save_game()
@@ -58,23 +61,6 @@ func _ready() -> void:
 		b.add_theme_font_size_override("font_size", 18)
 		b.pressed.connect(pair[1])
 		v.add_child(b)
-	var vol_row := HBoxContainer.new()
-	vol_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var vl := Label.new()
-	vl.text = "Volume effetti "
-	vol_row.add_child(vl)
-	var slider := HSlider.new()
-	slider.min_value = -40.0
-	slider.max_value = 6.0
-	slider.step = 1.0
-	slider.custom_minimum_size = Vector2(200, 24)
-	Sfx._load_settings()
-	slider.value = Sfx.volume_db
-	slider.value_changed.connect(func(v: float) -> void:
-		Sfx.set_volume(v)
-		Sfx.play("ui_click"))
-	vol_row.add_child(slider)
-	v.add_child(vol_row)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.add_theme_color_override("font_color", Color(0.6, 1, 0.6))
@@ -86,11 +72,13 @@ func _ready() -> void:
 	controls.text = CONTROLS
 	controls.visible = false
 	v.add_child(controls)
+	options = OptionsMenu.new()
+	add_child(options)
 	root.visible = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("pause"):
+	if not event.is_action_pressed("pause") or options.is_open():
 		return
 	get_viewport().set_input_as_handled()
 	if root.visible:
