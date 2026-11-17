@@ -34,6 +34,7 @@ var combo_step := 0
 var combo_timer := 0.0
 var facing_yaw := 0.0
 var powers: Dictionary = {}      # poteri dei leggendari indossati
+var skill_bonus: Dictionary = {}  # +% danni per abilità (bonus dei set): id abilità -> %
 var shield := 0.0                # scudo che assorbe danni (Scutum dell'Ultima Legione)
 var _shield_t := 0.0
 var _shield_cd := 0.0
@@ -109,6 +110,7 @@ func _ready() -> void:
 func refresh_stats() -> void:
 	stats = hero.compute_stats()
 	powers = hero.legendary_powers()
+	skill_bonus = hero.skill_bonuses()
 	life = minf(life, stats["max_life"])
 	resource = minf(resource, stats["resource_max"])
 

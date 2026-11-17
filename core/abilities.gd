@@ -33,6 +33,9 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 		return
 	if (e.elite or e.unique) and p.has_power("scipione"):
 		mult *= 1.5
+	var sb := float(p.skill_bonus.get(String(ab.get("id", "")), 0.0))
+	if sb > 0.0:
+		mult *= 1.0 + sb / 100.0
 	var r := p.roll_damage(mult)
 	var pos := e.global_position
 	e.take_damage(r[0], knock, r[1])

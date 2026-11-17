@@ -384,6 +384,16 @@ func _prop_defs() -> Dictionary:
 	d["tomba"] = {"parts": [["box", Vector3(0, 1.2, 0), Vector3(5, 2.4, 5), STONE], ["cyl", Vector3(0, 3.6, 0), Vector3(2.2, 2.4, 2.2), STONE.lightened(0.1)],
 			["cyl", Vector3(0, 5.2, 0), Vector3(0, 0.8, 2.3), STONE.darkened(0.1)]],
 		"col": [["box", Vector3(0, 2.5, 0), Vector3(5, 5, 5)]], "fade": true}
+	# Entrata di un dungeon (world/dungeon_entrance.gd): portale di pietra con scala che scende, apertura verso +Z
+	d["ingresso_catacombe"] = {"parts": [["box", Vector3(0, 0.15, -0.6), Vector3(5.6, 0.3, 4.4), STONE.darkened(0.2)],
+			["box", Vector3(-2.2, 1.6, 0), Vector3(1, 3.2, 1.2), STONE], ["box", Vector3(2.2, 1.6, 0), Vector3(1, 3.2, 1.2), STONE],
+			["box", Vector3(0, 3.5, 0), Vector3(5.6, 0.7, 1.4), STONE.lightened(0.1)],
+			["box", Vector3(0, 1.6, -0.5), Vector3(3.4, 3.2, 0.2), Color(0.02, 0.02, 0.03)],
+			["box", Vector3(0, 0.32, 0.9), Vector3(3.2, 0.06, 0.6), STONE.darkened(0.35)],
+			["box", Vector3(0, 0.26, 0.4), Vector3(3.2, 0.06, 0.6), STONE.darkened(0.45)],
+			["box", Vector3(0, 3.95, 0.72), Vector3(0.9, 0.5, 0.06), Color(0.85, 0.4, 1.0), 2.0]],
+		"col": [["box", Vector3(0, 1.8, -0.6), Vector3(5.6, 3.6, 2.4)]], "script": "res://world/dungeon_entrance.gd",
+		"light": [Vector3(0, 2.0, 1.2), Color(0.85, 0.4, 1.0), 1.2, 6.0]}
 	d["sarcofago"] = {"parts": [["box", Vector3(0, 0.45, 0), Vector3(2.2, 0.9, 1), STONE], ["box", Vector3(0, 1.0, 0), Vector3(2.3, 0.2, 1.1), MARBLE]],
 		"col": [["box", Vector3(0, 0.55, 0), Vector3(2.3, 1.1, 1.1)]], "vis": 110.0}
 	d["staccionata"] = {"parts": [["box", Vector3(-1.9, 0.6, 0), Vector3(0.15, 1.2, 0.15), WOOD], ["box", Vector3(1.9, 0.6, 0), Vector3(0.15, 1.2, 0.15), WOOD],
@@ -1302,6 +1312,9 @@ func _build_pois(parent: Node) -> void:
 	_place("forziere", g, c + Vector2(0, 8), 180.0, 1.0, {"flag_id": "chest_mausoleo", "item_level": 5, "rich": true})
 	for i in 4:
 		_place("anfora", g, c + Vector2(rng.randf_range(-6, 6), rng.randf_range(10, 13)))
+	# Entrata delle catacombe (dungeon generato, data/dungeon_db.gd). Fuori dal flusso di rng: non sposta il resto.
+	var ing := _place("ingresso_catacombe", g, c + Vector2(-12, 2), 0.0, 1.0, {"dungeon_id": "catacombe"})
+	ing.name = "IngressoCatacombe"
 
 	# --- Periferia di Ostia Nova: acquedotto, mura, porta ---
 	g = _group(parent, "OstiaNova")

@@ -3,6 +3,7 @@ extends CanvasLayer
 ## Pannello a sinistra (l'inventario si apre a destra) per:
 ##   Mercante: compra (clic sulla merce), vendi (clic destro su un oggetto dello zaino), riacquista.
 ##   Fabbro:   smonta (clic destro su un oggetto dello zaino) e forgia nuovi oggetti con i materiali.
+##             Scheda Gioielliere: combina 3 gemme in una superiore, incastona e togli le gemme.
 ##   Forziere personale (stash): clic = riprendi nello zaino, clic destro sullo zaino = deposita.
 ## Prezzi, materiali e ricette sono in data/item_db.gd (SELL_VALUE, BUY_MULT, salvage_yield, RECIPES).
 
@@ -24,6 +25,7 @@ var gold_label: Label
 var content: VBoxContainer
 var _tab := "merce"
 var _slot_choice := "arma"
+var _gem_choice := ""
 ## Merce di ogni mercante: si rinnova ogni volta che si rientra nel livello.
 var _stock: Dictionary = {}
 
@@ -121,7 +123,12 @@ func refresh() -> void:
 		_build_stash()
 	else:
 		subtitle.text = "Clic destro su un oggetto del tuo zaino: smontalo per ottenere materiali."
-		_build_smith()
+		_build_tabs([["merce", "Fabbro"], ["gemme", "Gioielliere"]])
+		if _tab == "gemme":
+			subtitle.text = "Scegli una gemma, poi clicca un'orbita vuota per incastonarla. Clic su una gemma incastonata: toglila."
+			_build_jeweler()
+		else:
+			_build_smith()
 
 
 ## Chiamato dall'inventario con il clic destro su un oggetto dello zaino.
@@ -190,10 +197,16 @@ func _deposit(index: int) -> void:
 # --- Mercante ---------------------------------------------------------------------------------
 
 func _build_vendor() -> void:
+	_build_tabs([["merce", "Merce"], ["riacquista", "Riacquista (%d)" % Game.buyback.size()]])
+	var buyback := _tab == "riacquista"
+	_build_vendor_items(buyback)
+
+
+func _build_tabs(list: Array) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
 	content.add_child(tabs)
-	for pair: Array in [["merce", "Merce"], ["riacquista", "Riacquista (%d)" % Game.buyback.size()]]:
+	for pair: Array in list:
 		var b := Button.new()
 		b.text = pair[1]
 		b.toggle_mode = true
@@ -206,7 +219,9 @@ func _build_vendor() -> void:
 			Sfx.play("ui_click")
 			refresh.call_deferred())
 		tabs.add_child(b)
-	var buyback := _tab == "riacquista"
+
+
+func _build_vendor_items(buyback: bool) -> void:
 	var items: Array = Game.buyback if buyback else _get_stock()
 	var grid := GridContainer.new()
 	grid.columns = 8
@@ -371,7 +386,7 @@ func _build_smith() -> void:
 		h.add_child(l)
 		content.add_child(h)
 	content.add_child(_label(13, Color(0.6, 0.6, 0.6),
-		"Gli oggetti forgiati sono del tuo livello e adatti alla tua classe.\nIl leggendario è casuale (il tipo scelto viene ignorato)."))
+		"Gli oggetti forgiati sono del tuo livello e adatti alla tua classe.\nIl leggendario è casuale (il tipo scelto viene ignorato) e può essere un pezzo di set."))
 
 
 func _salvage(index: int, notify: bool = true) -> Dictionary:
@@ -436,12 +451,155 @@ func _craft(rid: String) -> void:
 		h.add_material(m, -int(mats_req[m]))
 	h.add_item(it)
 	Sfx.play("anvil")
-	if it.rarity == Item.Rarity.LEGGENDARIO:
+	if it.is_special():
 		Sfx.play("legendary")
 	if source:
 		Fx.burst(Game.world_root(), source.global_position + Vector3(0, 1.2, 0), Color(1.0, 0.6, 0.2), 24, 5.0, 0.08, 0.6, -6.0, 60.0)
 	Game.level.hud.log_pickup("Forgiato: %s" % it.item_name, it.color())
 	_after_change()
+
+
+# --- Gioielliere -------------------------------------------------------------------------------
+
+func _build_jeweler() -> void:
+	var h := player.hero
+	content.add_child(_label(20, Hud.GOLD, "Sacchetto delle gemme"))
+	var keys: Array = h.gems.keys()
+	keys.sort()
+	if not h.gems.has(_gem_choice):
+		_gem_choice = String(keys[0]) if not keys.is_empty() else ""
+	if keys.is_empty():
+		content.add_child(_label(15, Color(0.6, 0.6, 0.6), "Nessuna gemma. Le lasciano nemici e forzieri: si raccolgono passandoci sopra."))
+	for k: String in keys:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var b := Button.new()
+		b.text = "%s  ×%d" % [ItemDB.gem_name(k), h.gem_count(k)]
+		b.toggle_mode = true
+		b.button_pressed = k == _gem_choice
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(250, 32)
+		b.add_theme_color_override("font_color", ItemDB.gem_color(k))
+		b.add_theme_color_override("font_pressed_color", ItemDB.gem_color(k).lightened(0.4))
+		b.tooltip_text = "Arma: %s\nElmo: %s\nAltro: %s" % [ItemDB.affix_text(ItemDB.gem_affix(k, "arma")),
+			ItemDB.affix_text(ItemDB.gem_affix(k, "elmo")), ItemDB.affix_text(ItemDB.gem_affix(k, "armatura"))]
+		b.pressed.connect(func() -> void:
+			_gem_choice = k
+			Sfx.play("ui_click")
+			refresh.call_deferred())
+		row.add_child(b)
+		var tier := ItemDB.gem_tier(k)
+		if tier < ItemDB.GEM_TIERS.size():
+			var cost := ItemDB.GEM_COMBINE_GOLD * tier
+			var c := Button.new()
+			c.text = "Combina %d (%d sesterzi)" % [ItemDB.GEM_COMBINE_COST, cost]
+			c.focus_mode = Control.FOCUS_NONE
+			c.disabled = h.gem_count(k) < ItemDB.GEM_COMBINE_COST or h.gold < cost
+			c.pressed.connect(combine_gem.bind(k))
+			row.add_child(c)
+		content.add_child(row)
+
+	content.add_child(_label(20, Hud.GOLD, "Oggetti con orbite"))
+	var any := false
+	for slot: String in HeroData.EQUIP_SLOTS:
+		var it: Item = h.equipment.get(slot)
+		if it != null and not it.gems.is_empty():
+			_socket_row(it, true)
+			any = true
+	for it: Variant in h.inventory:
+		if it != null and not (it as Item).gems.is_empty():
+			_socket_row(it, false)
+			any = true
+	if not any:
+		content.add_child(_label(15, Color(0.6, 0.6, 0.6), "Nessun oggetto con orbite (indossato o nello zaino)."))
+	content.add_child(_label(13, Color(0.6, 0.6, 0.6),
+		"L'effetto di una gemma dipende da dove la incastoni: arma, elmo o altro.\nTogliere una gemma costa %d sesterzi per grado: la gemma torna nel sacchetto." % ItemDB.GEM_REMOVE_GOLD))
+
+
+func _socket_row(it: Item, worn: bool) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	var lbl := _label(15, it.color(), ("%s  [indossato]" if worn else "%s") % it.item_name)
+	lbl.custom_minimum_size = Vector2(230, 0)
+	lbl.clip_text = true
+	lbl.mouse_filter = Control.MOUSE_FILTER_PASS
+	lbl.mouse_entered.connect(func() -> void: inv.show_tooltip(it.tooltip_bbcode(), true))
+	lbl.mouse_exited.connect(inv.hide_tooltip)
+	row.add_child(lbl)
+	for i in it.gems.size():
+		var g: String = it.gems[i]
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(80, 30)
+		b.clip_text = true
+		if g == "":
+			b.text = "◇ vuota"
+			b.disabled = _gem_choice == ""
+		else:
+			b.text = "◆ " + ItemDB.GEMS[ItemDB.gem_type(g)]["name"]
+			b.add_theme_color_override("font_color", ItemDB.gem_color(g))
+			b.tooltip_text = "%s: %s\nClic: togli (%d sesterzi)" % [ItemDB.gem_name(g),
+				ItemDB.affix_text(ItemDB.gem_affix(g, it.slot)), ItemDB.GEM_REMOVE_GOLD * ItemDB.gem_tier(g)]
+		b.pressed.connect(_on_socket.bind(it, i))
+		row.add_child(b)
+	content.add_child(row)
+
+
+func _on_socket(it: Item, i: int) -> void:
+	if String(it.gems[i]) == "":
+		socket_gem(it, i, _gem_choice)
+	else:
+		unsocket_gem(it, i)
+
+
+## Incastona una gemma del sacchetto nell'orbita i dell'oggetto. Ritorna true se riuscito.
+func socket_gem(it: Item, i: int, key: String) -> bool:
+	var h := player.hero
+	if key == "" or h.gem_count(key) <= 0 or i >= it.gems.size() or String(it.gems[i]) != "":
+		return false
+	h.add_gem(key, -1)
+	it.gems[i] = key
+	Sfx.play("anvil", null, -8.0)
+	Game.level.hud.log_pickup("Incastonato: %s" % ItemDB.gem_name(key), ItemDB.gem_color(key))
+	player.refresh_stats()
+	_after_change()
+	return true
+
+
+func unsocket_gem(it: Item, i: int) -> bool:
+	var h := player.hero
+	var key := String(it.gems[i])
+	if key == "":
+		return false
+	var cost := ItemDB.GEM_REMOVE_GOLD * ItemDB.gem_tier(key)
+	if h.gold < cost:
+		Game.level.hud.show_warning("Sesterzi insufficienti")
+		return false
+	h.gold -= cost
+	it.gems[i] = ""
+	h.add_gem(key)
+	Sfx.play("coins")
+	player.refresh_stats()
+	_after_change()
+	return true
+
+
+## 3 gemme uguali -> 1 del grado superiore.
+func combine_gem(key: String) -> bool:
+	var h := player.hero
+	var tier := ItemDB.gem_tier(key)
+	var cost := ItemDB.GEM_COMBINE_GOLD * tier
+	if tier >= ItemDB.GEM_TIERS.size() or h.gem_count(key) < ItemDB.GEM_COMBINE_COST or h.gold < cost:
+		return false
+	h.gold -= cost
+	h.add_gem(key, -ItemDB.GEM_COMBINE_COST)
+	var up := ItemDB.gem_key(ItemDB.gem_type(key), tier + 1)
+	h.add_gem(up)
+	_gem_choice = up
+	Sfx.play("anvil")
+	Game.level.hud.log_pickup("Combinato: %s" % ItemDB.gem_name(up), ItemDB.gem_color(up))
+	_after_change()
+	return true
 
 
 ## Aggiorna inventario e pannello (il pannello si ricostruisce al frame dopo, tramite il segnale).

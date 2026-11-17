@@ -2,10 +2,10 @@ class_name Item
 extends RefCounted
 ## Oggetto equipaggiabile (arma, armatura, gioiello). Si salva/carica come Dictionary (JSON).
 
-enum Rarity { COMUNE, MAGICO, RARO, LEGGENDARIO }
+enum Rarity { COMUNE, MAGICO, RARO, LEGGENDARIO, SET }
 
-const RARITY_NAMES := ["Comune", "Magico", "Raro", "Leggendario"]
-const RARITY_COLORS := [Color(0.92, 0.92, 0.92), Color(0.45, 0.62, 1.0), Color(1.0, 0.88, 0.3), Color(1.0, 0.55, 0.1)]
+const RARITY_NAMES := ["Comune", "Magico", "Raro", "Leggendario", "Set"]
+const RARITY_COLORS := [Color(0.92, 0.92, 0.92), Color(0.45, 0.62, 1.0), Color(1.0, 0.88, 0.3), Color(1.0, 0.55, 0.1), Color(0.3, 0.95, 0.3)]
 const SLOT_NAMES := {
 	"arma": "Arma", "secondaria": "Mano secondaria", "elmo": "Elmo", "armatura": "Armatura", "guanti": "Guanti",
 	"gambali": "Gambali", "calzari": "Calzari", "amuleto": "Amuleto", "anello": "Anello",
@@ -25,10 +25,32 @@ var armor := 0.0
 var affixes: Array = []   # [{ "stat": String, "value": float }]
 var flavor := ""
 var power := ""   # potere leggendario (chiave di ItemDB.POWERS)
+var set_id := ""  # pezzo di set (chiave di ItemDB.SETS)
+var gems: Array = []   # orbite: una chiave di gemma ("rubino:2") o "" se vuota; size() = numero di orbite
 
 
 func color() -> Color:
-	return RARITY_COLORS[clampi(rarity, 0, 3)]
+	return RARITY_COLORS[clampi(rarity, 0, RARITY_COLORS.size() - 1)]
+
+
+## Leggendari e set: colonna di luce alta, suono speciale.
+func is_special() -> bool:
+	return rarity >= Rarity.LEGGENDARIO
+
+
+func free_sockets() -> int:
+	return gems.count("")
+
+
+## Statistiche delle gemme incastonate.
+func gem_affixes() -> Array:
+	var out: Array = []
+	for g: String in gems:
+		if g != "":
+			var a := ItemDB.gem_affix(g, slot)
+			if not a.is_empty():
+				out.append(a)
+	return out
 
 
 func dps() -> float:
@@ -38,7 +60,7 @@ func dps() -> float:
 ## Somma dei valori degli affissi per statistica.
 func stat_totals() -> Dictionary:
 	var t := {}
-	for a: Dictionary in affixes:
+	for a: Dictionary in affixes + gem_affixes():
 		t[a["stat"]] = float(t.get(a["stat"], 0.0)) + float(a["value"])
 	return t
 
@@ -57,6 +79,7 @@ func to_dict() -> Dictionary:
 		"uid": uid, "base_id": base_id, "name": item_name, "slot": slot, "weapon_type": weapon_type,
 		"rarity": rarity, "ilvl": ilvl, "dmg_min": dmg_min, "dmg_max": dmg_max, "attack_speed": attack_speed,
 		"armor": armor, "affixes": affixes, "flavor": flavor, "power": power,
+		"set_id": set_id, "gems": gems,
 	}
 
 
@@ -77,6 +100,9 @@ static func from_dict(d: Dictionary) -> Item:
 	it.power = String(d.get("power", ""))
 	if it.power == "" and it.rarity == Rarity.LEGGENDARIO:
 		it.power = ItemDB.power_for_name(it.item_name)
+	it.set_id = String(d.get("set_id", ""))
+	for g: Variant in d.get("gems", []):
+		it.gems.append(String(g))
 	for a: Dictionary in d.get("affixes", []):
 		it.affixes.append({"stat": String(a["stat"]), "value": float(a["value"])})
 	return it
@@ -108,8 +134,18 @@ func tooltip_bbcode(compare: Item = null, usable: bool = true) -> String:
 		t += "\n"
 		for a: Dictionary in affixes:
 			t += "[color=#7fa8ff]%s[/color]\n" % ItemDB.affix_text(a)
+	if not gems.is_empty():
+		t += "\n"
+		for g: String in gems:
+			if g == "":
+				t += "[color=#777777]◇ Orbita vuota[/color]\n"
+			else:
+				t += "[color=#%s]◆ %s:[/color] [color=#7fa8ff]%s[/color]\n" % [ItemDB.gem_color(g).to_html(false),
+					ItemDB.gem_name(g), ItemDB.affix_text(ItemDB.gem_affix(g, slot))]
 	if power != "":
 		t += "\n[color=#ff9a30]%s[/color]\n" % ItemDB.POWERS.get(power, "")
+	if set_id != "" and ItemDB.SETS.has(set_id):
+		t += _set_text()
 	if flavor != "":
 		t += "\n[i][color=#c8a050]%s[/color][/i]\n" % flavor
 	if compare:
@@ -127,6 +163,27 @@ func tooltip_bbcode(compare: Item = null, usable: bool = true) -> String:
 				lines += "[color=#%s]%s[/color]\n" % [col, ItemDB.affix_text({"stat": k, "value": d}, true)]
 		if lines != "":
 			t += "\n[color=#999999]Rispetto a ciò che indossi:[/color]\n" + lines
+	return t
+
+
+## Elenco dei pezzi del set (verdi quelli indossati) e dei bonus (attivi in verde).
+func _set_text() -> String:
+	var st: Dictionary = ItemDB.SETS[set_id]
+	var worn := {}
+	var game: Node = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Game")
+	if game != null and game.get("hero") != null:
+		var eq: Dictionary = game.hero.equipment
+		for k: String in eq:
+			var w: Item = eq[k]
+			if w.set_id == set_id:
+				worn[w.item_name] = true
+	var t := "\n[color=#4cf24c]%s[/color]\n" % st["name"]
+	for pd: Dictionary in st["pieces"]:
+		t += "[color=#%s]  %s[/color]\n" % ["4cf24c" if worn.has(pd["name"]) else "777777", pd["name"]]
+	var bonus: Dictionary = st["bonus"]
+	for n: int in bonus:
+		var col := "4cf24c" if worn.size() >= n else "777777"
+		t += "[color=#%s](%d) %s[/color]\n" % [col, n, ItemDB.set_bonus_text(bonus[n])]
 	return t
 
 

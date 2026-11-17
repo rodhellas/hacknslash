@@ -23,6 +23,7 @@ var play_time := 0.0
 var materials: Dictionary = {}   # materiali del fabbro: "rottami", "essenza", "frammento"
 var waypoints: Dictionary = {}   # altari attivati (viaggio rapido): id -> {"level": id livello, "title": nome}
 var quests: Dictionary = {}      # missioni: id -> {"state": "active"/"done", "step": int, "count": int}
+var gems: Dictionary = {}        # sacchetto delle gemme: "rubino:2" -> quantità
 
 ## Altari del livello 1 nei salvataggi fatti prima del viaggio rapido.
 const LEGACY_WAYPOINTS := {
@@ -47,6 +48,23 @@ func material(id: String) -> int:
 
 func add_material(id: String, amount: int) -> void:
 	materials[id] = material(id) + amount
+
+
+func gem_count(key: String) -> int:
+	return int(gems.get(key, 0))
+
+
+func add_gem(key: String, amount: int = 1) -> void:
+	var n := gem_count(key) + amount
+	if n > 0:
+		gems[key] = n
+	else:
+		gems.erase(key)
+
+
+## +% danni per abilità dati dai set indossati: {id abilità: %}.
+func skill_bonuses() -> Dictionary:
+	return ItemDB.set_bonuses(equipment, level)["skills"]
 
 
 ## Poteri dei leggendari indossati (chiavi di ItemDB.POWERS).
@@ -118,12 +136,14 @@ func compute_stats() -> Dictionary:
 	for slot: String in equipment:
 		var it: Item = equipment[slot]
 		s["armor"] += it.armor
-		for a: Dictionary in it.affixes:
+		for a: Dictionary in it.affixes + it.gem_affixes():
 			s[a["stat"]] = float(s.get(a["stat"], 0.0)) + float(a["value"])
 		if slot == "arma":
 			wmin = it.dmg_min
 			wmax = it.dmg_max
 			aps = it.attack_speed
+	for a: Dictionary in ItemDB.set_bonuses(equipment, level)["stats"]:
+		s[a["stat"]] = float(s.get(a["stat"], 0.0)) + float(a["value"])
 	var off: Item = equipment.get("secondaria")
 	if off != null and off.dmg_max > 0.0:
 		wmin += off.dmg_min * 0.5
@@ -156,7 +176,7 @@ func to_dict() -> Dictionary:
 		"inventory": inv, "equipment": eq, "level_id": level_id,
 		"position": [position.x, position.y, position.z], "has_position": has_position,
 		"checkpoint_id": checkpoint_id, "flags": flags, "play_time": play_time,
-		"materials": materials, "waypoints": waypoints, "quests": quests,
+		"materials": materials, "waypoints": waypoints, "quests": quests, "gems": gems,
 	}
 
 
@@ -186,6 +206,9 @@ static func from_dict(d: Dictionary) -> HeroData:
 	for k: String in mats:
 		h.materials[k] = int(mats[k])
 	h.waypoints = d.get("waypoints", {})
+	var gs: Dictionary = d.get("gems", {})
+	for k: String in gs:
+		h.gems[k] = int(gs[k])
 	var qs: Dictionary = d.get("quests", {})
 	for id: String in qs:
 		var q: Dictionary = qs[id]

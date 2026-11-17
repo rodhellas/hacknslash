@@ -1,0 +1,121 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://world/dungeon_entrance.gd" id="1_2pva7"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_je0nv"]
+albedo_color = Color(0.44000003, 0.424, 0.4, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_me7ab"]
+size = Vector3(5.6, 0.3, 4.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yt45b"]
+albedo_color = Color(0.55, 0.53, 0.5, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_nm608"]
+size = Vector3(1, 3.2, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_t6ric"]
+size = Vector3(1, 3.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_deoew"]
+albedo_color = Color(0.595, 0.57699996, 0.55, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_wawvc"]
+size = Vector3(5.6, 0.7, 1.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_53q8v"]
+albedo_color = Color(0.02, 0.02, 0.03, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_iqpf0"]
+size = Vector3(3.4, 3.2, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q6fmu"]
+albedo_color = Color(0.3575, 0.34449998, 0.325, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_4bpeo"]
+size = Vector3(3.2, 0.06, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sr37h"]
+albedo_color = Color(0.3025, 0.2915, 0.275, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_mgy8g"]
+size = Vector3(3.2, 0.06, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lch41"]
+albedo_color = Color(0.85, 0.4, 1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.85, 0.4, 1, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_gnsge"]
+size = Vector3(0.9, 0.5, 0.06)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_evy7r"]
+size = Vector3(5.6, 3.6, 2.4)
+
+[node name="IngressoCatacombe" type="StaticBody3D" unique_id=1065105717]
+collision_mask = 0
+script = ExtResource("1_2pva7")
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1368148229]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=652204171]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -0.6)
+material_override = SubResource("StandardMaterial3D_je0nv")
+mesh = SubResource("BoxMesh_me7ab")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=687084877]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 1.6, 0)
+material_override = SubResource("StandardMaterial3D_yt45b")
+mesh = SubResource("BoxMesh_nm608")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=1789592582]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 1.6, 0)
+material_override = SubResource("StandardMaterial3D_yt45b")
+mesh = SubResource("BoxMesh_t6ric")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=2069185992]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+material_override = SubResource("StandardMaterial3D_deoew")
+mesh = SubResource("BoxMesh_wawvc")
+
+[node name="box_4" type="MeshInstance3D" parent="Graybox" unique_id=676885935]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -0.5)
+material_override = SubResource("StandardMaterial3D_53q8v")
+mesh = SubResource("BoxMesh_iqpf0")
+
+[node name="box_5" type="MeshInstance3D" parent="Graybox" unique_id=1366564805]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, 0.9)
+material_override = SubResource("StandardMaterial3D_q6fmu")
+mesh = SubResource("BoxMesh_4bpeo")
+
+[node name="box_6" type="MeshInstance3D" parent="Graybox" unique_id=1380518307]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26, 0.4)
+material_override = SubResource("StandardMaterial3D_sr37h")
+mesh = SubResource("BoxMesh_mgy8g")
+
+[node name="box_7" type="MeshInstance3D" parent="Graybox" unique_id=392866028]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.95, 0.72)
+material_override = SubResource("StandardMaterial3D_lch41")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_gnsge")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1402913910]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -0.6)
+shape = SubResource("BoxShape3D_evy7r")
+
+[node name="Light" type="OmniLight3D" parent="." unique_id=1021771574]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 1.2)
+light_color = Color(0.85, 0.4, 1, 1)
+light_energy = 1.2
+distance_fade_enabled = true
+distance_fade_begin = 60.0
+distance_fade_length = 15.0
+omni_range = 6.0

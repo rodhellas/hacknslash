@@ -73,6 +73,13 @@ const DATA := {
 		"summon": "pirata", "summon_count": 3, "summon_cd": 14.0,
 		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/vulso.tscn",
 	},
+	# --- Dungeon: Catacombe del Mausoleo ---
+	"custode": {
+		"name": "Il Custode delle Ossa", "hp": 1100.0, "damage": 22.0, "speed": 3.4, "range": 3.0, "windup": 0.8, "cooldown": 1.4,
+		"radius": 0.9, "height": 2.9, "xp": 500, "aggro": 16.0, "unique": true, "special": "slam", "slam_radius": 4.0,
+		"summon": "lemure", "summon_count": 3, "summon_cd": 12.0,
+		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/bruto.tscn",
+	},
 	"brenno": {
 		"name": "Brenno il Rinnegato", "hp": 900.0, "damage": 24.0, "speed": 3.6, "range": 3.2, "windup": 0.8, "cooldown": 1.4,
 		"radius": 1.0, "height": 3.3, "xp": 400, "aggro": 16.0, "unique": true, "special": "charge", "slam_radius": 3.8,

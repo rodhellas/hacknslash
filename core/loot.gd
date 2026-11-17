@@ -21,6 +21,11 @@ static func drop(source: String, pos: Vector3, ilvl: int) -> void:
 		gold_find = float(Game.level.player.stats.get("gold_find", 0.0))
 	for it: Item in ItemDB.roll_drops(source, ilvl, Game.hero.class_id):
 		spawn_item(it, pos)
+	var gk := ItemDB.roll_gem_drop(source, ilvl)
+	if gk != "":
+		var gd := LootDrop.make_gem(gk)
+		gd.position = _scatter(pos, 1.8)
+		Game.world_root().add_child.call_deferred(gd)
 	var g := ItemDB.roll_gold(source, ilvl, gold_find)
 	if g > 0:
 		var d := LootDrop.make_gold(g)

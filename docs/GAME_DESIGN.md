@@ -123,6 +123,26 @@ Nuovi nemici: Pirata cilicio (mischia), Arpionatore (a distanza), Granchio mecca
 - `core/sfx.gd`: 24 effetti sonori **sintetizzati da codice** (nessun file). Per usare un suono vero basta mettere `res://audio/sfx/<nome>.wav` (o `.ogg`): ha la precedenza. Nomi: swing, hit, crit, enemy_die, player_hurt, enemy_attack, cast, projectile, dash, explosion, gold, pickup, rare_drop, legendary, levelup, potion, chest, break, checkpoint, portal, ui_click, coins, anvil, talk. Volume nel menu di pausa (salvato in `user://settings.cfg`).
 - **Musica**: nessun brano incluso. Basta mettere `audio/music/<id livello>.ogg` (vedi `audio/music/LEGGIMI.txt`); dissolvenza tra i livelli, volume in Opzioni.
 
+## Gemme e set
+- **Gemme** (5 tipi × 5 gradi: scheggiato, grezzo, levigato, imperiale, divino). Effetto per grado 1, moltiplicato ×1 / 2 / 3,5 / 5,5 / 8:
+
+| Gemma | Arma | Elmo | Altro |
+|---|---|---|---|
+| Rubino | +4% danni | +25 vita | +6 Forza |
+| Smeraldo | +10% danno critico | +10% sesterzi | +6 Destrezza |
+| Topazio | +2% velocità d'attacco | +1 vita/s | +6 Intelligenza |
+| Ametista | +3 vita per colpo | +25 vita | +6 Vitalità |
+| Diamante | +0,8% critico | -2% ricarica | +12 armatura |
+
+- Orbite: arma, elmo, amuleto, anello fino a 1; gambali 2; armatura 3. Gioielliere (dal fabbro): 3 gemme uguali → 1 del grado dopo (60 sesterzi × grado); togliere una gemma costa 40 sesterzi × grado.
+- Gemme dai nemici (2,5% normali, 25% elite, sempre dai boss) e dai forzieri.
+- **Set** (verdi, un set per classe, 4 pezzi): Panoplia del Primo Pilo (Legionario), Paramenti del Reziario (Gladiatore), Insegne dei Saettatori di Creta (Sagittario), Paramenti dell'Augure Massimo (Augure). Bonus a 2 e 3 pezzi = statistiche; a 4 pezzi = +200% danni di due abilità e +100/150% di una terza.
+
+## Dungeon generati
+- Le mappe sono fatte a mano, i dungeon sono procedurali: generati con **seme fisso** (stessa mappa ogni volta, scelta provando i semi con `tools/export_dungeons.gd`).
+- **Catacombe del Mausoleo** (entrata accanto al Mausoleo, livello 1): 11 stanze su una griglia di 56 × 56 celle da 3 m, nemici di livello 5 (lemuri, predoni, Campioni), boss **il Custode delle Ossa** (colpo ad area, chiama lemuri). Pianta: `docs/mappe/dungeon_catacombe.png`.
+- Nemici e forzieri ricompaiono a ogni ingresso; il boss è unico per partita.
+
 ## Forma dei livelli (editor)
 - Nodo `Forma` in ogni livello: **strade** (curve con fascia calpestabile e lastricato), **aree** (radure circolari), **poligoni** (terra, acqua, buchi). Ogni elemento indica una **zona** (`data/map_zones.gd`: colore del suolo, bordo decorato, vegetazione sparsa).
 - Pannello **Mappa** (plugin Legio Map): *Ricostruisci terreno* rigenera solo terreno, confini, strade, acqua, vegetazione, lampioni e navmesh; il resto del livello resta com'è. Il resoconto segnala gli oggetti finiti fuori dall'area calpestabile.

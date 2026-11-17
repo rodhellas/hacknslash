@@ -5,7 +5,8 @@ L'utente parla **italiano**: rispondi in italiano. Commenti e testi di gioco son
 Design e stato del gioco: `docs/GAME_DESIGN.md`. Panoramica: `README.md`.
 
 ## Regole dell'utente
-- Stile Diablo 3, **niente roguelike**, livelli fatti a mano.
+- Stile Diablo 3, **niente roguelike**. Le **mappe** (livelli all'aperto, città) sono **fatte a mano**; i **dungeon** sono **procedurali**, con seme fisso (stessa mappa ogni volta).
+- Lavora sempre sul branch **main** (niente branch nuovi).
 - Nessuna IP esistente (niente Star Wars né attori reali): tutto originale.
 - Grafica in grayboxing finché non arrivano i modelli **Tripo 3D** (l'utente ha l'abbonamento); animazioni previste da **Mixamo**.
 - Commit + push solo quando l'utente lo chiede.
@@ -22,23 +23,26 @@ core/       game.gd (autoload "Game": partita, salvataggi, cambio scena, viaggi)
             abilities.gd (esecuzione abilità), loot.gd, fx.gd (materiali/effetti/particelle), sfx.gd (suoni),
             music.gd (musica dei livelli), settings.gd (opzioni video/audio/tasti), quests.gd (logica missioni), layers.gd
 data/       hero_classes.gd (classi+abilità), enemy_db.gd, item_db.gd (basi, affissi, leggendari+poteri, drop,
-            prezzi, materiali, ricette del fabbro), npc_db.gd (NPC e i loro dialoghi), quest_db.gd (missioni e loro testi),
-            map_zones.gd (zone del terreno: colore, bordo, vegetazione sparsa)
+            prezzi, materiali, ricette del fabbro, gemme, set), npc_db.gd (NPC e i loro dialoghi), quest_db.gd (missioni e loro testi),
+            map_zones.gd (zone del terreno: colore, bordo, vegetazione sparsa), dungeon_db.gd (dungeon generati)
 entities/   player.gd, enemy.gd, npc.gd, projectile.gd, loot_drop.gd, health_globe.gd
 world/      level.gd (script radice dei livelli), iso_camera.gd, occlusion_fader.gd, encounter_zone.gd (@tool),
             chest.gd, breakable.gd, checkpoint.gd (altare + viaggio rapido), level_exit.gd, lore_sign.gd, town_portal.gd,
             stash.gd (forziere personale), quest_gate.gd (cancello che si apre con un flag di missione),
-            map_shape.gd / map_road.gd / map_area.gd / map_polygon.gd (@tool: "Forma" del livello)
-ui/         main_menu.gd, hud.gd, inventory_ui.gd, trade_ui.gd (mercante/fabbro/forziere), options_menu.gd,
+            map_shape.gd / map_road.gd / map_area.gd / map_polygon.gd (@tool: "Forma" del livello),
+            dungeon_gen.gd (pianta procedurale), dungeon_level.gd (livello dungeon), dungeon_entrance.gd (entrata)
+ui/         main_menu.gd, hud.gd, inventory_ui.gd, trade_ui.gd (mercante/fabbro+gioielliere/forziere), options_menu.gd,
             pause_menu.gd, minimap.gd, globe.gd, skill_slot.gd
 tools/      build_world.gd (GENERATORE grayboxing: props, modelli, livello 1 + navmesh),
             build_ostia.gd / build_porto.gd (città e porto, estendono build_world.gd),
             map_builder.gd ("Ricostruisci terreno" dalla Forma + navmesh), map_preview.gd / export_maps.gd (piante PNG),
-            test_ostia.gd / test_atto2.gd / test_mappa.gd (test automatici)
+            export_dungeons.gd (piante PNG dei dungeon, anche per provare altri semi),
+            test_ostia.gd / test_atto2.gd / test_mappa.gd / test_gemme_set.gd / test_dungeon.gd (test automatici)
 addons/     legio_map/ (plugin dell'editor: pannello "Mappa")
 docs/       GAME_DESIGN.md, mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
 audio/      music/ e sfx/ (vuote: vedi LEGGIMI.txt; i suoni sono sintetizzati, la musica manca)
 scenes/     main_menu.tscn, levels/level_01.tscn, level_02_ostia.tscn, level_03_porto.tscn (navmesh incorporata),
+            levels/dungeon.tscn (vuota: il dungeon si costruisce da codice al caricamento),
             props/*.tscn, characters/*.tscn, enemies/*.tscn, npcs/*.tscn
 ```
 - Quasi tutto è **guidato dai dati** (dizionari in `data/`). Per bilanciare, cambia i numeri lì.
@@ -81,6 +85,19 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Ogni altare (`Checkpoint`) registra `hero.waypoints[id] = {level, title}` e `flags["cp_last_<livello>"]` (rinascita per livello).
 - Nel nodo radice: `is_town` (città: portale di ritorno) e `intro_text` (mostrato alla prima visita).
 
+## Gemme e set (data/item_db.gd)
+- **Rarità Set** = `Item.Rarity.SET` (4, verde). `ItemDB.SETS`: 4 set (uno per classe) da 4 pezzi, bonus a 2/3/4 pezzi. `"stats"` si sommano in `HeroData.compute_stats`, `"skills"` = +% danni per id abilità (`Player.skill_bonus`, applicato in `Abilities.hit_enemy`). Un leggendario ha il 35% (`SET_CHANCE`) di uscire come pezzo di set (anche dal fabbro).
+- **Gemme**: chiave `"tipo:grado"` (es. `"rubino:2"`, gradi 1-5). Stanno nel sacchetto `hero.gems` (non nello zaino), si raccolgono passandoci sopra (`LootDrop.make_gem`). Effetto per categoria (arma / elmo / altro) in `ItemDB.GEMS`, × `GEM_TIER_MULT`.
+- **Orbite**: `item.gems` (array, "" = vuota). Tirate in `ItemDB._build` (`MAX_SOCKETS` per slot, `SOCKET_CHANCE` per rarità). `Item.stat_totals()` e `compute_stats` includono le gemme.
+- **Gioielliere**: scheda del pannello del fabbro (`TradeUI._build_jeweler`): combina 3→1 (`combine_gem`), incastona (`socket_gem`), togli a pagamento (`unsocket_gem`).
+
+## Dungeon generati (data/dungeon_db.gd, world/dungeon_*.gd)
+- `DungeonGen.generate(cfg, seme)`: stanze + corridoi a L su griglia, anelli extra, partenza = stanza 0, boss = stanza più lontana a piedi. Usa solo il suo `RandomNumberGenerator`: **stesso seme = stessa mappa** (`fingerprint()` per confrontare). Non crea nodi.
+- `DungeonLevel` (estende `Level`, scena `scenes/levels/dungeon.tscn`, id livello `"dungeon"`): costruisce pavimento, muri (bassi sul lato sud, verso la telecamera), torce, props, forzieri, zone nemiche (boss unico nella stanza più lontana), scala di uscita, e fa il bake della navmesh al caricamento.
+- Entrata: prop `ingresso_catacombe` (`DungeonEntrance`, `dungeon_id`) nel livello 1 accanto al Mausoleo (`World/Luoghi/Mausoleo/IngressoCatacombe`). Scrive `hero.flags["dungeon"] = {id, return_level, x, z}`; l'uscita del dungeon riporta davanti all'entrata. Salvare dentro il dungeon funziona (stessa mappa al ricaricamento).
+- Nuovo dungeon: aggiungi una voce in `DungeonDB.DUNGEONS` e piazza un `ingresso_catacombe` con quel `dungeon_id`. Per scegliere il seme: `--script res://tools/export_dungeons.gd -- <seme>` → `docs/mappe/dungeon_<id>_seme<seme>.png`.
+- Nemici, forzieri e props ricompaiono a ogni ingresso; il boss (`custode`) è unico per partita come gli altri boss.
+
 ## Missioni (data/quest_db.gd, core/quests.gd)
 - Obiettivi in sequenza: kill, kill_unique, enter, altar, talk, salvage, chest. Eventi inviati con `Quests.notify(tipo, bersaglio)`.
 - Gli NPC prima provano `Quests.talk(npc_id)` (consegna/affida), poi aprono negozio/dialogo. Segni "!" / "?" sopra la testa.
@@ -105,8 +122,10 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 
 ## Test
 - Controllo veloce di compilazione: `--headless --import --path .`
-- **`tools/test_ostia.gd`** (41 controlli): `--headless --path . --fixed-fps 60 --script res://tools/test_ostia.gd`. Uscita del livello 1 → città, NPC, altare, mercante (compra/vendi/riacquista), fabbro (smonta/forgia), poteri leggendari, viaggio rapido, portale, salvataggio. Usa e cancella lo slot 3.
+- **`tools/test_ostia.gd`** (42 controlli): `--headless --path . --fixed-fps 60 --script res://tools/test_ostia.gd`. Uscita del livello 1 → città, NPC, altare, mercante (compra/vendi/riacquista), fabbro (smonta/forgia), poteri leggendari, viaggio rapido, portale, salvataggio. Usa e cancella lo slot 3.
 - **`tools/test_atto2.gd`** (53 controlli): missioni dell'atto 1 e 2, segni degli NPC, cancello, forziere personale, porto percorso a piedi fino al faro, Vulso e rinforzi, portale, diario, rimappatura tasti, salvataggio. Ripristina il forziere personale vero.
+- **`tools/test_gemme_set.gd`** (26 controlli): pezzi di set e bonus 2/4 pezzi, set dai leggendari, orbite, gioielliere (combina, incastona, togli), gemme raccolte da terra, salvataggio.
+- **`tools/test_dungeon.gd`** (23 controlli): stesso seme = stessa mappa (e 30 semi sempre collegati), entrata nel livello 1, navmesh dalla partenza al boss, boss e forzieri, uscita davanti all'entrata, ricarica dentro il dungeon.
 - **`tools/test_mappa.gd`** (13 controlli): Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 
@@ -115,4 +134,5 @@ Fatto: menu + 3 slot di salvataggio, 4 classi complete, loot/equipaggiamento/inv
 Fatto il 16-11: città-hub Ostia Nova (livello 2) con 11 NPC, mercante e fabbro (sesterzi, materiali, forgia), 12 leggendari con poteri, viaggio rapido dagli altari, portale cittadino (T), particelle ed effetti sonori sintetizzati, volume nel menu di pausa, salvataggi versione 2 (compatibili con i vecchi).
 Fatto il 16-11 (2): missioni (6, atti 1-2) con diario e segni sugli NPC, livello 3 "Porto di Ostia Nova" (circa 560 m, 20 zone, boss Vulso il Corsaro che chiama rinforzi, 5 nuovi nemici), forziere personale condiviso, opzioni (video, audio, rimappatura tasti) dal menu principale e dalla pausa, aggancio per la musica.
 Fatto il 17-11: Forma dei livelli modificabile nell'editor (strade, aree, acqua) + plugin Legio Map (pannello Mappa, Ricostruisci terreno, piante PNG); i tre generatori usano la Forma.
-Da fare: trama (testi in `data/quest_db.gd` e `data/npc_db.gd`, segnaposto `[TRAMA]`), musica e suoni veri, modelli Tripo, gemme/set, atto 3, bilanciamento.
+Fatto il 17-11 (2): gemme (5 tipi × 5 gradi, orbite, gioielliere), 4 set di classe con bonus, dungeon generati con seme fisso (Catacombe del Mausoleo, boss Custode delle Ossa) con entrata nel livello 1.
+Da fare: trama (testi in `data/quest_db.gd` e `data/npc_db.gd`, segnaposto `[TRAMA]`), musica e suoni veri, modelli Tripo, atto 3, altri dungeon, bilanciamento.

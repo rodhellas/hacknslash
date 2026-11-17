@@ -1,7 +1,8 @@
 class_name ItemDB
 extends RefCounted
 ## Database oggetti: basi, affissi, leggendari e generazione casuale del loot (stile Diablo).
-## Rarità: Comune (bianco, 0 affissi), Magico (blu, 1-2), Raro (giallo, 3-4), Leggendario (arancione, fissi + 2).
+## Rarità: Comune (bianco, 0 affissi), Magico (blu, 1-2), Raro (giallo, 3-4), Leggendario (arancione, fissi + 2),
+## Set (verde, fissi + 2, bonus indossando più pezzi). Gemme e orbite: vedi GEMS.
 
 const BASES := {
 	# --- Armi ---
@@ -100,6 +101,231 @@ const POWERS := {
 	"achille": "La pozione si ricarica in metà tempo e ti rende invulnerabile per 2 s.",
 }
 
+# ==================================================================================================
+#  GEMME (come in Diablo 3): si incastonano negli oggetti con orbite. L'effetto dipende da dove
+#  si incastona: arma, elmo o altro (armatura, gambali, gioielli...). Valori di grado 1 × GEM_TIER_MULT.
+#  Si raccolgono passandoci sopra e finiscono nel sacchetto delle gemme (hero.gems), non nello zaino.
+# ==================================================================================================
+const GEMS := {
+	"rubino": {"name": "Rubino", "color": Color(0.95, 0.15, 0.2),
+		"arma": ["damage_pct", 4.0], "elmo": ["life", 25.0], "altro": ["forza", 6.0]},
+	"smeraldo": {"name": "Smeraldo", "color": Color(0.2, 0.9, 0.35),
+		"arma": ["crit_damage", 10.0], "elmo": ["gold_find", 10.0], "altro": ["destrezza", 6.0]},
+	"topazio": {"name": "Topazio", "color": Color(1.0, 0.8, 0.15),
+		"arma": ["attack_speed_pct", 2.0], "elmo": ["life_regen", 1.0], "altro": ["intelligenza", 6.0]},
+	"ametista": {"name": "Ametista", "color": Color(0.7, 0.3, 1.0),
+		"arma": ["life_on_hit", 3.0], "elmo": ["life", 25.0], "altro": ["vitalita", 6.0]},
+	"diamante": {"name": "Diamante", "color": Color(0.85, 0.95, 1.0),
+		"arma": ["crit_chance", 0.8], "elmo": ["cdr_pct", 2.0], "altro": ["armor", 12.0]},
+}
+const GEM_TIERS := ["scheggiato", "grezzo", "levigato", "imperiale", "divino"]
+const GEM_TIER_MULT := [1.0, 2.0, 3.5, 5.5, 8.0]
+## Orbite massime per tipo di oggetto (gli altri tipi non ne hanno).
+const MAX_SOCKETS := {"arma": 1, "elmo": 1, "armatura": 3, "gambali": 2, "amuleto": 1, "anello": 1}
+## Probabilità che un oggetto abbia orbite, per rarità [comune, magico, raro, leggendario, set].
+const SOCKET_CHANCE := [0.08, 0.18, 0.3, 0.5, 0.35]
+## Gioielliere (pannello del fabbro): costo per combinare 3 gemme in una di grado superiore
+## e per togliere una gemma da un oggetto (sesterzi × grado della gemma).
+const GEM_COMBINE_COST := 3
+const GEM_COMBINE_GOLD := 60
+const GEM_REMOVE_GOLD := 40
+
+
+## Chiave di una gemma: "rubino:2" (tipo:grado, grado 1-5).
+static func gem_key(type: String, tier: int) -> String:
+	return "%s:%d" % [type, tier]
+
+
+static func gem_type(key: String) -> String:
+	return key.get_slice(":", 0)
+
+
+static func gem_tier(key: String) -> int:
+	return clampi(int(key.get_slice(":", 1)), 1, GEM_TIERS.size())
+
+
+static func gem_name(key: String) -> String:
+	var g: Dictionary = GEMS.get(gem_type(key), {"name": key})
+	return "%s %s" % [g["name"], GEM_TIERS[gem_tier(key) - 1]]
+
+
+static func gem_color(key: String) -> Color:
+	return (GEMS.get(gem_type(key), {"color": Color.WHITE}) as Dictionary)["color"]
+
+
+static func gem_category(slot: String) -> String:
+	return slot if slot == "arma" or slot == "elmo" else "altro"
+
+
+## Statistica data da una gemma incastonata in un oggetto di quello slot: {"stat", "value"}.
+static func gem_affix(key: String, slot: String) -> Dictionary:
+	var g: Dictionary = GEMS.get(gem_type(key), {})
+	if g.is_empty():
+		return {}
+	var pair: Array = g[gem_category(slot)]
+	var v := float(pair[1]) * float(GEM_TIER_MULT[gem_tier(key) - 1])
+	return {"stat": pair[0], "value": snappedf(v, 0.1) if v < 10.0 else roundf(v)}
+
+
+## Gemma casuale adatta al livello: gradi più alti più avanti nel gioco.
+static func roll_gem(ilvl: int) -> String:
+	var top := clampi(1 + ilvl / 12, 1, GEM_TIERS.size())
+	var tier := top if randf() < 0.6 else maxi(1, top - 1)
+	return gem_key(GEMS.keys().pick_random(), tier)
+
+
+## Probabilità che un nemico o un forziere lasci una gemma.
+const GEM_DROP_CHANCE := {"normal": 0.025, "elite": 0.25, "unique": 1.0, "chest": 0.15, "chest_rich": 0.4}
+
+
+static func roll_gem_drop(source: String, ilvl: int) -> String:
+	return roll_gem(ilvl) if randf() < float(GEM_DROP_CHANCE.get(source, 0.0)) else ""
+
+
+static func _roll_sockets(it: Item) -> void:
+	var mx: int = MAX_SOCKETS.get(it.slot, 0)
+	if mx == 0 or randf() > float(SOCKET_CHANCE[clampi(it.rarity, 0, SOCKET_CHANCE.size() - 1)]):
+		return
+	it.gems.resize(randi_range(1, mx))
+	it.gems.fill("")
+
+
+# ==================================================================================================
+#  SET (verdi): pezzi con statistiche fisse + 2 affissi casuali. Indossando più pezzi dello stesso
+#  set si attivano i bonus (2, 3, 4 pezzi). "skills" = +% danni di quelle abilità (id in hero_classes).
+#  I valori dei bonus crescono col livello dell'eroe come gli affissi ("scale" in AFFIXES).
+# ==================================================================================================
+const SETS := {
+	"primo_pilo": {"name": "Panoplia del Primo Pilo", "class": "legionario",
+		"pieces": [
+			{"base": "elmo_centurione", "name": "Elmo del Primo Pilo", "affixes": [["forza", 14.0], ["armor", 15.0]]},
+			{"base": "lorica", "name": "Lorica del Primo Pilo", "affixes": [["forza", 14.0], ["vitalita", 12.0]]},
+			{"base": "manicae", "name": "Manicae del Primo Pilo", "affixes": [["forza", 12.0], ["crit_chance", 3.0]]},
+			{"base": "ocreae", "name": "Ocreae del Primo Pilo", "affixes": [["vitalita", 12.0], ["life", 40.0]]},
+		],
+		"bonus": {
+			2: {"stats": [["armor", 60.0], ["vitalita", 20.0]]},
+			3: {"stats": [["life_regen", 5.0], ["cdr_pct", 10.0]]},
+			4: {"skills": {"pilum": 200.0, "bombardamento": 200.0, "colpo_gladio": 100.0},
+				"text": "+200% danni di Pilum e Bombardamento orbitale, +100% danni di Colpo di gladio."},
+		}},
+	"reziario": {"name": "Paramenti del Reziario", "class": "gladiatore",
+		"pieces": [
+			{"base": "galea", "name": "Galea del Reziario", "affixes": [["forza", 14.0], ["crit_damage", 20.0]]},
+			{"base": "lorica_hamata", "name": "Maglia del Reziario", "affixes": [["forza", 14.0], ["life", 40.0]]},
+			{"base": "guanti_cuoio", "name": "Fasce del Reziario", "affixes": [["attack_speed_pct", 6.0], ["crit_chance", 3.0]]},
+			{"base": "calcei", "name": "Calcei del Reziario", "affixes": [["forza", 12.0], ["move_speed_pct", 8.0]]},
+		],
+		"bonus": {
+			2: {"stats": [["attack_speed_pct", 8.0], ["life_on_hit", 6.0]]},
+			3: {"stats": [["crit_damage", 40.0], ["vitalita", 20.0]]},
+			4: {"skills": {"turbine": 200.0, "doppio_fendente": 150.0, "rete": 150.0},
+				"text": "+200% danni di Turbine, +150% danni di Doppio fendente e Rete del reziario."},
+		}},
+	"saettatori_creta": {"name": "Insegne dei Saettatori di Creta", "class": "sagittario",
+		"pieces": [
+			{"base": "cappuccio", "name": "Cappuccio del Saettatore", "affixes": [["destrezza", 14.0], ["crit_chance", 3.0]]},
+			{"base": "lorica_hamata", "name": "Corsaletto del Saettatore", "affixes": [["destrezza", 14.0], ["vitalita", 12.0]]},
+			{"base": "guanti_cuoio", "name": "Guanti del Saettatore", "affixes": [["destrezza", 12.0], ["attack_speed_pct", 6.0]]},
+			{"base": "caligae", "name": "Caligae del Saettatore", "affixes": [["destrezza", 12.0], ["move_speed_pct", 8.0]]},
+		],
+		"bonus": {
+			2: {"stats": [["crit_chance", 5.0], ["destrezza", 20.0]]},
+			3: {"stats": [["crit_damage", 40.0], ["life_on_hit", 5.0]]},
+			4: {"skills": {"ventaglio": 200.0, "pioggia_frecce": 200.0, "dardo": 100.0},
+				"text": "+200% danni di Ventaglio di dardi e Pioggia di frecce, +100% danni di Dardo al plasma."},
+		}},
+	"augure_massimo": {"name": "Paramenti dell'Augure Massimo", "class": "augure",
+		"pieces": [
+			{"base": "cappuccio", "name": "Cappuccio dell'Augure Massimo", "affixes": [["intelligenza", 14.0], ["cdr_pct", 5.0]]},
+			{"base": "toga", "name": "Toga dell'Augure Massimo", "affixes": [["intelligenza", 14.0], ["life", 40.0]]},
+			{"base": "manicae", "name": "Manicae dell'Augure Massimo", "affixes": [["intelligenza", 12.0], ["crit_chance", 3.0]]},
+			{"base": "bracae", "name": "Bracae dell'Augure Massimo", "affixes": [["vitalita", 12.0], ["intelligenza", 12.0]]},
+		],
+		"bonus": {
+			2: {"stats": [["intelligenza", 20.0], ["life_regen", 4.0]]},
+			3: {"stats": [["cdr_pct", 10.0], ["crit_damage", 35.0]]},
+			4: {"skills": {"meteora": 200.0, "ira_nettuno": 200.0, "fulmine": 100.0},
+				"text": "+200% danni di Meteora e Ira di Nettuno, +100% danni di Fulmine di Giove."},
+		}},
+}
+## Quando esce un leggendario, probabilità che sia invece un pezzo di set.
+const SET_CHANCE := 0.35
+
+
+## Pezzo di set: smart = del set della classe dell'eroe (quasi sempre).
+static func make_set_piece(ilvl: int, class_id: String, smart: bool = true, set_id: String = "", piece: int = -1) -> Item:
+	if set_id == "":
+		var ids: Array = []
+		for k: String in SETS:
+			if not smart or SETS[k]["class"] == class_id:
+				ids.append(k)
+		if ids.is_empty():
+			ids = SETS.keys()
+		set_id = ids.pick_random()
+	var st: Dictionary = SETS[set_id]
+	var pieces: Array = st["pieces"]
+	var pd: Dictionary = pieces[piece if piece >= 0 else randi() % pieces.size()]
+	var it := _build(pd["base"], ilvl, Item.Rarity.SET, "")
+	it.item_name = pd["name"]
+	it.set_id = set_id
+	var sc := 1.0 + 0.1 * (ilvl - 1)
+	for pair: Array in pd["affixes"]:
+		var stat: String = pair[0]
+		var v := float(pair[1])
+		if AFFIXES[stat]["scale"]:
+			v *= sc
+		it.affixes.append({"stat": stat, "value": snappedf(v, 0.1) if v < 10.0 else roundf(v)})
+	var main := String(HeroClasses.get_data(class_id)["main_stat"])
+	it.affixes.append_array(_roll_affixes(it.slot, 2, ilvl, main))
+	return it
+
+
+## Pezzi indossati per set: {set_id: quantità}.
+static func set_counts(equipment: Dictionary) -> Dictionary:
+	var out := {}
+	for slot: String in equipment:
+		var it: Item = equipment[slot]
+		if it != null and it.set_id != "":
+			out[it.set_id] = int(out.get(it.set_id, 0)) + 1
+	return out
+
+
+## Bonus attivi dei set indossati: {"stats": [{stat, value}], "skills": {id abilità: %}}.
+static func set_bonuses(equipment: Dictionary, hero_level: int) -> Dictionary:
+	var stats: Array = []
+	var skills := {}
+	var sc := 1.0 + 0.1 * (hero_level - 1)
+	var counts := set_counts(equipment)
+	for sid: String in counts:
+		if not SETS.has(sid):
+			continue
+		var bonus: Dictionary = SETS[sid]["bonus"]
+		for n: int in bonus:
+			if int(counts[sid]) < n:
+				continue
+			var b: Dictionary = bonus[n]
+			for pair: Array in b.get("stats", []):
+				var v := float(pair[1])
+				if AFFIXES[pair[0]]["scale"]:
+					v = roundf(v * sc)
+				stats.append({"stat": pair[0], "value": v})
+			var sk: Dictionary = b.get("skills", {})
+			for id: String in sk:
+				skills[id] = float(skills.get(id, 0.0)) + float(sk[id])
+	return {"stats": stats, "skills": skills}
+
+
+## Testo di un bonus di set (per il tooltip).
+static func set_bonus_text(b: Dictionary) -> String:
+	if b.has("text"):
+		return String(b["text"])
+	var parts: Array = []
+	for pair: Array in b.get("stats", []):
+		parts.append(affix_text({"stat": pair[0], "value": float(pair[1])}))
+	return ", ".join(parts)
+
+
 ## Materiali del fabbro (si ottengono smontando gli oggetti).
 const MATERIALS := {
 	"rottami": {"name": "Rottami di bronzo", "color": Color(0.85, 0.6, 0.35)},
@@ -107,7 +333,7 @@ const MATERIALS := {
 	"frammento": {"name": "Frammento divino", "color": Color(1.0, 0.55, 0.1)},
 }
 ## Valore di vendita di base per rarità (cresce col livello dell'oggetto). Il mercante vende a ×BUY_MULT.
-const SELL_VALUE := [5, 15, 40, 120]
+const SELL_VALUE := [5, 15, 40, 120, 150]
 const BUY_MULT := 5
 
 ## Probabilità di rarità per fonte: [comune, magico, raro, leggendario]
@@ -169,6 +395,7 @@ static func _build(base_id: String, ilvl: int, rarity: int, main_stat: String) -
 		Item.Rarity.MAGICO: n = randi_range(1, 2)
 		Item.Rarity.RARO: n = randi_range(3, 4)
 	it.affixes = _roll_affixes(it.slot, n, ilvl, main_stat)
+	_roll_sockets(it)
 	match rarity:
 		Item.Rarity.MAGICO:
 			it.item_name = "%s %s" % [b["name"], SUFFIXES.get(it.affixes[0]["stat"], "")]
@@ -234,7 +461,11 @@ static func _legendary(ilvl: int, class_id: String, smart: bool) -> Item:
 
 ## Genera un oggetto casuale. smart = favorisce oggetti utilizzabili dalla classe.
 static func generate(ilvl: int, rarity: int, class_id: String, smart: bool = true) -> Item:
+	if rarity == Item.Rarity.SET:
+		return make_set_piece(ilvl, class_id, smart and randf() < 0.85)
 	if rarity == Item.Rarity.LEGGENDARIO:
+		if randf() < SET_CHANCE:
+			return make_set_piece(ilvl, class_id, smart and randf() < 0.85)
 		return _legendary(ilvl, class_id, smart and randf() < 0.8)
 	var candidates: Array = []
 	var use_smart := smart and randf() < 0.7
@@ -288,7 +519,7 @@ static func roll_gold(source: String, ilvl: int, gold_find: float) -> int:
 
 ## Prezzo di vendita al mercante.
 static func sell_value(it: Item) -> int:
-	return int(SELL_VALUE[clampi(it.rarity, 0, 3)] * (1.0 + 0.25 * (it.ilvl - 1)))
+	return int(SELL_VALUE[clampi(it.rarity, 0, SELL_VALUE.size() - 1)] * (1.0 + 0.25 * (it.ilvl - 1)))
 
 
 static func buy_price(it: Item) -> int:
@@ -302,6 +533,7 @@ static func salvage_yield(it: Item) -> Dictionary:
 		Item.Rarity.MAGICO: return {"rottami": randi_range(1, 2), "essenza": 1}
 		Item.Rarity.RARO: return {"essenza": randi_range(2, 3), "rottami": 1}
 		Item.Rarity.LEGGENDARIO: return {"frammento": 1, "essenza": 3}
+		Item.Rarity.SET: return {"frammento": 1, "essenza": 2}
 	return {}
 
 
@@ -317,6 +549,8 @@ const RECIPES := {
 static func craft(recipe_id: String, slot: String, ilvl: int, class_id: String) -> Item:
 	var rarity: int = RECIPES[recipe_id]["rarity"]
 	if rarity == Item.Rarity.LEGGENDARIO:
+		if randf() < SET_CHANCE:
+			return make_set_piece(ilvl, class_id, true)
 		return _legendary(ilvl, class_id, true)
 	var candidates: Array = []
 	for k: String in BASES:

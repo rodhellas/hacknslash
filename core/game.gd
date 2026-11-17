@@ -13,6 +13,8 @@ const LEVELS := {
 	"level_01": "res://scenes/levels/level_01.tscn",
 	"ostia_nova": "res://scenes/levels/level_02_ostia.tscn",
 	"level_03_porto": "res://scenes/levels/level_03_porto.tscn",
+	## Dungeon generati (quale dungeon: Game.hero.flags["dungeon"], vedi world/dungeon_level.gd)
+	"dungeon": "res://scenes/levels/dungeon.tscn",
 }
 ## Nomi dei livelli (elenco degli altari, portale) nell'ordine della campagna.
 const LEVEL_TITLES := {

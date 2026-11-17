@@ -5,12 +5,19 @@ extends Area3D
 
 var item: Item = null
 var gold := 0
+var gem := ""   # chiave di una gemma ("rubino:2"): si raccoglie passandoci sopra come i sesterzi
 var _visual: Node3D
 
 
 static func make_item(it: Item) -> LootDrop:
 	var d := LootDrop.new()
 	d.item = it
+	return d
+
+
+static func make_gem(key: String) -> LootDrop:
+	var d := LootDrop.new()
+	d.gem = key
 	return d
 
 
@@ -23,7 +30,7 @@ static func make_gold(amount: int) -> LootDrop:
 func _ready() -> void:
 	add_to_group("interactable")
 	collision_layer = Layers.INTERACT
-	collision_mask = Layers.PLAYER if gold > 0 else 0
+	collision_mask = Layers.PLAYER if item == null else 0
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = 0.7
@@ -57,7 +64,7 @@ func _ready() -> void:
 		if item.rarity >= Item.Rarity.RARO:
 			var beam := MeshInstance3D.new()
 			var cm := CylinderMesh.new()
-			var h := 9.0 if item.rarity == Item.Rarity.LEGGENDARIO else 3.5
+			var h := 9.0 if item.is_special() else 3.5
 			cm.top_radius = 0.12
 			cm.bottom_radius = 0.18
 			cm.height = h
@@ -69,7 +76,24 @@ func _ready() -> void:
 			beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			_visual.add_child(beam)
 			Fx.minimap_icon(self, col, 1.2, "square")
-			Sfx.play("legendary" if item.rarity == Item.Rarity.LEGGENDARIO else "rare_drop", global_position)
+			Sfx.play("legendary" if item.is_special() else "rare_drop", global_position)
+	elif gem != "":
+		var gc := ItemDB.gem_color(gem)
+		var stone := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.16
+		sm.height = 0.26
+		sm.radial_segments = 6
+		sm.rings = 2
+		stone.mesh = sm
+		stone.material_override = Fx.mat(gc, 2.5)
+		stone.position.y = 0.16
+		_visual.add_child(stone)
+		label.text = ItemDB.gem_name(gem)
+		label.modulate = gc
+		label.font_size = 24
+		Fx.minimap_icon(self, gc, 1.0, "square")
+		body_entered.connect(_on_body_entered)
 	else:
 		for i in 3:
 			var coin := MeshInstance3D.new()
@@ -93,7 +117,9 @@ func _ready() -> void:
 
 
 func interact_name() -> String:
-	return item.item_name if item != null else "%d sesterzi" % gold
+	if item != null:
+		return item.item_name
+	return ItemDB.gem_name(gem) if gem != "" else "%d sesterzi" % gold
 
 
 func can_interact() -> bool:
@@ -120,6 +146,13 @@ func _on_body_entered(body: Node) -> void:
 
 func _take_gold() -> void:
 	if is_queued_for_deletion():
+		return
+	if gem != "":
+		Game.hero.add_gem(gem)
+		Game.level.hud.log_pickup(ItemDB.gem_name(gem), ItemDB.gem_color(gem))
+		Sfx.play("pickup")
+		Game.level.player.inventory_changed.emit()
+		queue_free()
 		return
 	Game.hero.gold += gold
 	Game.level.hud.log_pickup("+%d sesterzi" % gold, Color(1.0, 0.85, 0.3))

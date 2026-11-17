@@ -154,6 +154,11 @@ func refresh() -> void:
 	var m := ""
 	for id: String in ItemDB.MATERIALS:
 		m += "%s: %d    " % [ItemDB.MATERIALS[id]["name"], h.material(id)]
+	var ng := 0
+	for k: String in h.gems:
+		ng += h.gem_count(k)
+	if ng > 0:
+		m += "Gemme: %d" % ng
 	mats_label.text = m
 	var hint := "Clic: equipaggia / togli    Shift+clic: getta a terra    I / C: chiudi"
 	if trade != null and trade.is_open:
