@@ -143,7 +143,7 @@ func _run() -> void:
 		game.hero.add_item(ItemDBS.generate(5, r, "legionario"))
 	var salv_idx: int = -1
 	for i in game.hero.inventory.size():
-		if game.hero.inventory[i] != null and game.hero.inventory[i].rarity == 3:
+		if game.hero.inventory[i] != null and game.hero.inventory[i].rarity >= 3:   # leggendario o pezzo di set (anche lui dà un frammento)
 			salv_idx = i
 	trade.on_bag_right_click(salv_idx)
 	_check(game.hero.material("frammento") == 1, "smontare un leggendario dà un frammento divino")

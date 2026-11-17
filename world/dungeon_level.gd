@@ -195,6 +195,13 @@ func _build_rooms(world: Node3D, rng: RandomNumberGenerator) -> void:
 		deco.add_child(light)
 		if i == gen.start_room:
 			continue
+		match gen.kinds[i]:
+			"colonne": _room_columns(deco, r)
+			"cripta": _room_crypt(deco, r)
+			"tesoro":
+				_chest(deco, c + Vector3(0, 0, -1.5), true)
+				for k in 4:
+					_prop(deco, "anfora", _room_edge_point(r, rng), rng.randf_range(0, 360))
 		# Oggetti lungo i bordi della stanza (il centro resta libero per combattere)
 		for pr: Array in props:
 			if rng.randf() < float(pr[1]):
@@ -203,17 +210,45 @@ func _build_rooms(world: Node3D, rng: RandomNumberGenerator) -> void:
 					var p := _room_edge_point(r, rng)
 					_prop(deco, String(pr[0]), p, rng.randf_range(0, 360))
 	# Forzieri: uno decorato nella stanza del boss, uno normale in un paio di altre stanze
-	var boss_c := gen.room_center_world(gen.boss_room) + Vector3(0, 0, -gen.rooms[gen.boss_room].size.y * gen.tile * 0.35)
-	_chest(deco, boss_c, true)
+	var boss_c := gen.room_center_world(gen.boss_room)
+	if _chest(deco, boss_c + Vector3(0, 0, -gen.rooms[gen.boss_room].size.y * gen.tile * 0.35), true) == null:
+		_chest(deco, boss_c + Vector3(0, 0, -gen.tile), true)
 	for k in 2:
 		var i := rng.randi_range(1, gen.rooms.size() - 1)
-		if i != gen.boss_room:
+		if i != gen.boss_room and gen.kinds[i] != "tesoro":
 			_chest(deco, _room_edge_point(gen.rooms[i], rng), false)
+
+
+## Sala a colonne: una griglia di colonne (una ogni 3 celle), lontano dal centro e dagli sbocchi.
+func _room_columns(deco: Node3D, r: Rect2i) -> void:
+	if r.size.x < 7 or r.size.y < 7:
+		return
+	var center := r.position + r.size / 2
+	for y in range(r.position.y + 2, r.end.y - 1, 3):
+		for x in range(r.position.x + 2, r.end.x - 1, 3):
+			var c := Vector2i(x, y)
+			if (c - center).length() < 2.0 or _near_doorway(r, c):
+				continue
+			_prop(deco, String(cfg.get("column", "colonna")), gen.cell_to_world(Vector2(c)), 0.0)
+
+
+## Cripta: file di sarcofagi lungo i due lati lunghi.
+func _room_crypt(deco: Node3D, r: Rect2i) -> void:
+	var horizontal := r.size.x >= r.size.y
+	var length := r.size.x if horizontal else r.size.y
+	for side in [0, 1]:
+		for k in range(1, length - 1, 2):
+			var c := Vector2i(r.position.x + k, r.position.y + (1 if side == 0 else r.size.y - 2)) if horizontal \
+				else Vector2i(r.position.x + (1 if side == 0 else r.size.x - 2), r.position.y + k)
+			if _near_doorway(r, c):
+				continue
+			_prop(deco, "sarcofago", gen.cell_to_world(Vector2(c)), 0.0 if horizontal else 90.0)
 
 
 ## Punto vicino al bordo di una stanza, lontano dagli sbocchi dei corridoi.
 func _room_edge_point(r: Rect2i, rng: RandomNumberGenerator) -> Vector3:
-	var inner := Vector2(r.size) - Vector2(1.6, 1.6)
+	# A una cella dal muro: la cella dell'oggetto e le sue vicine sono tutte pavimento
+	var inner := Vector2(r.size) - Vector2(3.0, 3.0)
 	var best := Vector2.ZERO
 	for attempt in 8:
 		var side := rng.randi_range(0, 3)
@@ -224,7 +259,7 @@ func _room_edge_point(r: Rect2i, rng: RandomNumberGenerator) -> Vector3:
 			1: p = Vector2(u * inner.x, inner.y)
 			2: p = Vector2(0, u * inner.y)
 			_: p = Vector2(inner.x, u * inner.y)
-		best = Vector2(r.position) + Vector2(0.3, 0.3) + p
+		best = Vector2(r.position) + Vector2(1.0, 1.0) + p
 		if not _near_doorway(r, Vector2i(roundi(best.x), roundi(best.y))):
 			break
 	return gen.cell_to_world(best)
@@ -241,6 +276,8 @@ func _near_doorway(r: Rect2i, c: Vector2i) -> bool:
 
 
 func _prop(parent: Node3D, pname: String, pos: Vector3, rot: float) -> Node3D:
+	if not gen.is_open(gen.world_to_cell(pos)):
+		return null   # nelle caverne il bordo è irregolare: niente oggetti dentro la roccia
 	var ps := load("res://scenes/props/%s.tscn" % pname) as PackedScene
 	if ps == null:
 		return null
@@ -251,11 +288,12 @@ func _prop(parent: Node3D, pname: String, pos: Vector3, rot: float) -> Node3D:
 	return inst
 
 
-func _chest(parent: Node3D, pos: Vector3, rich: bool) -> void:
+func _chest(parent: Node3D, pos: Vector3, rich: bool) -> Node3D:
 	var ch := _prop(parent, "forziere", pos, 0.0)
 	if ch != null:
 		ch.set("item_level", area_level)
 		ch.set("rich", rich)
+	return ch
 
 
 func _bake(world: NavigationRegion3D) -> void:
@@ -276,9 +314,12 @@ func _bake(world: NavigationRegion3D) -> void:
 
 ## Scala di risalita sul lato nord della stanza di partenza.
 func _build_exit() -> void:
+	# Verso nord dal centro della stanza di partenza, fin dove il pavimento è libero (anche nelle caverne)
 	var r := gen.rooms[gen.start_room]
-	var c := gen.room_center_world(gen.start_room)
-	var pos := c + Vector3(0, 0, -r.size.y * gen.tile * 0.5 + 1.5)
+	var cell := r.position + r.size / 2
+	while cell.y > r.position.y + 1 and gen.is_open(cell + Vector2i(0, -1)):
+		cell.y -= 1
+	var pos := gen.cell_to_world(Vector2(cell)) + Vector3(0, 0, -gen.tile * 0.3)
 	var stairs := Node3D.new()
 	stairs.name = "Scala"
 	stairs.position = pos
@@ -329,7 +370,7 @@ func _build_encounters(rng: RandomNumberGenerator) -> void:
 			z.unique_id = String(cfg.get("boss", ""))
 			z.enemy_types = PackedStringArray(enemies)
 			z.count = 4
-		elif rng.randf() < 0.25:
+		elif gen.kinds[i] == "tesoro" or rng.randf() < 0.25:
 			z.elite = true
 			z.enemy_types = PackedStringArray([elites[rng.randi_range(0, elites.size() - 1)]])
 			z.count = 3

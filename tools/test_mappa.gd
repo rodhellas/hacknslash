@@ -50,6 +50,15 @@ func _part1() -> void:
 	hand_before = luoghi.find_children("*", "", true, false).size()
 	var enc_before := _count(level.get_node("Incontri"))
 
+	print("\n== 0. Ogni livello ha la sua Forma (un tool che risalva un livello non deve perderla)")
+	for path: String in ["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02_ostia.tscn", "res://scenes/levels/level_03_porto.tscn"]:
+		var st := (load(path) as PackedScene).get_state()
+		var n_forma := 0
+		for i in st.get_node_count():
+			if String(st.get_node_path(i, true)).begins_with("./Forma") or String(st.get_node_path(i)) == "./Forma":
+				n_forma += 1
+		_check(n_forma > 1, "%s: Forma con %d nodi" % [path.get_file(), n_forma])
+
 	print("\n== 1. Ricostruzione senza modifiche")
 	var rep: String = Builder.new().build(level, true)
 	_check(rep.contains("Terreno ricostruito"), "ricostruzione eseguita")

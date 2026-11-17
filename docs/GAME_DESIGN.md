@@ -141,6 +141,9 @@ Nuovi nemici: Pirata cilicio (mischia), Arpionatore (a distanza), Granchio mecca
 ## Dungeon generati
 - Le mappe sono fatte a mano, i dungeon sono procedurali: generati con **seme fisso** (stessa mappa ogni volta, scelta provando i semi con `tools/export_dungeons.gd`).
 - **Catacombe del Mausoleo** (entrata accanto al Mausoleo, livello 1): 11 stanze su una griglia di 56 × 56 celle da 3 m, nemici di livello 5 (lemuri, predoni, Campioni), boss **il Custode delle Ossa** (colpo ad area, chiama lemuri). Pianta: `docs/mappe/dungeon_catacombe.png`.
+- **Caverne del Clan** (entrata nell'accampamento barbaro, livello 1): stile caverna, 9 grotte, nemici di livello 4 (barbari, frombolieri, lupi, bruti), boss **Tharvo Mangiaferro** (carica, chiama barbari).
+- **Cisterne del Porto** (entrata al magazzino del sale, livello 3): 12 stanze, molte sale a colonne, nemici di livello 8 (granchi, pirati, arpionatori, automi), boss **la Madre dei Granchi** (colpo ad area, chiama granchi).
+- Tipi di stanza: sala a colonne, cripta (file di sarcofagi), stanza del tesoro (forziere decorato + Campioni). Piante in `docs/mappe/dungeon_*.png`.
 - Nemici e forzieri ricompaiono a ogni ingresso; il boss è unico per partita.
 
 ## Forma dei livelli (editor)

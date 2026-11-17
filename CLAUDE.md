@@ -39,7 +39,7 @@ tools/      build_world.gd (GENERATORE grayboxing: props, modelli, livello 1 + n
             export_dungeons.gd (piante PNG dei dungeon, anche per provare altri semi),
             test_ostia.gd / test_atto2.gd / test_mappa.gd / test_gemme_set.gd / test_dungeon.gd (test automatici)
 addons/     legio_map/ (plugin dell'editor: pannello "Mappa")
-docs/       GAME_DESIGN.md, mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
+docs/       GAME_DESIGN.md, PIANO_EQUIPAGGIAMENTO.md (pezzi agganciati alle ossa), mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
 audio/      music/ e sfx/ (vuote: vedi LEGGIMI.txt; i suoni sono sintetizzati, la musica manca)
 scenes/     main_menu.tscn, levels/level_01.tscn, level_02_ostia.tscn, level_03_porto.tscn (navmesh incorporata),
             levels/dungeon.tscn (vuota: il dungeon si costruisce da codice al caricamento),
@@ -92,10 +92,11 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - **Gioielliere**: scheda del pannello del fabbro (`TradeUI._build_jeweler`): combina 3→1 (`combine_gem`), incastona (`socket_gem`), togli a pagamento (`unsocket_gem`).
 
 ## Dungeon generati (data/dungeon_db.gd, world/dungeon_*.gd)
-- `DungeonGen.generate(cfg, seme)`: stanze + corridoi a L su griglia, anelli extra, partenza = stanza 0, boss = stanza più lontana a piedi. Usa solo il suo `RandomNumberGenerator`: **stesso seme = stessa mappa** (`fingerprint()` per confrontare). Non crea nodi.
+- `DungeonGen.generate(cfg, seme)`: stanze + corridoi su griglia, anelli extra, partenza = stanza 0, boss = stanza più lontana a piedi. Stili: `"stanze"` (rettangoli, corridoi a L) e `"caverna"` (grotte irregolari, gallerie tortuose). Tipi di stanza (`kinds`): partenza, boss, normale, `colonne`, `cripta`, `tesoro` (pesi in `room_kinds`). Usa solo il suo `RandomNumberGenerator`: **stesso seme = stessa mappa** (`fingerprint()` per confrontare). Non crea nodi.
 - `DungeonLevel` (estende `Level`, scena `scenes/levels/dungeon.tscn`, id livello `"dungeon"`): costruisce pavimento, muri (bassi sul lato sud, verso la telecamera), torce, props, forzieri, zone nemiche (boss unico nella stanza più lontana), scala di uscita, e fa il bake della navmesh al caricamento.
-- Entrata: prop `ingresso_catacombe` (`DungeonEntrance`, `dungeon_id`) nel livello 1 accanto al Mausoleo (`World/Luoghi/Mausoleo/IngressoCatacombe`). Scrive `hero.flags["dungeon"] = {id, return_level, x, z}`; l'uscita del dungeon riporta davanti all'entrata. Salvare dentro il dungeon funziona (stessa mappa al ricaricamento).
-- Nuovo dungeon: aggiungi una voce in `DungeonDB.DUNGEONS` e piazza un `ingresso_catacombe` con quel `dungeon_id`. Per scegliere il seme: `--script res://tools/export_dungeons.gd -- <seme>` → `docs/mappe/dungeon_<id>_seme<seme>.png`.
+- Dungeon: **Catacombe del Mausoleo** (livello 1, `World/Luoghi/Mausoleo/IngressoCatacombe`, boss `custode`), **Caverne del Clan** (livello 1, `World/Luoghi/AccampamentoBarbaro/IngressoCaverne`, stile caverna, boss `tharvo`), **Cisterne del Porto** (livello 3, `World/Luoghi/Magazzini/IngressoCisterne`, sale a colonne, boss `madre_granchi`). I boss riusano modelli esistenti ingranditi (`model_scale` in EnemyDB).
+- Entrata: prop `ingresso_catacombe` (`DungeonEntrance`, `dungeon_id`); è anche nei generatori dei livelli. Scrive `hero.flags["dungeon"] = {id, return_level, x, z}`; l'uscita del dungeon riporta davanti all'entrata. Salvare dentro il dungeon funziona (stessa mappa al ricaricamento).
+- Nuovo dungeon: aggiungi una voce in `DungeonDB.DUNGEONS` (con `"entrance"` per il test) e piazza un `ingresso_catacombe` con quel `dungeon_id` (nell'editor, poi ricalcola la navmesh). Gli oggetti nelle stanze vanno solo su celle con tutte le vicine di pavimento (`is_open`). Per scegliere il seme: `--script res://tools/export_dungeons.gd -- <seme>` → `docs/mappe/dungeon_<id>_seme<seme>.png`.
 - Nemici, forzieri e props ricompaiono a ogni ingresso; il boss (`custode`) è unico per partita come gli altri boss.
 
 ## Missioni (data/quest_db.gd, core/quests.gd)
@@ -118,6 +119,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - `Sfx.play` / `Music.play` non fanno nulla in headless; `DisplayServer.keyboard_get_keycode_from_physical` non è supportato in headless.
 - Godot 4.7 limita la ricerca dei percorsi a **4096 poligoni** (`path_search_max_polygons`); il livello 1 ne ha circa 6300. Per i clic del giocatore basta, ma nei test su percorsi lunghi usa `path_search_max_polygons = 0`.
 - Navmesh ricostruita più volte a runtime in uno script `--script`: con le iterazioni asincrone (predefinite) la mappa di navigazione non si sincronizza più. Nei test spegnile con `NavigationServer3D.region_set_use_async_iterations(rid, false)` e `map_set_use_async_iterations(map, false)` (vedi test_mappa.gd).
+- Tool che caricano un livello, lo mettono nell'albero e poi lo **risalvano**: imposta prima `load("res://world/map_shape.gd").keep_in_game = true`, altrimenti la `Forma` si cancella da sola e sparisce dal .tscn salvato (`test_mappa.gd` controlla che ogni livello abbia la Forma).
 - I nemici bloccano fisicamente l'eroe: nei test che camminano tra i nemici bisogna "combattere" (vedi `_walk_to(..., fight)` in test_atto2.gd).
 
 ## Test
@@ -125,8 +127,8 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - **`tools/test_ostia.gd`** (42 controlli): `--headless --path . --fixed-fps 60 --script res://tools/test_ostia.gd`. Uscita del livello 1 → città, NPC, altare, mercante (compra/vendi/riacquista), fabbro (smonta/forgia), poteri leggendari, viaggio rapido, portale, salvataggio. Usa e cancella lo slot 3.
 - **`tools/test_atto2.gd`** (53 controlli): missioni dell'atto 1 e 2, segni degli NPC, cancello, forziere personale, porto percorso a piedi fino al faro, Vulso e rinforzi, portale, diario, rimappatura tasti, salvataggio. Ripristina il forziere personale vero.
 - **`tools/test_gemme_set.gd`** (26 controlli): pezzi di set e bonus 2/4 pezzi, set dai leggendari, orbite, gioielliere (combina, incastona, togli), gemme raccolte da terra, salvataggio.
-- **`tools/test_dungeon.gd`** (23 controlli): stesso seme = stessa mappa (e 30 semi sempre collegati), entrata nel livello 1, navmesh dalla partenza al boss, boss e forzieri, uscita davanti all'entrata, ricarica dentro il dungeon.
-- **`tools/test_mappa.gd`** (13 controlli): Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
+- **`tools/test_dungeon.gd`** (39 controlli): per ogni dungeon stesso seme = stessa mappa e 30 semi sempre collegati; catacombe percorse dall'entrata all'uscita (boss, forzieri, ricarica dentro il dungeon); per gli altri: entrata nel loro livello, percorso fino al boss e alla scala, boss che compare, stanze arredate.
+- **`tools/test_mappa.gd`** (16 controlli): ogni livello ha la Forma; Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 
 ## Stato (17-11-2026)
@@ -135,4 +137,5 @@ Fatto il 16-11: città-hub Ostia Nova (livello 2) con 11 NPC, mercante e fabbro 
 Fatto il 16-11 (2): missioni (6, atti 1-2) con diario e segni sugli NPC, livello 3 "Porto di Ostia Nova" (circa 560 m, 20 zone, boss Vulso il Corsaro che chiama rinforzi, 5 nuovi nemici), forziere personale condiviso, opzioni (video, audio, rimappatura tasti) dal menu principale e dalla pausa, aggancio per la musica.
 Fatto il 17-11: Forma dei livelli modificabile nell'editor (strade, aree, acqua) + plugin Legio Map (pannello Mappa, Ricostruisci terreno, piante PNG); i tre generatori usano la Forma.
 Fatto il 17-11 (2): gemme (5 tipi × 5 gradi, orbite, gioielliere), 4 set di classe con bonus, dungeon generati con seme fisso (Catacombe del Mausoleo, boss Custode delle Ossa) con entrata nel livello 1.
+Fatto il 17-11 (3): altri 2 dungeon (Caverne del Clan in stile caverna, Cisterne del Porto), tipi di stanza (colonne, cripta, tesoro), piano per l'equipaggiamento visibile (`docs/PIANO_EQUIPAGGIAMENTO.md`).
 Da fare: trama (testi in `data/quest_db.gd` e `data/npc_db.gd`, segnaposto `[TRAMA]`), musica e suoni veri, modelli Tripo, atto 3, altri dungeon, bilanciamento.

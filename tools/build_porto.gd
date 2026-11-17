@@ -266,6 +266,9 @@ func _p_magazzini(parent: Node) -> void:
 	_place("forziere", g, c + Vector2(2, -2), 90.0, 1.0, {"flag_id": "chest_porto_sale", "item_level": 7, "rich": true})
 	for i in 4:
 		_place("pila_casse", g, c + Vector2(8 + (i % 2) * 3.2, -8 + i * 4.0), rng.randf() * 30.0)
+	# Entrata delle Cisterne del Porto (dungeon generato, data/dungeon_db.gd)
+	var ing := _place("ingresso_catacombe", g, c + Vector2(-2, 12), 0.0, 1.0, {"dungeon_id": "cisterne"})
+	ing.name = "IngressoCisterne"
 	_place("cartello", g, Vector2(-30, -152), 90.0, 1.0, {"title": "Magazzino del sale",
 		"text": "Proprietà di Tito Mercatore. Vietato l'ingresso ai non autorizzati.\n\nQualcuno ha forzato la porta."})
 

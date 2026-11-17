@@ -122,8 +122,8 @@ func _ready() -> void:
 
 	var scene := load(data["model"]) as PackedScene
 	model = scene.instantiate() if scene else Node3D.new()
-	if elite:
-		model.scale = Vector3.ONE * 1.25
+	# "model_scale": riusa il modello di un altro nemico più grande (es. i boss dei dungeon)
+	model.scale = Vector3.ONE * float(data.get("model_scale", 1.0)) * (1.25 if elite else 1.0)
 	add_child(model)
 
 	_build_bar(h)

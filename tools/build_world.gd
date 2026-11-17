@@ -1273,6 +1273,9 @@ func _build_pois(parent: Node) -> void:
 		_place("anfora", g, c + Vector2(rng.randf_range(-6, 6), rng.randf_range(-12, -8)))
 	for i in 3:
 		_place("cassa", g, c + Vector2(-9 + i * 1.3, 9), rng.randf() * 30.0)
+	# Entrata delle Caverne del Clan (dungeon generato, data/dungeon_db.gd)
+	var ing_c := _place("ingresso_catacombe", g, c + Vector2(0, -15), 0.0, 1.0, {"dungeon_id": "caverne_clan"})
+	ing_c.name = "IngressoCaverne"
 
 	# --- Necropoli lungo la Via (come la Via Appia) ---
 	g = _group(parent, "Necropoli")

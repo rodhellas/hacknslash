@@ -44,7 +44,7 @@ I tasti si possono cambiare in **Opzioni > Comandi** (dal menu principale o dall
 - **Effetti e audio segnaposto**: particelle per colpi, morti, esplosioni, scie dei proiettili e level up; effetti sonori sintetizzati da codice (sostituibili con file veri in `audio/sfx/`).
 - **Set** (verdi): 4 set, uno per classe, con bonus a 2, 3 e 4 pezzi (statistiche e +200% danni di alcune abilità).
 - **Gemme**: rubino, smeraldo, topazio, ametista e diamante in 5 gradi; si incastonano nelle orbite (effetto diverso su arma, elmo e resto). Il fabbro ha la scheda **Gioielliere** per combinarle, incastonarle e toglierle.
-- **Dungeon generati**: le Catacombe del Mausoleo (entrata accanto al Mausoleo nel livello 1) sono generate da un seme fisso, quindi la mappa è sempre la stessa; nemici e forzieri ricompaiono a ogni ingresso, il boss è il Custode delle Ossa.
+- **Dungeon generati** da un seme fisso (la mappa è sempre la stessa): Catacombe del Mausoleo e Caverne del Clan nel livello 1, Cisterne del Porto nel livello 3. Sale a colonne, cripte, stanze del tesoro; nemici e forzieri ricompaiono a ogni ingresso, ogni dungeon ha il suo boss.
 - **9 slot di equipaggiamento**, zaino da 40 caselle, statistiche (Forza/Destrezza/Intelligenza/Vitalità, armatura, critico, velocità d'attacco...).
 - **Nemici a zone** (EncounterZone): compaiono quando ti avvicini, il gruppo si attiva insieme, tornano a casa se scappi. Ci sono gli elite (Campioni, blu) e un boss unico (Brenno, arancione).
 - **Navigazione**: navmesh + evitamento RVO, i nemici aggirano gli ostacoli.

@@ -11,6 +11,7 @@ extends RefCounted
 ##   special         "slam" (colpo ad area), "charge" (carica a distanza)
 ##   summon          tipo di nemico che chiama in aiuto (summon_count alla volta, ogni summon_cd secondi)
 ##   model           scena del modello 3D (sostituibile con quello di Tripo)
+##   model_scale     ingrandisce il modello (per riusare quello di un altro nemico, es. i boss dei dungeon)
 
 const DATA := {
 	"predone": {
@@ -79,6 +80,20 @@ const DATA := {
 		"radius": 0.9, "height": 2.9, "xp": 500, "aggro": 16.0, "unique": true, "special": "slam", "slam_radius": 4.0,
 		"summon": "lemure", "summon_count": 3, "summon_cd": 12.0,
 		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/bruto.tscn",
+	},
+	# --- Dungeon: Cisterne del Porto ---
+	"madre_granchi": {
+		"name": "La Madre dei Granchi", "hp": 1900.0, "damage": 30.0, "speed": 3.2, "range": 3.2, "windup": 0.85, "cooldown": 1.5,
+		"radius": 1.6, "height": 2.2, "xp": 900, "aggro": 16.0, "unique": true, "special": "slam", "slam_radius": 4.5,
+		"summon": "granchio", "summon_count": 5, "summon_cd": 10.0,
+		"knock_resist": 0.0, "interruptible": false, "model": "res://scenes/enemies/granchio.tscn", "model_scale": 3.2,
+	},
+	# --- Dungeon: Caverne del Clan ---
+	"tharvo": {
+		"name": "Tharvo Mangiaferro", "hp": 850.0, "damage": 22.0, "speed": 3.8, "range": 2.8, "windup": 0.7, "cooldown": 1.3,
+		"radius": 0.9, "height": 3.0, "xp": 380, "aggro": 16.0, "unique": true, "special": "charge", "slam_radius": 3.5,
+		"summon": "barbaro", "summon_count": 2, "summon_cd": 15.0,
+		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/barbaro.tscn", "model_scale": 1.6,
 	},
 	"brenno": {
 		"name": "Brenno il Rinnegato", "hp": 900.0, "damage": 24.0, "speed": 3.6, "range": 3.2, "windup": 0.8, "cooldown": 1.4,
