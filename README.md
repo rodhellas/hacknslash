@@ -51,4 +51,8 @@ I tasti si possono cambiare in **Opzioni > Comandi** (dal menu principale o dall
 - **Livello 2 "Ostia Nova"**: la città-hub (circa 100 × 110 m), raggiunta dall'uscita del livello 1.
 - **Livello 3 "Porto di Ostia Nova"** (atto 2): magazzini, moli, cantieri navali, spazioporto e faro; pirati cilici, automi portuali, granchi meccanici e il boss Vulso il Corsaro. Si apre con la missione del prefetto.
 
+## Modificare le mappe
+
+Ogni livello ha un nodo **Forma** con strade, aree e specchi d'acqua che si modificano trascinandoli nell'editor. Il pannello **Mappa** (plugin *Legio Map*, già attivo) ha il pulsante **Ricostruisci terreno**: rigenera terreno, bordi, strade, acqua, vegetazione e navmesh senza toccare luoghi, nemici, forzieri e NPC piazzati a mano. Le piante dall'alto dei livelli sono in `docs/mappe/`.
+
 Vedi [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) per il design e [CLAUDE.md](CLAUDE.md) per l'architettura del codice.

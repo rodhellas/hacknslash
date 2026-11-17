@@ -21,9 +21,12 @@ extends Node3D
 ## Distanza minima della vegetazione dal bordo delle strade lastricate (m).
 @export var scatter_road_margin := 1.0
 
+## Tool e test headless lo mettono a true per tenere la Forma anche fuori dall'editor.
+static var keep_in_game := false
+
 
 func _ready() -> void:
-	if not Engine.is_editor_hint():
+	if not Engine.is_editor_hint() and not keep_in_game:
 		queue_free()
 
 

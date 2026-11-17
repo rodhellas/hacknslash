@@ -37,9 +37,14 @@ func _count(n: Node) -> int:
 
 
 func _part1() -> void:
+	load("res://world/map_shape.gd").keep_in_game = true   # in gioco la Forma si elimina da sola
 	level = (load("res://scenes/levels/level_03_porto.tscn") as PackedScene).instantiate()
 	level.set_script(null)   # niente logica di gioco: serve solo la scena
 	root.add_child(level)
+	# Con le iterazioni asincrone (predefinite in Godot 4.7) la mappa, ricostruita più volte nello
+	# stesso frame, non si sincronizza più in modalità --script: qui le spegniamo.
+	NavigationServer3D.region_set_use_async_iterations((level.get_node("World") as NavigationRegion3D).get_rid(), false)
+	NavigationServer3D.map_set_use_async_iterations(level.get_world_3d().navigation_map, false)
 	Builder = load("res://tools/map_builder.gd")
 	luoghi = level.get_node("World/Luoghi")
 	hand_before = luoghi.find_children("*", "", true, false).size()

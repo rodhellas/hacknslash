@@ -123,6 +123,11 @@ Nuovi nemici: Pirata cilicio (mischia), Arpionatore (a distanza), Granchio mecca
 - `core/sfx.gd`: 24 effetti sonori **sintetizzati da codice** (nessun file). Per usare un suono vero basta mettere `res://audio/sfx/<nome>.wav` (o `.ogg`): ha la precedenza. Nomi: swing, hit, crit, enemy_die, player_hurt, enemy_attack, cast, projectile, dash, explosion, gold, pickup, rare_drop, legendary, levelup, potion, chest, break, checkpoint, portal, ui_click, coins, anvil, talk. Volume nel menu di pausa (salvato in `user://settings.cfg`).
 - **Musica**: nessun brano incluso. Basta mettere `audio/music/<id livello>.ogg` (vedi `audio/music/LEGGIMI.txt`); dissolvenza tra i livelli, volume in Opzioni.
 
+## Forma dei livelli (editor)
+- Nodo `Forma` in ogni livello: **strade** (curve con fascia calpestabile e lastricato), **aree** (radure circolari), **poligoni** (terra, acqua, buchi). Ogni elemento indica una **zona** (`data/map_zones.gd`: colore del suolo, bordo decorato, vegetazione sparsa).
+- Pannello **Mappa** (plugin Legio Map): *Ricostruisci terreno* rigenera solo terreno, confini, strade, acqua, vegetazione, lampioni e navmesh; il resto del livello resta com'è. Il resoconto segnala gli oggetti finiti fuori dall'area calpestabile.
+- Piante PNG (2 px = 1 m, nord in alto) in `docs/mappe/`, da pannello o con `tools/export_maps.gd`.
+
 ## Idee / prossimi passi
 - Scrivere la trama (dialoghi in `data/npc_db.gd`) e le missioni.
 - Atto 3 (dopo il faro).
