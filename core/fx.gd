@@ -69,9 +69,9 @@ static func _apply_overlay(root: Node, color: Variant) -> void:
 			om.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			_overlays[key] = om
 		m = _overlays[key]
-	for gi: GeometryInstance3D in meshes(root):
+	for gi: Variant in meshes(root):
 		if is_instance_valid(gi):
-			gi.material_overlay = m
+			(gi as GeometryInstance3D).material_overlay = m
 
 
 ## Testo che sale e svanisce (numeri di danno, "LIVELLO SU!", ecc.).
@@ -90,6 +90,10 @@ static func popup_text(parent: Node, pos: Vector3, text: String, color: Color, s
 	parent.add_child(l)
 	l.global_position = pos
 	var tw := l.create_tween().set_parallel(true)
+	# Numeri grandi (critici, colpi forti): compaiono ingranditi e "battono" sul posto
+	if size >= 56:
+		l.scale = Vector3.ONE * 1.9
+		tw.tween_property(l, "scale", Vector3.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(l, "global_position", pos + Vector3(randf_range(-0.5, 0.5), 1.4, 0.0), 0.75) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.tween_property(l, "modulate:a", 0.0, 0.35).set_delay(0.4)

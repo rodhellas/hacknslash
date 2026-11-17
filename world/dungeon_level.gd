@@ -14,6 +14,15 @@ const WALL_LOW_H := 1.2
 var cfg: Dictionary = {}
 var gen: DungeonGen
 var dungeon_id := ""
+## Labirinti di Dedalo (rift_grade > 0, vedi Level): avanzamento, tempo e Guardiano.
+var rift_progress := 0.0
+var rift_target := 1.0
+var rift_time := 0.0
+var guardian_spawned := false
+var rift_done := false
+var guardian: Enemy = null
+var gem_upgrades_left := 0
+var rift_kills := 0
 
 
 func _ready() -> void:
@@ -21,7 +30,11 @@ func _ready() -> void:
 	if Game.hero != null:
 		info = Game.hero.flags.get("dungeon", {})
 	dungeon_id = String(info.get("id", DungeonDB.DUNGEONS.keys()[0]))
-	cfg = DungeonDB.get_data(dungeon_id)
+	if info.has("rift"):
+		rift_grade = maxi(1, int(info["rift"]))
+		cfg = DifficultyDB.rift_config(rift_grade, int(info.get("seed", 1)), Game.hero.level if Game.hero else 1)
+	else:
+		cfg = DungeonDB.get_data(dungeon_id)
 	level_id = "dungeon"
 	level_title = String(cfg["title"])
 	area_level = int(cfg["enemy_level"])
@@ -65,6 +78,7 @@ func build() -> void:
 	start.position = gen.room_center_world(gen.start_room)
 	_build_exit()
 	_build_encounters(rng)
+	_build_shrines(rng)
 
 
 # --- Geometria ------------------------------------------------------------------------------
@@ -307,6 +321,12 @@ func _bake(world: NavigationRegion3D) -> void:
 	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	nm.geometry_collision_mask = Layers.WORLD
 	world.navigation_mesh = nm
+	# Senza finestra (test automatici) le iterazioni asincrone della navigazione a volte non si
+	# sincronizzano dopo molti bake di fila: lì si spengono (vedi CLAUDE.md, insidie).
+	if DisplayServer.get_name() == "headless":
+		NavigationServer3D.region_set_use_async_iterations(world.get_rid(), false)
+		if is_inside_tree():
+			NavigationServer3D.map_set_use_async_iterations(get_world_3d().navigation_map, false)
 	world.bake_navigation_mesh(false)
 
 
@@ -369,7 +389,7 @@ func _build_encounters(rng: RandomNumberGenerator) -> void:
 		if i == gen.boss_room:
 			z.unique_id = String(cfg.get("boss", ""))
 			z.enemy_types = PackedStringArray(enemies)
-			z.count = 4
+			z.count = 4 if rift_grade <= 0 else 7
 		elif gen.kinds[i] == "tesoro" or rng.randf() < 0.25:
 			z.elite = true
 			z.enemy_types = PackedStringArray([elites[rng.randi_range(0, elites.size() - 1)]])
@@ -378,13 +398,190 @@ func _build_encounters(rng: RandomNumberGenerator) -> void:
 			z.enemy_types = PackedStringArray(enemies)
 			z.count = clampi(r.get_area() / 10, 3, 8)
 		zones.add_child(z)
+		rift_target += float(z.count) * (4.0 if z.elite else 1.0)
+	rift_target = maxf(10.0, rift_target * DifficultyDB.RIFT_PROGRESS)
+
+
+## Santuari nelle stanze (piloni nei labirinti): in una cella libera vicino al centro della stanza.
+func _build_shrines(rng: RandomNumberGenerator) -> void:
+	var holder := Node3D.new()
+	holder.name = "Extra"
+	add_child(holder)
+	var rooms: Array = []
+	for i in gen.rooms.size():
+		if i != gen.start_room and i != gen.boss_room:
+			rooms.append(i)
+	rooms.shuffle()
+	var n_shr := WorldDB.SHRINES_PER_DUNGEON if rift_grade <= 0 else 1
+	var n := n_shr + (WorldDB.PYLONS_PER_RIFT if rift_grade > 0 else 0)
+	for k in mini(n, rooms.size()):
+		var r := gen.rooms[rooms[k]]
+		var cell := Vector2i(-1, -1)
+		for t in 30:
+			var c := r.position + Vector2i(rng.randi_range(1, r.size.x - 2), rng.randi_range(1, r.size.y - 2))
+			if gen.is_open(c) and c != r.position + r.size / 2:
+				cell = c
+				break
+		if cell.x < 0:
+			continue
+		var s := Shrine.new()
+		s.pylon = k >= n_shr
+		s.shrine_id = (WorldDB.PYLONS if s.pylon else WorldDB.SHRINES).keys().pick_random()
+		s.position = gen.cell_to_world(Vector2(cell))
+		holder.add_child(s)
+
+
+# --- Labirinti di Dedalo ----------------------------------------------------------------------
+
+func _process(delta: float) -> void:
+	if rift_grade > 0 and not rift_done and player != null and not player.dead:
+		rift_time += delta
+
+
+## Chiamato da Enemy._die: riempie la barra del labirinto; il Guardiano chiude il labirinto.
+func on_enemy_died(e: Enemy) -> void:
+	if rift_grade <= 0 or rift_done:
+		return
+	if e == guardian:
+		_complete_rift(e.global_position)
+		return
+	rift_kills += 1
+	if guardian_spawned:
+		return
+	rift_progress = minf(rift_target, rift_progress + (4.0 if e.elite else 1.0))
+	if rift_progress >= rift_target:
+		_spawn_guardian()
+
+
+func _spawn_guardian() -> void:
+	guardian_spawned = true
+	var gid := String(cfg.get("guardian", "custode"))
+	var a := randf() * TAU
+	var pos := player.global_position + Vector3(cos(a), 0, sin(a)) * 7.0
+	var s := NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, pos)
+	if s != Vector3.ZERO and s.y < 1.0:
+		pos = Vector3(s.x, 0.0, s.z)
+	guardian = Enemy.create(gid, int(cfg["enemy_level"]))
+	guardian.position = pos
+	enemies_root.add_child(guardian)
+	guardian.display_name = "Guardiano: " + guardian.display_name
+	guardian.max_life *= 3.0
+	guardian.life = guardian.max_life
+	if guardian.name_label:
+		guardian.name_label.text = guardian.display_name
+	guardian.aggro()
+	Fx.pillar(dynamic_root, pos, Color(0.7, 0.4, 1.0), 14.0, 1.5)
+	Fx.ring(dynamic_root, pos, 6.0, Color(0.7, 0.4, 1.0), 0.8)
+	Sfx.play("portal", pos)
+	hud.show_banner("Il Guardiano del labirinto!")
+
+
+func _complete_rift(pos: Vector3) -> void:
+	rift_done = true
+	var lvl := int(cfg["enemy_level"])
+	Loot.drop("rift", pos, lvl)
+	for i in rift_grade / 10:
+		Loot.spawn_item(ItemDB.generate(lvl, Item.Rarity.LEGGENDARIO, Game.hero.class_id), pos)
+	var msg := "Labirinto completato in %d:%02d." % [int(rift_time) / 60, int(rift_time) % 60]
+	# Gemma leggendaria: sempre la prima volta, poi 40%, una che non hai ancora
+	var owned := {}
+	for g: Dictionary in Game.hero.owned_legendary_gems():
+		owned[ItemDB.leg_gem_id(String(g["key"]))] = true
+	var missing: Array = []
+	for id: String in ItemDB.LEGENDARY_GEMS:
+		if not owned.has(id):
+			missing.append(id)
+	if not missing.is_empty() and (owned.is_empty() or randf() < 0.4):
+		var gd := LootDrop.make_gem(ItemDB.leg_gem_key(String(missing.pick_random()), 1))
+		gd.position = pos + Vector3(-1.5, 0, 1.0)
+		dynamic_root.add_child(gd)
+	_record_rift()
+	if rift_time <= DifficultyDB.RIFT_TIME:
+		gem_upgrades_left = ItemDB.LEG_GEM_UPGRADES
+		offer_gem_upgrade.call_deferred()
+		var up := 2 if rift_time <= DifficultyDB.RIFT_FAST else 1
+		var new_max := maxi(int(Game.hero.flags.get("rift_max", 1)), rift_grade + up)
+		Game.hero.flags["rift_max"] = new_max
+		msg += " Sbloccato il grado %d!" % new_max
+	else:
+		msg += " Troppo tardi per salire di grado."
+	Game.hero.flags["rift_best"] = maxi(int(Game.hero.flags.get("rift_best", 0)), rift_grade if rift_time <= DifficultyDB.RIFT_TIME else 0)
+	hud.show_banner("Labirinto completato!")
+	hud.show_message(msg, 6.0)
+	# Uscita accanto al Guardiano
+	var exit := LevelExit.new()
+	exit.name = "UscitaLabirinto"
+	exit.title = "Torna in città"
+	var cs := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = 1.2
+	cyl.height = 2.0
+	cs.shape = cyl
+	cs.position.y = 1.0
+	exit.add_child(cs)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 1.0
+	tm.outer_radius = 1.3
+	ring.mesh = tm
+	ring.material_override = Fx.mat(Color(0.7, 0.4, 1.0), 4.0, false, true)
+	ring.rotation_degrees.x = 90.0
+	ring.position.y = 1.4
+	exit.add_child(ring)
+	exit.position = pos + Vector3(2.5, 0, 0)
+	add_child(exit)
+
+
+## Record personali dei labirinti (i 10 migliori: grado più alto, poi tempo più basso).
+func _record_rift() -> void:
+	var recs: Array = Game.hero.flags.get("rift_records", [])
+	recs.append({"grade": rift_grade, "time": roundi(rift_time), "kills": rift_kills, "ok": rift_time <= DifficultyDB.RIFT_TIME})
+	recs.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if bool(a["ok"]) != bool(b["ok"]):
+			return bool(a["ok"])
+		if int(a["grade"]) != int(b["grade"]):
+			return int(a["grade"]) > int(b["grade"])
+		return int(a["time"]) < int(b["time"]))
+	Game.hero.flags["rift_records"] = recs.slice(0, 10)
+
+
+## Dopo un labirinto in tempo: 3 tentativi di potenziare una gemma leggendaria.
+func offer_gem_upgrade() -> void:
+	if gem_upgrades_left <= 0:
+		return
+	var gems: Array = Game.hero.owned_legendary_gems()
+	if gems.is_empty():
+		gem_upgrades_left = 0
+		return
+	var opts: Array = []
+	for g: Dictionary in gems:
+		var ch := ItemDB.leg_gem_upgrade_chance(ItemDB.leg_gem_rank(String(g["key"])), rift_grade)
+		opts.append(["%s – %d%%" % [ItemDB.gem_name(String(g["key"])), roundi(ch * 100.0)], try_gem_upgrade.bind(g), ch <= 0.0])
+	hud.show_choice("Potenzia una gemma leggendaria",
+		"Tentativi rimasti: %d. La probabilità dipende dal grado del labirinto (%d) rispetto a quello della gemma." % [gem_upgrades_left, rift_grade], opts)
+
+
+func try_gem_upgrade(entry: Dictionary, roll: float = -1.0) -> bool:
+	if gem_upgrades_left <= 0:
+		return false
+	gem_upgrades_left -= 1
+	var ok: bool = Game.hero.upgrade_legendary_gem(entry, rift_grade, roll)
+	hud.show_message(("Potenziamento riuscito: " if ok else "Potenziamento fallito: ") + ItemDB.gem_name(String(entry["key"])), 2.5)
+	Sfx.play("anvil" if ok else "hit")
+	player.refresh_stats()
+	hud.hide_choice()
+	offer_gem_upgrade.call_deferred()
+	return ok
 
 
 ## L'uscita riporta davanti all'entrata da cui si è scesi.
 func on_exit_reached(exit: LevelExit) -> void:
 	var info: Dictionary = Game.hero.flags.get("dungeon", {})
 	var back := String(info.get("return_level", "level_01"))
-	Game.hero.flags["completed_dungeon_" + dungeon_id] = true
+	if rift_grade > 0:
+		Game.hero.flags.erase("dungeon")
+	else:
+		Game.hero.flags["completed_dungeon_" + dungeon_id] = true
 	Sfx.play("portal")
 	if info.has("x"):
 		Game.travel(back, "", Vector3(float(info["x"]), 0.0, float(info["z"])))

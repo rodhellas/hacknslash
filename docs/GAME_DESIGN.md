@@ -57,8 +57,10 @@ Abilità: clic sinistro (primaria, genera risorsa), clic destro (secondaria), ta
 - **Mercante**: vende 16 oggetti del livello dell'eroe (4 rari, 12 magici), rinnovati a ogni ingresso in città. Prezzo = valore × 5. Valore di vendita = [5, 15, 40, 120] per rarità × (1 + 0,25 × (liv. oggetto − 1)). Riacquisto degli ultimi 12 oggetti venduti allo stesso prezzo di vendita.
 - **Fabbro**: smonta gli oggetti in materiali (comune → rottami di bronzo, magico → rottami + essenza arcana, raro → essenze, leggendario → frammento divino + essenze) e forgia oggetti del livello dell'eroe per la propria classe:
   magico = 25 sesterzi × livello + 4 rottami; raro = 80 × livello + 8 rottami + 4 essenze; leggendario (casuale) = 300 × livello + 2 frammenti + 10 essenze.
-- **Forziere personale** (in città, accanto all'altare del Foro): 60 caselle, condiviso da tutti gli eroi (`user://stash.json`).
-- **Da fare**: gemme, set.
+- **Forziere personale** (in città, accanto all'altare del Foro): 60 caselle per scheda, condiviso da tutti gli eroi (`user://stash.json`).
+- **Forziere a schede**: 60 caselle per scheda, fino a 5 schede (5.000 / 25.000 / 75.000 / 200.000 sesterzi).
+- **Mercante**: vendita in blocco fino ai comuni, ai magici o ai rari (leggendari e set mai).
+- **Fabbro, scheda Aspetto**: ogni base raccolta o indossata sblocca il suo aspetto; cambiare aspetto costa 50 × livello sesterzi, tornare all'originale è gratis; tinte gratuite (rosso, porpora, verde, oro, acciaio, bronzo, cuoio, stoffa).
 
 ## Viaggi
 - **Altari**: si attivano avvicinandosi (salvano e diventano il punto di rinascita del loro livello). Cliccandoli si apre il **viaggio rapido** verso tutti gli altari attivati, anche di altri livelli.
@@ -75,7 +77,8 @@ Generata da `tools/build_ostia.gd`. Nord = −Z.
 
 ## Nemici (data/enemy_db.gd)
 Predone, Lupo cibernetico, Drone ribelle (a distanza), Barbaro, Frombolier (a distanza), Bruto (colpo ad area), Lemure (spettro), Legionario rinnegato, **Brenno il Rinnegato** (boss unico: carica + colpo ad area).
-- Elite "Campioni": vita ×3, danni ×1,4, nome blu, aura blu.
+- Elite: i gruppi elite sono **Campioni** (tutti blu, stessi affissi, vita ×3, danni ×1,4) oppure un **capo raro** (giallo, vita ×4, nome proprio) con 2 servitori in più normali. Affissi (`EnemyDB.ELITE_AFFIXES`, quanti dipende dalla difficoltà): Rapido (+35% velocità), Corazzato (-35% danni, niente spinta), Vampirico (si cura del 30% dei danni), Scudato (3 s invulnerabile ogni 10 s), Incendiario (pozze di fuoco), Gelido (sfere che esplodono e rallentano), Teletrasporto, Esplosivo (esplode morendo), Elettrico (scariche in 6 direzioni), Orda (+3 nemici).
+- Stordimento e fiamme (varianti delle abilità): elite e boss restano storditi la metà.
 - Ogni attacco ha un tempo di carica (il nemico si illumina di arancione): si può schivare, e i nemici leggeri vengono interrotti se colpiti.
 
 ## Livello 1 – Campagna di Lazio Prime (scenes/levels/level_01.tscn)
@@ -151,9 +154,44 @@ Nuovi nemici: Pirata cilicio (mischia), Arpionatore (a distanza), Granchio mecca
 - Pannello **Mappa** (plugin Legio Map): *Ricostruisci terreno* rigenera solo terreno, confini, strade, acqua, vegetazione, lampioni e navmesh; il resto del livello resta com'è. Il resoconto segnala gli oggetti finiti fuori dall'area calpestabile.
 - Piante PNG (2 px = 1 m, nord in alto) in `docs/mappe/`, da pannello o con `tools/export_maps.gd`.
 
+## Abilità, varianti e passive (data/skill_db.gd)
+- 10 abilità per classe: le 6 base + 4 alternative (primaria liv. 9, secondaria 11, tattiche 13 e 16). Clic sinistro solo primarie, clic destro solo secondarie, tasti 1-4 qualunque tattica.
+- Ogni abilità ha 3 **varianti** (rune), sbloccate a livello abilità + 6 / + 14 / + 24. Effetti nuovi: fiamme nel tempo, stordimento, cura sui colpi, attirare i nemici, seconda esplosione, potenziamento all'uso.
+- **Passive**: 6 per classe, 3 caselle (liv. 10, 20, 30).
+- Cambiare abilità la mette in ricarica.
+- 12 **leggendari** cambiano un'abilità (`SkillDB.POWER_MODS`), 4 **set** nuovi (uno in più per classe) potenziano anche le abilità alternative.
+
+## Difficoltà ed endgame (data/difficulty_db.gd)
+- Normale, Esperto, Maestro (liv. 10), Tormento I-X (liv. 30): vita nemici da ×1 a ×76, danni da ×1 a ×15,5, esperienza fino a ×15, leggendari fino a ×6, affissi delle elite 1 → 4. Da Esperto i nemici hanno almeno il livello dell'eroe.
+- **Labirinti di Dedalo**: Obelisco nel foro di Ostia Nova. Grado da 1 al massimo sbloccato; seme nuovo a ogni tentativo (stile stanze o caverna, aspetto di uno dei dungeon della campagna). Barra riempita uccidendo (normale 1, elite 4) fino al 75% dei nemici attesi → compare il Guardiano (un boss ingrandito, vita ×3). Sconfitto entro 15 minuti: +1 grado (+2 sotto 7,5 minuti). Ricompensa: 4-6 oggetti (il primo leggendario), gemma, molti sesterzi, +1 leggendario ogni 10 gradi. Scala: vita ×1,4 × 1,17^(grado−1), danni ×1,3 × 1,1^(grado−1).
+
+## Interfaccia
+- Finestra Abilità (K), anteprima 3D nello zaino, ordina zaino, statistiche dettagliate, barra del boss in alto, affissi nel riquadro del bersaglio, numeri di danno più grandi per critici e colpi forti.
+- Nebbia di guerra (celle da 8 m, salvata per livello in `hero.flags["fog"]`; niente nebbia in città) e segnalini delle missioni (fuori mappa: freccia sul bordo).
+- Filtro del loot e nomi a terra (Opzioni > Gioco; Alt per vederli tutti).
+- Schermata di caricamento con il nome del luogo e un consiglio.
+- Controller: mira automatica, navigazione dei pannelli (vedi README).
+
+## Modalità avventura e mondo vivo (data/world_db.gd)
+- **Taglie**: Tabula nel foro di Ostia Nova. Atto I (livello 1, Catacombe, Caverne) e atto II (porto, Cisterne): 4 taglie per atto (un boss + uccisioni / elite / eventi). Ognuna: 60 PE e 40 sesterzi × livello. Tutte finite: **Cassa del Prefetto** (1 leggendario, 2 forzieri decorati di loot, 5 essenze, 1 frammento, 200 sesterzi × livello) e taglie nuove. I boss delle taglie ricompaiono.
+- **Santuari** (3 per mappa, 2 per dungeon, 120 s): Fortuna (+25% sesterzi, +50% leggendari), Marte (+25% danni), Mercurio (+25% movimento, +15% velocità d'attacco), Minerva (-25% danni subiti), Apollo (+25% esperienza).
+- **Piloni** (Labirinti, 2 per labirinto, 15-30 s): Potenza (+300% danni), Flusso (niente costi, ricariche ×0,25), Egida (invulnerabile), Vento.
+- **Eventi** (2 per mappa): forziere maledetto (30 s di ondate), stendardo del clan (3 ondate, l'ultima con un'elite), prigionieri (3 da liberare, arrivano le guardie). Ricompensa: forziere decorato + PE.
+
+## Boss
+- Attacchi speciali ogni 6 s (4 con la furia): nova (16 proiettili), pioggia di fuoco (6 zone attorno all'eroe), onda (7 m attorno al boss), salto (piomba sull'eroe). Fasi: Brenno (66% rinnegati, 33% furia + salto), Custode (66% scudo finché vivono 4 lemuri, 33% furia + nova), Tharvo (50% furia + onda), Vulso (66% scudo con 4 pirati, 33% furia + pioggia), Madre dei Granchi (66% 6 granchi, 33% furia + pioggia).
+
+## Equipaggiamento, danni, gemme leggendarie
+- 13 caselle: elmo, spallacci, amuleto, armatura, guanti, bracciali, due anelli, cintura, arma, gambali, mano secondaria, calzari. Doppia arma per il Gladiatore (+15% velocità d'attacco).
+- Tipi di danno: fisico, fuoco, freddo (rallenta del 25%), fulmine; affissi +4-10% per tipo su amuleto, bracciali e mano secondaria.
+- Gemme leggendarie (solo amuleto e anelli, grado 1-50): Cuore di Marte (+10% danni +1%/grado), Occhio di Giano (+20% danno critico +2%/grado), Pietra di Vesta (-10% danni subiti +0,3%/grado, max 25%), Lacrima di Niobe (cura 1% dei danni +0,1%/grado), Scintilla di Vulcano (15% di incendiare), Dente di Cerbero (+20% contro elite e boss +1%/grado). Potenziamento: 100% se il labirinto è 10 gradi sopra la gemma, 60% a pari grado, meno sotto.
+
+## Hardcore
+- Scelto alla creazione. Alla morte l'eroe resta nello slot come "caduto" e non si può più giocare. Forziere personale separato.
+
 ## Idee / prossimi passi
 - Scrivere la trama (dialoghi in `data/npc_db.gd`) e le missioni.
 - Atto 3 (dopo il faro).
 - Sostituire i modelli segnaposto con quelli di Tripo + animazioni Mixamo.
 - Musica, suoni veri, effetti con shader.
-- Nebbia di guerra sulla mappa, skill alternative/rune come in D3, opzioni grafiche e di rimappatura dei tasti.
+- Bilanciamento fino al livello 60 e ai Tormenti alti.

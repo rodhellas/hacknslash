@@ -36,13 +36,30 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 	var sb := float(p.skill_bonus.get(String(ab.get("id", "")), 0.0))
 	if sb > 0.0:
 		mult *= 1.0 + sb / 100.0
-	var r := p.roll_damage(mult)
+	if p.has_passive("cecchino") and p.global_position.distance_to(e.global_position) > 10.0:
+		mult *= 1.2
+	# Tipo di danno: +% dagli affissi; il freddo rallenta
+	var element := String(ab.get("element", "fisico"))
+	mult *= 1.0 + float(p.stats.get(element + "_pct", 0.0)) / 100.0
+	if element == "freddo" and not ab.has("slow"):
+		e.apply_slow(0.25, 1.5)
+	mult *= p.special_damage_mult(e)
+	var r := p.roll_damage(mult, float(ab.get("crit_bonus", 0.0)))
 	var pos := e.global_position
-	e.take_damage(r[0], knock, r[1])
-	p.on_damage_dealt(r[0])
-	Sfx.play("crit" if r[1] else "hit", pos, 0.0 if r[1] else -3.0)
 	if ab.has("slow"):
 		e.apply_slow(float(ab["slow"]), float(ab.get("slow_time", 2.0)))
+	if float(ab.get("stun", 0.0)) > 0.0:
+		e.apply_stun(float(ab["stun"]))
+	if float(ab.get("dot", 0.0)) > 0.0 and not e.dead:
+		var t := float(ab.get("dot_time", 3.0))
+		e.apply_dot(float(p.roll_damage(float(ab["dot"]) * (1.0 + sb / 100.0))[0]), t, ab.get("color", Color(1.0, 0.5, 0.15)))
+	e.take_damage(r[0], knock, r[1], false, element)
+	p.on_damage_dealt(r[0], e)
+	if float(ab.get("heal_hit", 0.0)) > 0.0:
+		p.heal(float(r[0]) * float(ab["heal_hit"]), false)
+	if float(ab.get("gain_hit", 0.0)) > 0.0:
+		p.resource = minf(p.resource + float(ab["gain_hit"]), float(p.stats["resource_max"]))
+	Sfx.play("crit" if r[1] else "hit", pos, 0.0 if r[1] else -3.0)
 	# Poteri leggendari che si attivano colpendo
 	if _proc_depth > 0:
 		return
@@ -62,10 +79,14 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 ## Danni ad area attorno a un punto (usato da esplosioni, atterraggi, onde d'urto).
 static func damage_area(p: Player, center: Vector3, radius: float, mult: float, knock: float, ab: Dictionary) -> int:
 	var n := 0
+	var pull := bool(ab.get("pull", false))
 	for e: Enemy in enemies_in_radius(p.get_tree(), center, radius):
 		var k := e.global_position - center
 		k.y = 0.0
-		hit_enemy(p, e, mult, k.normalized() * knock, ab)
+		var kv := k.normalized() * knock
+		if pull:
+			kv = -k.normalized() * minf(k.length() * 4.0, 18.0)
+		hit_enemy(p, e, mult, kv, ab)
 		n += 1
 	break_props(p, center, radius)
 	return n
@@ -158,6 +179,13 @@ static func _aoe_point(p: Player, ab: Dictionary, point: Vector3) -> void:
 				Sfx.play("hit", point, -6.0)).set_delay(maxf(t, 0.01))
 	if delay > 0.2:
 		Sfx.play("cast", null, -6.0)
+	# Variante "echo": la stessa area colpisce di nuovo dopo un po'
+	if float(ab.get("echo", 0.0)) > 0.0:
+		var again := ab.duplicate()
+		again.erase("echo")
+		p.create_tween().tween_callback(func() -> void:
+			if is_instance_valid(p) and not p.dead:
+				_aoe_point(p, again, point)).set_delay(float(ab["echo"]))
 
 
 static func _aoe_self(p: Player, ab: Dictionary) -> void:
@@ -200,6 +228,8 @@ static func _dash(p: Player, ab: Dictionary, point: Vector3) -> void:
 			Fx.burst(Game.world_root(), p.global_position + Vector3(0, 1.0, 0), col, 16, 4.0, 0.1, 0.4, 0.0)
 			p.global_position = target
 			Fx.ring(Game.world_root(), target, 2.5, col, 0.4)
+			if float(ab.get("dmg", 0.0)) > 0.0:
+				damage_area(p, target, float(ab.get("radius", 3.0)), float(ab["dmg"]), float(ab.get("knock", 6.0)), ab)
 			Fx.burst(Game.world_root(), target + Vector3(0, 1.0, 0), col, 16, 4.0, 0.1, 0.4, 0.0)
 			Sfx.play("portal", null, -8.0, 0.2)
 

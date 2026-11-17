@@ -34,6 +34,7 @@ const DATA := {
 		"weapons": ["gladio", "spatha"], "offhands": ["scudo"],
 		"start_items": ["gladio_plasma", "scutum", "galea"],
 		"model": "res://scenes/characters/legionario.tscn",
+		"model_f": "res://scenes/characters/legionario_f.tscn",
 		"color": Color(0.7, 0.1, 0.1),
 		"abilities": [
 			{"id": "colpo_gladio", "name": "Colpo di gladio", "slot": "lmb", "unlock": 1, "kind": "melee",
@@ -67,9 +68,10 @@ const DATA := {
 		"resource_max": 100.0, "resource_regen": 0.0, "resource_starts_full": false,
 		"base": {"forza": 11, "destrezza": 10, "intelligenza": 7, "vitalita": 11},
 		"per_level": {"forza": 3, "destrezza": 2, "intelligenza": 1, "vitalita": 1},
-		"weapons": ["gladio", "ascia", "spatha"], "offhands": ["pugnale", "scudo"],
+		"weapons": ["gladio", "ascia", "spatha"], "offhands": ["pugnale", "scudo", "gladio", "ascia"],
 		"start_items": ["scure", "pugio", "galea"],
 		"model": "res://scenes/characters/gladiatore.tscn",
+		"model_f": "res://scenes/characters/gladiatore_f.tscn",
 		"color": Color(0.75, 0.5, 0.3),
 		"abilities": [
 			{"id": "doppio_fendente", "name": "Doppio fendente", "slot": "lmb", "unlock": 1, "kind": "melee",
@@ -108,6 +110,7 @@ const DATA := {
 		"weapons": ["arco"], "offhands": ["faretra"],
 		"start_items": ["arco_plasma", "faretra", "cappuccio"],
 		"model": "res://scenes/characters/sagittario.tscn",
+		"model_f": "res://scenes/characters/sagittario_f.tscn",
 		"color": Color(0.25, 0.5, 0.25),
 		"abilities": [
 			{"id": "dardo", "name": "Dardo al plasma", "slot": "lmb", "unlock": 1, "kind": "projectile",
@@ -145,6 +148,7 @@ const DATA := {
 		"weapons": ["scettro"], "offhands": ["focus"],
 		"start_items": ["lituo", "sfera_oracolo", "cappuccio"],
 		"model": "res://scenes/characters/augure.tscn",
+		"model_f": "res://scenes/characters/augure_f.tscn",
 		"color": Color(0.85, 0.85, 0.95),
 		"abilities": [
 			{"id": "fulmine", "name": "Fulmine di Giove", "slot": "lmb", "unlock": 1, "kind": "projectile",

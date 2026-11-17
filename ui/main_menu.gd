@@ -8,6 +8,9 @@ var slot_list: VBoxContainer
 var slot_mode := "new"   # "new" o "load"
 var chosen_slot := 0
 var chosen_class := "legionario"
+var chosen_sex := "m"
+var hardcore_check: CheckBox
+var sex_buttons: Dictionary = {}
 var class_buttons: Dictionary = {}
 var class_detail: RichTextLabel
 var name_edit: LineEdit
@@ -100,6 +103,8 @@ func _build_main() -> VBoxContainer:
 
 func _refresh_main() -> void:
 	var s := Game.latest_slot()
+	if s >= 0 and bool(Game.slot_info(s).get("dead", false)):
+		s = -1   # l'ultimo eroe è un hardcore caduto
 	_continue_btn.visible = s >= 0
 	if s >= 0:
 		var info := Game.slot_info(s)
@@ -135,9 +140,15 @@ func _refresh_slots() -> void:
 			var secs := int(info["play_time"])
 			text = "Slot %d  -  %s, %s liv. %d   (%dh %02dm)   %s" % [i + 1, info["name"],
 				HeroClasses.get_data(info["class_id"])["name"], info["level"], secs / 3600, (secs / 60) % 60, info["saved_at"]]
+			var extra: Array = [DifficultyDB.level_name(int(info["difficulty"]))]
+			if int(info["rift_max"]) > 1:
+				extra.append("Labirinto grado %d" % int(info["rift_max"]))
+			if bool(info["hardcore"]):
+				extra.append("HARDCORE" + ("  † caduto" if bool(info["dead"]) else ""))
+			text += "\n          " + "   ·   ".join(extra)
 		var b := _button(text, _on_slot_pressed.bind(i, not info.is_empty()))
 		b.custom_minimum_size = Vector2(700, 52)
-		b.disabled = slot_mode == "load" and info.is_empty()
+		b.disabled = slot_mode == "load" and (info.is_empty() or bool(info.get("dead", false)))
 		row.add_child(b)
 		if slot_mode == "load" and not info.is_empty():
 			var del := _button("Elimina", func() -> void:
@@ -179,6 +190,24 @@ func _build_class() -> VBoxContainer:
 		b.pressed.connect(_select_class.bind(id))
 		row.add_child(b)
 		class_buttons[id] = b
+	var srow := HBoxContainer.new()
+	srow.alignment = BoxContainer.ALIGNMENT_CENTER
+	srow.add_theme_constant_override("separation", 10)
+	srow.add_child(_label(18, Color.WHITE, "Corpo: "))
+	for sx: String in ["m", "f"]:
+		var sb := Button.new()
+		sb.toggle_mode = true
+		sb.text = "Uomo" if sx == "m" else "Donna"
+		sb.custom_minimum_size = Vector2(140, 40)
+		sb.add_theme_font_size_override("font_size", 18)
+		sb.pressed.connect(_select_sex.bind(sx))
+		srow.add_child(sb)
+		sex_buttons[sx] = sb
+	hardcore_check = CheckBox.new()
+	hardcore_check.text = "Hardcore (se muori l'eroe è perso per sempre; forziere separato)"
+	hardcore_check.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4))
+	srow.add_child(hardcore_check)
+	v.add_child(srow)
 	class_detail = RichTextLabel.new()
 	class_detail.bbcode_enabled = true
 	class_detail.fit_content = true
@@ -201,7 +230,14 @@ func _build_class() -> VBoxContainer:
 	brow.add_child(_button("Inizia l'avventura", _start))
 	v.add_child(brow)
 	_select_class("legionario")
+	_select_sex("m")
 	return v
+
+
+func _select_sex(sx: String) -> void:
+	chosen_sex = sx
+	for k: String in sex_buttons:
+		(sex_buttons[k] as Button).button_pressed = k == sx
 
 
 func _select_class(id: String) -> void:
@@ -222,7 +258,7 @@ func _start() -> void:
 	var n := name_edit.text.strip_edges()
 	if n == "":
 		n = "Lucio"
-	Game.new_game(chosen_slot, n, chosen_class)
+	Game.new_game(chosen_slot, n, chosen_class, chosen_sex, hardcore_check.button_pressed)
 
 
 # --- Helper ---------------------------------------------------------------------------

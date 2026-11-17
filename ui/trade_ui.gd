@@ -26,6 +26,8 @@ var content: VBoxContainer
 var _tab := "merce"
 var _slot_choice := "arma"
 var _gem_choice := ""
+var _stash_tab := 0
+var _look_slot := "arma"
 ## Merce di ogni mercante: si rinnova ogni volta che si rientra nel livello.
 var _stock: Dictionary = {}
 
@@ -56,7 +58,7 @@ func _ready() -> void:
 	head.add_child(spacer)
 	var x := Button.new()
 	x.text = "Chiudi"
-	x.focus_mode = Control.FOCUS_NONE
+	x.focus_mode = Control.FOCUS_ALL
 	x.pressed.connect(close)
 	head.add_child(x)
 	subtitle = _label(15, Color(0.75, 0.7, 0.6))
@@ -86,6 +88,10 @@ func open(src: Node3D, p_mode: String, p_title: String) -> void:
 	_tab = "merce"
 	is_open = true
 	panel.visible = true
+	if player and player.using_pad:
+		_focus_first.call_deferred()
+	if inv and inv.preview:
+		inv.preview.visible = false
 	refresh()
 
 
@@ -123,12 +129,22 @@ func refresh() -> void:
 		_build_stash()
 	else:
 		subtitle.text = "Clic destro su un oggetto del tuo zaino: smontalo per ottenere materiali."
-		_build_tabs([["merce", "Fabbro"], ["gemme", "Gioielliere"]])
+		_build_tabs([["merce", "Fabbro"], ["gemme", "Gioielliere"], ["aspetto", "Aspetto"]])
 		if _tab == "gemme":
 			subtitle.text = "Scegli una gemma, poi clicca un'orbita vuota per incastonarla. Clic su una gemma incastonata: toglila."
 			_build_jeweler()
+		elif _tab == "aspetto":
+			subtitle.text = "Cambia l'aspetto di ciò che indossi senza cambiarne le statistiche. Gli aspetti si sbloccano raccogliendo oggetti."
+			_build_looks()
 		else:
 			_build_smith()
+
+
+func _focus_first() -> void:
+	for c: Node in content.find_children("*", "Button", true, false):
+		if (c as Button).visible and not (c as Button).disabled:
+			(c as Button).grab_focus()
+			return
 
 
 ## Chiamato dall'inventario con il clic destro su un oggetto dello zaino.
@@ -143,29 +159,65 @@ func on_bag_right_click(index: int) -> void:
 
 func _build_stash() -> void:
 	var items := Game.stash()
+	_stash_tab = clampi(_stash_tab, 0, Game.stash_tabs - 1)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 4)
+	content.add_child(tabs)
+	for t in Game.stash_tabs:
+		var tb := Button.new()
+		tb.text = "Scheda %d" % (t + 1)
+		tb.toggle_mode = true
+		tb.button_pressed = t == _stash_tab
+		tb.focus_mode = Control.FOCUS_ALL
+		tb.pressed.connect(func() -> void:
+			_stash_tab = t
+			refresh.call_deferred())
+		tabs.add_child(tb)
+	var price := Game.next_stash_tab_price()
+	if price > 0:
+		var buy := Button.new()
+		buy.text = "Compra scheda (%d sesterzi)" % price
+		buy.focus_mode = Control.FOCUS_ALL
+		buy.disabled = player.hero.gold < price
+		buy.pressed.connect(func() -> void:
+			if Game.buy_stash_tab():
+				_stash_tab = Game.stash_tabs - 1
+				Sfx.play("coins")
+				_after_change())
+		tabs.add_child(buy)
 	var grid := GridContainer.new()
 	grid.columns = 8
 	grid.add_theme_constant_override("h_separation", 4)
 	grid.add_theme_constant_override("v_separation", 4)
 	content.add_child(grid)
 	var used := 0
-	for i in items.size():
+	var first := _stash_tab * Game.STASH_SIZE
+	for i in range(first, first + Game.STASH_SIZE):
 		var it: Item = items[i]
 		var b := InventoryUI.make_slot_button(Vector2(60, 60))
 		InventoryUI.paint_slot(b, it, "", it == null or player.hero.can_equip(it))
 		if it != null:
 			used += 1
 			b.gui_input.connect(_on_stash_input.bind(i))
-			b.mouse_entered.connect(func() -> void:
-				inv.show_tooltip(it.tooltip_bbcode(player.hero.equipment.get(it.slot), player.hero.can_equip(it)), true))
+			var show_tip := func() -> void:
+				inv.show_tooltip(it.tooltip_bbcode(player.hero.equipment.get(it.slot), player.hero.can_equip(it)), true)
+			b.mouse_entered.connect(show_tip)
+			b.focus_entered.connect(show_tip)
 			b.mouse_exited.connect(inv.hide_tooltip)
 		grid.add_child(b)
-	content.add_child(_label(14, Color(0.7, 0.65, 0.55), "%d / %d caselle occupate" % [used, items.size()]))
+	content.add_child(_label(14, Color(0.7, 0.65, 0.55), "%d / %d caselle occupate in questa scheda" % [used, Game.STASH_SIZE]))
+
+
+## Controller: A su una casella = clic sinistro.
+static func _pad_click(event: InputEvent) -> bool:
+	return event is InputEventJoypadButton and event.pressed and (event as InputEventJoypadButton).button_index == JOY_BUTTON_A
 
 
 func _on_stash_input(event: InputEvent, index: int) -> void:
-	if not (event is InputEventMouseButton and event.pressed):
+	if not ((event is InputEventMouseButton and event.pressed) or _pad_click(event)):
 		return
+	if _pad_click(event):
+		get_viewport().set_input_as_handled()
 	var items := Game.stash()
 	var it: Item = items[index]
 	if it == null:
@@ -184,7 +236,10 @@ func _deposit(index: int) -> void:
 	if it == null:
 		return
 	var items := Game.stash()
-	var free := items.find(null)
+	# Prima la scheda aperta, poi le altre
+	var free := items.find(null, _stash_tab * Game.STASH_SIZE)
+	if free < 0 or free >= (_stash_tab + 1) * Game.STASH_SIZE:
+		free = items.find(null)
 	if free < 0:
 		Game.level.hud.show_warning("Il forziere è pieno")
 		return
@@ -211,7 +266,7 @@ func _build_tabs(list: Array) -> void:
 		b.text = pair[1]
 		b.toggle_mode = true
 		b.button_pressed = _tab == pair[0]
-		b.focus_mode = Control.FOCUS_NONE
+		b.focus_mode = Control.FOCUS_ALL
 		b.custom_minimum_size = Vector2(160, 34)
 		var id: String = pair[0]
 		b.pressed.connect(func() -> void:
@@ -234,24 +289,38 @@ func _build_vendor_items(buyback: bool) -> void:
 		InventoryUI.paint_slot(b, it, "", player.hero.can_equip(it))
 		b.gui_input.connect(_on_item_input.bind(i, buyback))
 		b.mouse_entered.connect(_on_item_hover.bind(it, buyback))
+		b.focus_entered.connect(_on_item_hover.bind(it, buyback))
 		b.mouse_exited.connect(inv.hide_tooltip)
 		grid.add_child(b)
 	if items.is_empty():
 		content.add_child(_label(15, Color(0.6, 0.6, 0.6), "Niente da riacquistare." if buyback else "Merce esaurita."))
-	var sell_all := Button.new()
-	sell_all.text = "Vendi tutti gli oggetti comuni dello zaino"
-	sell_all.focus_mode = Control.FOCUS_NONE
-	sell_all.pressed.connect(func() -> void:
-		var n := 0
-		for i in player.hero.inventory.size():
-			var it: Item = player.hero.inventory[i]
-			if it != null and it.rarity == Item.Rarity.COMUNE:
-				_sell(i, false)
-				n += 1
-		if n == 0:
-			Game.level.hud.show_warning("Nessun oggetto comune nello zaino")
-		_after_change())
-	content.add_child(sell_all)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	content.add_child(row)
+	for pair: Array in [[Item.Rarity.COMUNE, "Vendi tutti i comuni"], [Item.Rarity.MAGICO, "Vendi comuni e magici"], [Item.Rarity.RARO, "Vendi fino ai rari"]]:
+		var sell_all := Button.new()
+		sell_all.text = pair[1]
+		sell_all.focus_mode = Control.FOCUS_ALL
+		sell_all.add_theme_color_override("font_color", Item.RARITY_COLORS[pair[0]])
+		var max_r: int = pair[0]
+		sell_all.pressed.connect(func() -> void:
+			if sell_all_up_to(max_r) == 0:
+				Game.level.hud.show_warning("Niente da vendere"))
+		row.add_child(sell_all)
+	content.add_child(_label(13, Color(0.6, 0.6, 0.6), "Leggendari e set non vengono mai venduti in blocco."))
+
+
+## Vende tutti gli oggetti dello zaino fino alla rarità data. Ritorna quanti.
+func sell_all_up_to(max_rarity: int) -> int:
+	var n := 0
+	for i in player.hero.inventory.size():
+		var it: Item = player.hero.inventory[i]
+		if it != null and it.rarity <= mini(max_rarity, Item.Rarity.RARO):
+			_sell(i, false)
+			n += 1
+	if n > 0:
+		_after_change()
+	return n
 
 
 func _get_stock() -> Array:
@@ -279,8 +348,10 @@ func _on_item_hover(it: Item, buyback: bool) -> void:
 
 
 func _on_item_input(event: InputEvent, index: int, buyback: bool) -> void:
-	if not (event is InputEventMouseButton and event.pressed):
+	if not ((event is InputEventMouseButton and event.pressed) or _pad_click(event)):
 		return
+	if _pad_click(event):
+		get_viewport().set_input_as_handled()
 	var list: Array = Game.buyback if buyback else _get_stock()
 	if index >= list.size():
 		return
@@ -337,7 +408,7 @@ func _build_smith() -> void:
 	for pair: Array in [[Item.Rarity.COMUNE, "Tutti i comuni"], [Item.Rarity.MAGICO, "Tutti i magici"], [Item.Rarity.RARO, "Tutti i rari"]]:
 		var b := Button.new()
 		b.text = pair[1]
-		b.focus_mode = Control.FOCUS_NONE
+		b.focus_mode = Control.FOCUS_ALL
 		b.add_theme_color_override("font_color", Item.RARITY_COLORS[pair[0]])
 		var rarity: int = pair[0]
 		b.pressed.connect(func() -> void: _salvage_all(rarity))
@@ -349,9 +420,9 @@ func _build_smith() -> void:
 	var srow := HBoxContainer.new()
 	srow.add_child(_label(16, Color(0.85, 0.8, 0.7), "Tipo di oggetto: "))
 	var opt := OptionButton.new()
-	opt.focus_mode = Control.FOCUS_NONE
+	opt.focus_mode = Control.FOCUS_ALL
 	var idx := 0
-	for slot: String in HeroData.EQUIP_SLOTS:
+	for slot: String in HeroData.ITEM_SLOTS:
 		opt.add_item(Item.SLOT_NAMES[slot])
 		opt.set_item_metadata(idx, slot)
 		if slot == _slot_choice:
@@ -375,7 +446,7 @@ func _build_smith() -> void:
 		var b := Button.new()
 		b.text = String(r["name"])
 		b.custom_minimum_size = Vector2(230, 38)
-		b.focus_mode = Control.FOCUS_NONE
+		b.focus_mode = Control.FOCUS_ALL
 		b.disabled = not ok
 		b.add_theme_color_override("font_color", Item.RARITY_COLORS[int(r["rarity"])])
 		b.pressed.connect(_craft.bind(rid))
@@ -477,23 +548,26 @@ func _build_jeweler() -> void:
 		b.text = "%s  ×%d" % [ItemDB.gem_name(k), h.gem_count(k)]
 		b.toggle_mode = true
 		b.button_pressed = k == _gem_choice
-		b.focus_mode = Control.FOCUS_NONE
+		b.focus_mode = Control.FOCUS_ALL
 		b.custom_minimum_size = Vector2(250, 32)
 		b.add_theme_color_override("font_color", ItemDB.gem_color(k))
 		b.add_theme_color_override("font_pressed_color", ItemDB.gem_color(k).lightened(0.4))
-		b.tooltip_text = "Arma: %s\nElmo: %s\nAltro: %s" % [ItemDB.affix_text(ItemDB.gem_affix(k, "arma")),
-			ItemDB.affix_text(ItemDB.gem_affix(k, "elmo")), ItemDB.affix_text(ItemDB.gem_affix(k, "armatura"))]
+		if ItemDB.is_legendary_gem(k):
+			b.tooltip_text = "%s\nSolo in amuleto e anelli. Si potenzia completando i Labirinti di Dedalo." % ItemDB.leg_gem_text(k)
+		else:
+			b.tooltip_text = "Arma: %s\nElmo: %s\nAltro: %s" % [ItemDB.affix_text(ItemDB.gem_affix(k, "arma")),
+				ItemDB.affix_text(ItemDB.gem_affix(k, "elmo")), ItemDB.affix_text(ItemDB.gem_affix(k, "armatura"))]
 		b.pressed.connect(func() -> void:
 			_gem_choice = k
 			Sfx.play("ui_click")
 			refresh.call_deferred())
 		row.add_child(b)
 		var tier := ItemDB.gem_tier(k)
-		if tier < ItemDB.GEM_TIERS.size():
+		if tier < ItemDB.GEM_TIERS.size() and not ItemDB.is_legendary_gem(k):
 			var cost := ItemDB.GEM_COMBINE_GOLD * tier
 			var c := Button.new()
 			c.text = "Combina %d (%d sesterzi)" % [ItemDB.GEM_COMBINE_COST, cost]
-			c.focus_mode = Control.FOCUS_NONE
+			c.focus_mode = Control.FOCUS_ALL
 			c.disabled = h.gem_count(k) < ItemDB.GEM_COMBINE_COST or h.gold < cost
 			c.pressed.connect(combine_gem.bind(k))
 			row.add_child(c)
@@ -529,7 +603,7 @@ func _socket_row(it: Item, worn: bool) -> void:
 	for i in it.gems.size():
 		var g: String = it.gems[i]
 		var b := Button.new()
-		b.focus_mode = Control.FOCUS_NONE
+		b.focus_mode = Control.FOCUS_ALL
 		b.custom_minimum_size = Vector2(80, 30)
 		b.clip_text = true
 		if g == "":
@@ -557,6 +631,13 @@ func socket_gem(it: Item, i: int, key: String) -> bool:
 	var h := player.hero
 	if key == "" or h.gem_count(key) <= 0 or i >= it.gems.size() or String(it.gems[i]) != "":
 		return false
+	if ItemDB.is_legendary_gem(key):
+		if not it.slot in ItemDB.LEG_GEM_SLOTS:
+			Game.level.hud.show_warning("Le gemme leggendarie vanno solo in amuleto e anelli")
+			return false
+		if player.hero.legendary_gems().has(ItemDB.leg_gem_id(key)) and h.equipment.values().has(it):
+			Game.level.hud.show_warning("Indossi già questa gemma leggendaria")
+			return false
 	h.add_gem(key, -1)
 	it.gems[i] = key
 	Sfx.play("anvil", null, -8.0)
@@ -571,7 +652,7 @@ func unsocket_gem(it: Item, i: int) -> bool:
 	var key := String(it.gems[i])
 	if key == "":
 		return false
-	var cost := ItemDB.GEM_REMOVE_GOLD * ItemDB.gem_tier(key)
+	var cost := ItemDB.GEM_REMOVE_GOLD * (5 if ItemDB.is_legendary_gem(key) else ItemDB.gem_tier(key))
 	if h.gold < cost:
 		Game.level.hud.show_warning("Sesterzi insufficienti")
 		return false
@@ -589,7 +670,7 @@ func combine_gem(key: String) -> bool:
 	var h := player.hero
 	var tier := ItemDB.gem_tier(key)
 	var cost := ItemDB.GEM_COMBINE_GOLD * tier
-	if tier >= ItemDB.GEM_TIERS.size() or h.gem_count(key) < ItemDB.GEM_COMBINE_COST or h.gold < cost:
+	if ItemDB.is_legendary_gem(key) or tier >= ItemDB.GEM_TIERS.size() or h.gem_count(key) < ItemDB.GEM_COMBINE_COST or h.gold < cost:
 		return false
 	h.gold -= cost
 	h.add_gem(key, -ItemDB.GEM_COMBINE_COST)
@@ -600,6 +681,98 @@ func combine_gem(key: String) -> bool:
 	Game.level.hud.log_pickup("Combinato: %s" % ItemDB.gem_name(up), ItemDB.gem_color(up))
 	_after_change()
 	return true
+
+
+# --- Aspetto (trasmogrificazione) ----------------------------------------------------------------
+
+func _build_looks() -> void:
+	var h := player.hero
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	content.add_child(row)
+	for slot: String in VisualDB.VISIBLE_SLOTS:
+		var b := Button.new()
+		b.text = Item.SLOT_NAMES[slot]
+		b.toggle_mode = true
+		b.button_pressed = slot == _look_slot
+		b.focus_mode = Control.FOCUS_ALL
+		b.add_theme_font_size_override("font_size", 13)
+		b.pressed.connect(func() -> void:
+			_look_slot = slot
+			refresh.call_deferred())
+		row.add_child(b)
+	var worn: Item = h.equipment.get(_look_slot)
+	if worn == null:
+		content.add_child(_label(15, Color(0.7, 0.7, 0.7), "Non indossi niente in questo slot."))
+		return
+	var cur := h.look_for(_look_slot)
+	content.add_child(_label(16, Hud.GOLD, "Aspetto attuale: %s" % String(ItemDB.BASES.get(cur, {"name": cur})["name"])))
+	content.add_child(_label(13, Color(0.6, 0.6, 0.6), "Costo: %d sesterzi per cambio. Tornare all'aspetto originale è gratis." % look_cost()))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	content.add_child(grid)
+	var orig := Button.new()
+	orig.text = "Originale (%s)" % ItemDB.BASES[worn.base_id]["name"]
+	orig.custom_minimum_size = Vector2(240, 36)
+	orig.focus_mode = Control.FOCUS_ALL
+	orig.pressed.connect(func() -> void: set_look(_look_slot, ""))
+	grid.add_child(orig)
+	for base: String in h.looks_for_slot(_look_slot):
+		var b := Button.new()
+		b.text = String(ItemDB.BASES[base]["name"])
+		b.custom_minimum_size = Vector2(240, 36)
+		b.focus_mode = Control.FOCUS_ALL
+		b.disabled = base == cur
+		b.pressed.connect(func() -> void: set_look(_look_slot, base))
+		grid.add_child(b)
+	content.add_child(_label(16, Hud.GOLD, "Tinta"))
+	var dyes := HBoxContainer.new()
+	dyes.add_theme_constant_override("separation", 4)
+	content.add_child(dyes)
+	for d: String in [""] + VisualDB.DYES:
+		var b := Button.new()
+		b.text = "Nessuna" if d == "" else d.capitalize()
+		b.focus_mode = Control.FOCUS_ALL
+		b.toggle_mode = true
+		b.button_pressed = String(h.dyes.get(_look_slot, "")) == d
+		if d != "":
+			b.add_theme_color_override("font_color", VisualDB.MATERIALS[d])
+		b.pressed.connect(func() -> void: set_dye(_look_slot, d))
+		dyes.add_child(b)
+
+
+func look_cost() -> int:
+	return 50 * player.hero.level
+
+
+## Cambia l'aspetto di uno slot ("" = originale). Ritorna true se riuscito.
+func set_look(slot: String, base: String) -> bool:
+	var h := player.hero
+	if base != "" and not h.looks_for_slot(slot).has(base):
+		return false
+	if base != "":
+		if h.gold < look_cost():
+			Game.level.hud.show_warning("Sesterzi insufficienti")
+			return false
+		h.gold -= look_cost()
+		h.transmog[slot] = base
+	else:
+		h.transmog.erase(slot)
+	Sfx.play("anvil", null, -8.0)
+	player.refresh_stats()
+	_after_change()
+	return true
+
+
+func set_dye(slot: String, dye: String) -> void:
+	if dye == "":
+		player.hero.dyes.erase(slot)
+	else:
+		player.hero.dyes[slot] = dye
+	player.refresh_stats()
+	_after_change()
 
 
 ## Aggiorna inventario e pannello (il pannello si ricostruisce al frame dopo, tramite il segnale).

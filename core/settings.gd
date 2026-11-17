@@ -16,10 +16,22 @@ const ACTIONS := [
 	["primary", "Muovi / attacca"], ["secondary", "Abilità (clic destro)"], ["force_stand", "Attacca sul posto"],
 	["skill_1", "Abilità 1"], ["skill_2", "Abilità 2"], ["skill_3", "Abilità 3"], ["skill_4", "Abilità 4"],
 	["potion", "Pozione"], ["interact", "Interagisci"], ["town_portal", "Portale cittadino"],
-	["inventory", "Inventario"], ["map", "Mappa"], ["quest_log", "Diario missioni"],
+	["inventory", "Inventario"], ["skills", "Abilità"], ["map", "Mappa"], ["quest_log", "Diario missioni"],
+	["show_items", "Mostra oggetti a terra"],
 ]
 
 static var video: Dictionary = VIDEO_DEFAULTS.duplicate()
+## Filtro del loot: gli oggetti con rarità sotto questo valore non compaiono a terra (0 = tutti,
+## 1 = niente comuni, 2 = niente comuni né magici). Diventano qualche sesterzio.
+static var loot_filter := 0
+## Nomi degli oggetti a terra sempre visibili (altrimenti solo tenendo premuto Alt, come in D3).
+static var always_show_items := true
+## Numeri di danno sopra i nemici.
+static var damage_numbers := true
+## Scala dell'interfaccia (1.0 = normale).
+static var ui_scale := 1.0
+## Daltonici: la rarità si legge anche da una lettera (C, M, R, L, S) oltre che dal colore.
+static var colorblind := false
 
 
 static func load_and_apply() -> void:
@@ -28,6 +40,11 @@ static func load_and_apply() -> void:
 		return
 	for k: String in VIDEO_DEFAULTS:
 		video[k] = cfg.get_value("video", k, VIDEO_DEFAULTS[k])
+	loot_filter = int(cfg.get_value("gameplay", "loot_filter", 0))
+	always_show_items = bool(cfg.get_value("gameplay", "always_show_items", true))
+	damage_numbers = bool(cfg.get_value("gameplay", "damage_numbers", true))
+	ui_scale = float(cfg.get_value("gameplay", "ui_scale", 1.0))
+	colorblind = bool(cfg.get_value("gameplay", "colorblind", false))
 	Sfx.volume_db = float(cfg.get_value("audio", "sfx_db", Sfx.volume_db))
 	Music.volume_db = float(cfg.get_value("audio", "music_db", Music.volume_db))
 	if cfg.has_section("controls"):
@@ -35,8 +52,7 @@ static func load_and_apply() -> void:
 			if cfg.has_section_key("controls", a[0]):
 				var ev := deserialize(String(cfg.get_value("controls", a[0])))
 				if ev != null:
-					InputMap.action_erase_events(a[0])
-					InputMap.action_add_event(a[0], ev)
+					rebind(a[0], ev)
 	apply_video()
 
 
@@ -45,6 +61,11 @@ static func save() -> void:
 	cfg.load(PATH)
 	for k: String in video:
 		cfg.set_value("video", k, video[k])
+	cfg.set_value("gameplay", "loot_filter", loot_filter)
+	cfg.set_value("gameplay", "always_show_items", always_show_items)
+	cfg.set_value("gameplay", "damage_numbers", damage_numbers)
+	cfg.set_value("gameplay", "ui_scale", ui_scale)
+	cfg.set_value("gameplay", "colorblind", colorblind)
 	cfg.set_value("audio", "sfx_db", Sfx.volume_db)
 	cfg.set_value("audio", "music_db", Music.volume_db)
 	if cfg.has_section("controls"):
@@ -68,6 +89,7 @@ static func apply_video() -> void:
 		4: vp.msaa_3d = Viewport.MSAA_4X
 		_: vp.msaa_3d = Viewport.MSAA_2X
 	vp.scaling_3d_scale = clampf(float(video["scale"]), 0.5, 1.0)
+	vp.content_scale_factor = clampf(ui_scale, 0.75, 1.5)
 	if Game.level != null and is_instance_valid(Game.level):
 		apply_to_level(Game.level)
 
@@ -112,6 +134,18 @@ static func describe(ev: InputEvent) -> String:
 	return ev.as_text()
 
 
+## Sostituisce tasto/mouse di un'azione tenendo i pulsanti del controller (il tasto resta il primo evento).
+static func rebind(action: String, ev: InputEvent) -> void:
+	var pads: Array = []
+	for e: InputEvent in InputMap.action_get_events(action):
+		if e is InputEventJoypadButton or e is InputEventJoypadMotion:
+			pads.append(e)
+	InputMap.action_erase_events(action)
+	InputMap.action_add_event(action, ev)
+	for e: InputEvent in pads:
+		InputMap.action_add_event(action, e)
+
+
 static func serialize(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		return "k:%d" % (ev as InputEventKey).physical_keycode
@@ -139,9 +173,13 @@ static func _differs_from_default(action: String) -> bool:
 	var def: Dictionary = ProjectSettings.get_setting("input/" + action, {})
 	var def_events: Array = def.get("events", [])
 	var cur := InputMap.action_get_events(action)
-	if def_events.size() != cur.size():
-		return true
-	for i in cur.size():
-		if serialize(cur[i]) != serialize(def_events[i]):
-			return true
-	return false
+	# Conta solo tastiera e mouse (i pulsanti del controller non si rimappano)
+	var a: Array = []
+	var b: Array = []
+	for e: InputEvent in cur:
+		if serialize(e) != "":
+			a.append(serialize(e))
+	for e: Variant in def_events:
+		if e is InputEvent and serialize(e) != "":
+			b.append(serialize(e))
+	return a != b

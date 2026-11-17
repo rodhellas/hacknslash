@@ -15,12 +15,15 @@ extends Node3D
 ## Musica del livello: percorso di un file audio. Vuoto = res://audio/music/<level_id>.ogg se esiste.
 @export_file("*.ogg", "*.mp3", "*.wav") var music := ""
 
+## > 0 nei Labirinti di Dedalo: grado (sostituisce la difficoltà, vedi Game.enemy_scaling).
+var rift_grade := 0
 var player: Player
 var camera: IsoCamera
 var hud: Hud
 var inventory_ui: InventoryUI
 var pause_menu: PauseMenu
 var trade_ui: TradeUI
+var skills_ui: SkillsUI
 var dynamic_root: Node3D
 var enemies_root: Node3D
 var hover: Dictionary = {"kind": "ground", "node": null, "point": Vector3.ZERO}
@@ -31,6 +34,7 @@ func _ready() -> void:
 	Game.level = self
 	Game.ensure_debug_hero()
 	Game.hero.level_id = level_id
+	Game.hide_loading.call_deferred()
 
 	dynamic_root = Node3D.new()
 	dynamic_root.name = "Dynamic"
@@ -60,6 +64,9 @@ func _ready() -> void:
 	add_child(trade_ui)
 	trade_ui.bind(player, inventory_ui)
 	inventory_ui.trade = trade_ui
+	skills_ui = SkillsUI.new()
+	add_child(skills_ui)
+	skills_ui.bind(player)
 	pause_menu = PauseMenu.new()
 	add_child(pause_menu)
 
@@ -85,8 +92,78 @@ func _ready() -> void:
 	Quests.notify("enter", level_id)
 	Music.play_level(level_id, music)
 	Settings.apply_to_level(self)
+	_place_world_extras()
+	_onboarding()
 	# Salva subito dopo un cambio di livello (così il salvataggio sa dove si trova l'eroe)
 	Game.save_game.call_deferred()
+
+
+## Santuari ed eventi casuali (WorldDB): a ogni visita, vicino ad alcune zone di nemici scelte a caso.
+## Le mappe restano quelle fatte a mano: questi oggetti non bloccano il passaggio e non si salvano.
+func _place_world_extras() -> void:
+	if is_town or level_id == "dungeon":
+		return
+	var map := get_world_3d().navigation_map
+	# La mappa di navigazione è quella del mondo (resta tra un livello e l'altro): si aspetta che
+	# la navmesh di QUESTO livello ci sia davvero (il punto dell'eroe trova un punto vicino).
+	for i in 300:
+		await get_tree().physics_frame
+		if not is_inside_tree():
+			return
+		var s := NavigationServer3D.map_get_closest_point(map, player.global_position)
+		if i > 2 and s != Vector3.ZERO and Vector2(s.x - player.global_position.x, s.z - player.global_position.z).length() < 3.0:
+			break
+	var zones: Array = []
+	for z: Node in get_tree().get_nodes_in_group("encounter_zones"):
+		if String(z.get("unique_id")) == "" and (z as Node3D).global_position.distance_to(player.global_position) > 30.0:
+			zones.append(z)
+	zones.shuffle()
+	var holder := Node3D.new()
+	holder.name = "Extra"
+	add_child(holder)
+	var used := 0
+	for z: Node3D in zones:
+		var pos := _free_point_near(z.global_position, map)
+		if pos == Vector3.INF:
+			continue
+		if used < WorldDB.SHRINES_PER_MAP:
+			var s := Shrine.new()
+			s.shrine_id = WorldDB.SHRINES.keys().pick_random()
+			s.position = pos
+			holder.add_child(s)
+		elif used < WorldDB.SHRINES_PER_MAP + WorldDB.EVENTS_PER_MAP:
+			var ev := WorldEvent.new()
+			ev.event_id = WorldDB.EVENTS.keys().pick_random()
+			ev.enemy_types = z.get("enemy_types")
+			ev.enemy_level = int(z.get("enemy_level"))
+			ev.position = pos
+			holder.add_child(ev)
+		else:
+			break
+		used += 1
+
+
+## Punto calpestabile a 8-12 m dal centro di una zona (lontano dai nemici che ci stanno).
+func _free_point_near(center: Vector3, map: RID) -> Vector3:
+	for k in 8:
+		var a := randf() * TAU
+		var p := center + Vector3(cos(a), 0, sin(a)) * randf_range(8.0, 12.0)
+		var s := NavigationServer3D.map_get_closest_point(map, p)
+		if s != Vector3.ZERO and s.y < 1.0 and Vector2(s.x - p.x, s.z - p.z).length() < 1.5:
+			return Vector3(s.x, 0.0, s.z)
+	return Vector3.INF
+
+
+## Suggerimenti dei primi minuti (una volta per eroe).
+func _onboarding() -> void:
+	if is_town:
+		hud.hint("citta", "in città trovi mercante, fabbro, forziere, la Tabula delle taglie e l'Obelisco di Dedalo.")
+	elif rift_grade > 0:
+		hud.hint("labirinto", "riempi la barra in alto a sinistra uccidendo nemici: poi arriva il Guardiano. Sconfiggilo in tempo per salire di grado.")
+	elif level_id == "dungeon":
+		hud.hint("dungeon", "i dungeon hanno sempre la stessa pianta; nemici e forzieri tornano a ogni ingresso. Cerca santuari nelle stanze.")
+	elif level_id == "level_01":
+		hud.hint("muovi", "clic sinistro per muoverti e attaccare, clic destro e 1-4 per le abilità, Q per la pozione.")
 
 
 func _exit_tree() -> void:
@@ -146,10 +223,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.minimap.toggle_big()
 	elif event.is_action_pressed("quest_log"):
 		hud.toggle_quest_log()
+	elif event.is_action_pressed("skills"):
+		skills_ui.toggle()
 
 
 ## Chiude il pannello aperto più in alto (ESC). Ritorna false se non c'era niente da chiudere.
 func close_top_panel() -> bool:
+	if hud.choice_panel.visible:
+		hud.hide_choice()
+		return true
+	if skills_ui.is_open:
+		skills_ui.close_panel()
+		return true
 	if hud.quest_log.visible:
 		hud.quest_log.visible = false
 		return true
@@ -249,7 +334,16 @@ func on_enemy_hit(e: Enemy) -> void:
 
 
 func _on_player_died() -> void:
-	hud.show_death()
+	var recap := "Uccisioni: %d   Tempo in vita: %d:%02d   Sesterzi raccolti: %d" % [player.kills_since_death,
+		int(player.time_since_death) / 60, int(player.time_since_death) % 60, Game.hero.gold - player.gold_at_spawn]
+	if Game.hero.hardcore:
+		# Hardcore: l'eroe è perso per sempre (resta nello slot come ricordo, non si può più giocare)
+		Game.hero.flags["dead"] = true
+		Game.hero.flags["death_place"] = level_title
+		Game.save_game()
+		hud.show_hardcore_death("%s è caduto per sempre a %s.\n%s" % [Game.hero.hero_name, level_title, recap])
+		return
+	hud.show_death(recap)
 
 
 func respawn_player() -> void:

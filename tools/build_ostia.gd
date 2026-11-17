@@ -183,6 +183,18 @@ func _forum(parent: Node) -> void:
 	_place("statua", g, Vector2(9, -16), 180.0)
 	_place("altare", g, Vector2(8, 8), 0.0, 1.0, {"checkpoint_id": "ostia_foro", "title": "Altare del Foro"})
 	_place("scrigno", g, Vector2(-8, 9))
+	# Obelisco di Dedalo (Labirinti, endgame): si costruisce da solo, non blocca la navmesh
+	var ob: Node3D = load("res://world/rift_obelisk.gd").new()
+	ob.name = "ObeliscoDedalo"
+	ob.position = Vector3(0, 0, 10)
+	g.add_child(ob)
+	ob.owner = level_root
+	# Tabula delle taglie (modalità avventura)
+	var tb: Node3D = load("res://world/bounty_board.gd").new()
+	tb.name = "TabulaTaglie"
+	tb.position = Vector3(5, 0, -9)
+	g.add_child(tb)
+	tb.owner = level_root
 
 	# Mercato (lato ovest)
 	var m := _group(parent, "Mercato")

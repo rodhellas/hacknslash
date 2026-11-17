@@ -39,6 +39,20 @@ var cast_label: Label
 var quest_tracker: RichTextLabel
 var quest_log: Control
 var quest_log_text: RichTextLabel
+var choice_panel: Control
+var choice_title: Label
+var choice_body: Label
+var choice_list: VBoxContainer
+var rift_box: PanelContainer
+var rift_label: Label
+var rift_bar: ProgressBar
+var event_box: PanelContainer
+var event_label: Label
+var buff_label: Label
+var _pad_glyphs := false
+var boss_box: PanelContainer
+var boss_name: Label
+var boss_bar: ProgressBar
 var _banner_t := 0.0
 var _msg_t := 0.0
 var _warn_t := 0.0
@@ -118,6 +132,64 @@ func _ready() -> void:
 	target_box.visible = false
 	root.add_child(target_box)
 
+	# --- Barra del boss (in alto, grande) ---
+	boss_box = PanelContainer.new()
+	boss_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	boss_box.offset_left = -330
+	boss_box.offset_right = 330
+	boss_box.offset_top = 8
+	boss_box.add_theme_stylebox_override("panel", _panel_style(0.7))
+	boss_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bv := VBoxContainer.new()
+	boss_box.add_child(bv)
+	boss_name = _label(22, Color(1.0, 0.6, 0.15))
+	boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	bv.add_child(boss_name)
+	boss_bar = _bar(Color(0.85, 0.35, 0.05), Vector2(620, 22))
+	bv.add_child(boss_bar)
+	boss_box.visible = false
+	root.add_child(boss_box)
+
+	# --- Labirinto di Dedalo: tempo e avanzamento ---
+	rift_box = PanelContainer.new()
+	rift_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	rift_box.offset_left = 14
+	rift_box.offset_top = 14
+	rift_box.add_theme_stylebox_override("panel", _panel_style(0.65))
+	rift_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rv := VBoxContainer.new()
+	rift_box.add_child(rv)
+	rift_label = _label(16, Color(0.85, 0.7, 1.0))
+	rv.add_child(rift_label)
+	rift_bar = _bar(Color(0.6, 0.3, 1.0), Vector2(300, 14))
+	rv.add_child(rift_bar)
+	rift_box.visible = false
+	root.add_child(rift_box)
+
+	# --- Evento in corso ---
+	event_box = PanelContainer.new()
+	event_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	event_box.offset_left = -230
+	event_box.offset_right = 230
+	event_box.offset_top = 150
+	event_box.add_theme_stylebox_override("panel", _panel_style(0.6))
+	event_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	event_label = _label(17, Color(1.0, 0.6, 0.95))
+	event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	event_box.add_child(event_label)
+	event_box.visible = false
+	root.add_child(event_box)
+
+	# --- Potenziamenti attivi (santuari, piloni, abilità), sopra la barra ---
+	buff_label = _label(15, Color(0.9, 0.95, 1.0))
+	buff_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	buff_label.offset_left = -400
+	buff_label.offset_right = 400
+	buff_label.offset_top = -180
+	buff_label.offset_bottom = -156
+	buff_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root.add_child(buff_label)
+
 	# --- Minimappa ---
 	minimap = Minimap.new()
 	root.add_child(minimap)
@@ -181,6 +253,14 @@ func _ready() -> void:
 	var wbody := waypoint_panel.find_child("Body", true, false) as Label
 	wbody.get_parent().add_child(waypoint_list)
 	wbody.get_parent().move_child(waypoint_list, wbody.get_index() + 1)
+	choice_panel = _make_panel(root, "", "", [])
+	choice_title = choice_panel.find_child("Title", true, false)
+	choice_body = choice_panel.find_child("Body", true, false)
+	choice_list = VBoxContainer.new()
+	choice_list.add_theme_constant_override("separation", 6)
+	choice_list.alignment = BoxContainer.ALIGNMENT_CENTER
+	choice_body.get_parent().add_child(choice_list)
+	choice_body.get_parent().move_child(choice_list, choice_body.get_index() + 1)
 
 	# --- Missioni: elenco a sinistra e diario (J) ---
 	quest_tracker = RichTextLabel.new()
@@ -235,12 +315,40 @@ func bind(p: Player, l: Level) -> void:
 	area_label.text = l.level_title
 	res_globe.fill_color = p.cls["resource_color"]
 	res_globe.caption = p.cls["resource"]
-	for s: String in slots:
-		var ab: Dictionary = p.abilities.get(s, {})
-		(slots[s] as SkillSlot).set_ability(ab, HeroClasses.SLOT_KEYS[s])
+	_bind_slots()
+	p.abilities_changed.connect(_bind_slots)
 	p.xp_changed.connect(func(_a: int, _b: int, _c: int) -> void: _update_xp())
 	_update_xp()
 	update_quests()
+
+
+## Pulsanti del controller mostrati sulla barra quando si gioca col controller.
+const PAD_KEYS := {"lmb": "A", "rmb": "X", "1": "Y", "2": "B", "3": "LB", "4": "RB"}
+
+
+func _bind_slots() -> void:
+	_pad_glyphs = player.using_pad
+	for s: String in slots:
+		var ab: Dictionary = player.abilities.get(s, {})
+		(slots[s] as SkillSlot).set_ability(ab, PAD_KEYS[s] if _pad_glyphs else HeroClasses.SLOT_KEYS[s])
+	potion_slot.key_text = "RT" if _pad_glyphs else "Q"
+
+
+## Suggerimento mostrato una sola volta per eroe (primi minuti di gioco).
+func hint(id: String, text: String) -> void:
+	if Game.hero == null or Game.hero.flags.has("hint_" + id):
+		return
+	Game.hero.flags["hint_" + id] = true
+	show_message("Suggerimento: " + text, 6.0)
+
+
+func set_event(title: String, objective: String) -> void:
+	event_box.visible = true
+	event_label.text = "%s\n%s" % [title, objective]
+
+
+func clear_event() -> void:
+	event_box.visible = false
 
 
 func _update_xp() -> void:
@@ -266,6 +374,13 @@ func _process(delta: float) -> void:
 		sl.cd_left = player.cooldown_left(ab)
 		sl.cd_total = maxf(float(ab.get("cooldown", 1.0)), 0.01)
 		sl.unaffordable = player.resource < float(ab.get("cost", 0.0))
+	if player.using_pad != _pad_glyphs:
+		_bind_slots()
+	var bt: Array = []
+	for b: Dictionary in player.buffs:
+		if String(b.get("name", "")) != "":
+			bt.append("%s %d s" % [b["name"], ceili(float(b["time"]))])
+	buff_label.text = "   ".join(bt)
 	potion_slot.cd_left = maxf(player.potion_cd, 0.0)
 	potion_slot.cd_total = player.potion_cooldown()
 	var cast_box: Control = cast_bar.get_meta("box")
@@ -281,13 +396,28 @@ func _process(delta: float) -> void:
 	elif _target != null and is_instance_valid(_target) and not _target.dead and _target_timer > 0.0:
 		t = _target
 	_target_timer -= delta
+	# Barra del boss: un nemico unico che ti ha notato, entro 45 m
+	var boss: Enemy = _active_boss()
+	boss_box.visible = boss != null
+	if boss != null:
+		boss_name.text = boss.display_name
+		boss_bar.max_value = boss.max_life
+		boss_bar.value = boss.life
+		if t == boss:
+			t = null
+	target_box.offset_top = 86 if boss != null else 10
 	target_box.visible = t != null
 	if t != null:
-		target_name.text = t.display_name + ("   (liv. %d)" % t.level)
-		target_name.add_theme_color_override("font_color",
-			Color(1.0, 0.6, 0.15) if t.unique else (Color(0.45, 0.65, 1.0) if t.elite else Color.WHITE))
+		var txt := t.display_name + ("   (liv. %d)" % t.level)
+		if not t.affixes.is_empty():
+			txt += "\n" + t.affix_text()
+		target_name.text = txt
+		target_name.add_theme_color_override("font_color", t.name_color())
+		if t.elite and not t.affixes.is_empty():
+			hint("elite", "le elite hanno affissi (scritti sotto il nome): Scudato è invulnerabile a tratti, Incendiario lascia fuoco a terra...")
 		target_bar.max_value = t.max_life
 		target_bar.value = t.life
+	_update_rift()
 
 	# Etichetta sotto il cursore per oggetti interagibili
 	if level.hover["kind"] == "interact" and is_instance_valid(level.hover["node"]):
@@ -304,6 +434,61 @@ func _process(delta: float) -> void:
 	message.modulate.a = clampf(_msg_t, 0.0, 1.0)
 	_warn_t -= delta
 	warning.modulate.a = clampf(_warn_t * 2.0, 0.0, 1.0)
+
+
+func _active_boss() -> Enemy:
+	for e: Enemy in get_tree().get_nodes_in_group("enemies"):
+		if e.unique and not e.dead and e.state != Enemy.State.IDLE and e.global_position.distance_to(player.global_position) < 45.0:
+			return e
+	return null
+
+
+func _update_rift() -> void:
+	var grade := int(level.rift_grade)
+	rift_box.visible = grade > 0
+	if grade <= 0:
+		return
+	var t := float(level.get("rift_time"))
+	var lim := DifficultyDB.RIFT_TIME
+	var txt := "Labirinto grado %d   %02d:%02d / %02d:00" % [grade, int(t) / 60, int(t) % 60, int(lim / 60.0)]
+	if bool(level.get("rift_done")):
+		txt += "\nCompletato!"
+	elif bool(level.get("guardian_spawned")):
+		txt += "\nIl Guardiano è arrivato"
+	rift_label.text = txt
+	rift_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4) if t > lim else Color(0.85, 0.7, 1.0))
+	rift_bar.max_value = maxf(float(level.get("rift_target")), 1.0)
+	rift_bar.value = float(level.get("rift_progress"))
+
+
+## Pannello con una scelta tra più opzioni: options = [[testo, Callable], ...] (+ "Annulla").
+func show_choice(title: String, body: String, options: Array) -> void:
+	choice_title.text = title
+	choice_body.text = body
+	for c in choice_list.get_children():
+		c.queue_free()
+	var first: Button = null
+	for o: Array in options:
+		var b := Button.new()
+		b.text = String(o[0])
+		b.custom_minimum_size = Vector2(360, 38)
+		b.disabled = o.size() > 2 and bool(o[2])
+		b.pressed.connect(o[1])
+		choice_list.add_child(b)
+		if first == null and not b.disabled:
+			first = b
+	var cancel := Button.new()
+	cancel.text = "Annulla"
+	cancel.custom_minimum_size = Vector2(360, 38)
+	cancel.pressed.connect(hide_choice)
+	choice_list.add_child(cancel)
+	choice_panel.visible = true
+	if first != null:
+		first.grab_focus()
+
+
+func hide_choice() -> void:
+	choice_panel.visible = false
 
 
 func set_target(e: Enemy) -> void:
@@ -339,8 +524,17 @@ func log_pickup(text: String, col: Color) -> void:
 	tw.tween_callback(l.queue_free)
 
 
-func show_death() -> void:
+func show_death(recap: String = "") -> void:
+	(death_panel.find_child("Body", true, false) as Label).text = "Gli dèi ti concedono un'altra possibilità.\n\n" + recap
 	death_panel.visible = true
+
+
+## Morte in hardcore: niente rinascita.
+func show_hardcore_death(text: String) -> void:
+	show_choice("CADUTO PER SEMPRE", text, [["Torna al menu", func() -> void: Game.quit_to_menu(false)]])
+	for c in choice_list.get_children():
+		if c is Button and (c as Button).text == "Annulla":
+			c.queue_free()
 
 
 func hide_death() -> void:
@@ -361,6 +555,11 @@ func update_quests() -> void:
 	for id: String in Quests.active_ids():
 		var q := QuestDB.get_data(id)
 		t += "[b][color=#f2c75a]%s[/color][/b]\n[color=#e8e0d0]• %s[/color]\n" % [q["title"], Quests.step_text(id)]
+	var bl: Array = Bounties.tracker_lines()
+	if not bl.is_empty():
+		t += "[b][color=#f2c75a]Taglie[/color][/b]\n"
+		for line: String in bl:
+			t += "[color=#e8e0d0]• %s[/color]\n" % line
 	if t != "":
 		t += "[color=#888888][font_size=12]J: diario delle missioni[/font_size][/color]"
 	quest_tracker.text = t

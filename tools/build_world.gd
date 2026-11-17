@@ -129,6 +129,8 @@ func _generate() -> void:
 		_build_props()
 	if all or "models" in args:
 		_build_models()
+	if "characters" in args:
+		_build_models(false, "characters/")
 	if all or "level" in args:
 		_build_level()
 	print("Generazione completata.")
@@ -628,7 +630,7 @@ func _build_props(only_missing: bool = false) -> void:
 #  MODELLI SEGNAPOSTO (rivolti verso -Z)
 # ==========================================================================================
 
-func _build_models(only_missing: bool = false) -> void:
+func _build_models(only_missing: bool = false, only_prefix: String = "") -> void:
 	for dir in ["characters", "enemies", "npcs"]:
 		DirAccess.make_dir_recursive_absolute("res://scenes/" + dir)
 	var models := _model_defs()
@@ -636,14 +638,32 @@ func _build_models(only_missing: bool = false) -> void:
 		var out_path := "res://scenes/%s.tscn" % key
 		if only_missing and ResourceLoader.exists(out_path):
 			continue
+		if only_prefix != "" and not key.begins_with(only_prefix):
+			continue
 		var root := Node3D.new()
 		root.name = "Model"
 		var gfx := Node3D.new()
 		gfx.name = "Graybox"
 		root.add_child(gfx)
 		gfx.owner = root
+		var prese: Node3D = null
 		for p: Array in models[key]:
+			if p[0] == "presa":
+				# Presa dell'equipaggiamento (core/appearance.gd); con lo scheletro diventa un BoneAttachment3D
+				if prese == null:
+					prese = Node3D.new()
+					prese.name = "Prese"
+					root.add_child(prese)
+					prese.owner = root
+				var m := Marker3D.new()
+				m.name = String(p[1])
+				m.position = p[2]
+				prese.add_child(m)
+				m.owner = root
+				continue
 			var mi := _part(gfx, root, p, 0.0)
+			if p.size() > 6:
+				mi.set_meta("body_part", true)
 			if (p[3] as Color).a < 1.0:
 				mi.material_override = Fx.new_mat(p[3], float(p[4]) if p.size() > 4 else 0.0, true)
 		_save_scene(root, out_path)
@@ -654,41 +674,8 @@ func _build_models(only_missing: bool = false) -> void:
 func _model_defs() -> Dictionary:
 	var skin := Color(0.85, 0.65, 0.5)
 	var bronze := Color(0.7, 0.5, 0.25)
-	return {
-		"characters/legionario": [
-			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), RED],
-			["box", Vector3(0, 1.05, 0), Vector3(0.9, 0.5, 0.6), METAL.lightened(0.2)],
-			["sphere", Vector3(0, 1.75, 0), Vector3(0.3, 0.55, 0), GOLD],
-			["box", Vector3(0, 2.0, 0.05), Vector3(0.08, 0.22, 0.55), Color(0.9, 0.1, 0.1), 1.0],
-			["box", Vector3(-0.52, 0.95, -0.15), Vector3(0.1, 1.0, 0.7), GOLD],
-			["box", Vector3(0.45, 0.9, -0.55), Vector3(0.08, 0.08, 0.9), PLASMA, 4.0],
-		],
-		"characters/gladiatore": [
-			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), skin],
-			["box", Vector3(0, 0.7, 0), Vector3(0.88, 0.35, 0.6), Color(0.45, 0.2, 0.12)],
-			["sphere", Vector3(0, 1.75, 0), Vector3(0.32, 0.6, 0), bronze],
-			["box", Vector3(0, 1.75, -0.28), Vector3(0.35, 0.3, 0.06), Color(0.2, 0.15, 0.1)],
-			["box", Vector3(0, 2.05, 0), Vector3(0.1, 0.25, 0.6), bronze],
-			["box", Vector3(-0.48, 1.1, 0), Vector3(0.2, 0.6, 0.25), bronze],
-			["box", Vector3(0.48, 0.9, -0.5), Vector3(0.07, 0.07, 1.0), WOOD],
-			["box", Vector3(0.48, 0.9, -0.95), Vector3(0.1, 0.45, 0.25), METAL.lightened(0.3), 0.5],
-		],
-		"characters/sagittario": [
-			["capsule", Vector3(0, 0.85, 0), Vector3(0.38, 1.5, 0), Color(0.25, 0.45, 0.25)],
-			["sphere", Vector3(0, 1.72, 0), Vector3(0.26, 0.5, 0), skin],
-			["cyl", Vector3(0, 1.85, 0.03), Vector3(0, 0.6, 0.34), Color(0.18, 0.32, 0.18)],
-			["box", Vector3(-0.45, 1.0, -0.3), Vector3(0.06, 1.5, 0.08), WOOD],
-			["box", Vector3(-0.43, 1.0, -0.22), Vector3(0.02, 1.4, 0.02), PLASMA, 4.0],
-			["cyl", Vector3(0.2, 1.2, 0.35), Vector3(0.12, 0.8, 0.12), Color(0.35, 0.25, 0.15), 0.0, Vector3(20, 0, -15)],
-		],
-		"characters/augure": [
-			["cyl", Vector3(0, 0.75, 0), Vector3(0.3, 1.5, 0.55), Color(0.9, 0.9, 0.95)],
-			["box", Vector3(0, 0.9, 0), Vector3(0.62, 0.12, 0.62), Color(0.45, 0.2, 0.6)],
-			["sphere", Vector3(0, 1.72, 0), Vector3(0.26, 0.5, 0), skin],
-			["cyl", Vector3(0, 1.88, 0.03), Vector3(0, 0.55, 0.34), Color(0.45, 0.2, 0.6)],
-			["cyl", Vector3(0.5, 1.1, -0.1), Vector3(0.04, 2.2, 0.04), WOOD],
-			["sphere", Vector3(0.5, 2.3, -0.1), Vector3(0.16, 0.32, 0), Color(0.5, 0.6, 1.0), 5.0],
-		],
+	var d := _character_defs()
+	d.merge({
 		"enemies/predone": [
 			["capsule", Vector3(0, 0.8, 0), Vector3(0.42, 1.6, 0), Color(0.45, 0.33, 0.22)],
 			["cyl", Vector3(0, 1.75, 0), Vector3(0, 0.55, 0.33), Color(0.3, 0.22, 0.15)],
@@ -833,7 +820,61 @@ func _model_defs() -> Dictionary:
 			["box", Vector3(0, 0.8, 0), Vector3(0.85, 0.1, 0.62), Color(0.4, 0.3, 0.2)],
 			["sphere", Vector3(0, 1.75, 0), Vector3(0.27, 0.52, 0), skin],
 		],
+	})
+	return d
+
+
+## Eroi: corpo base (maschile "<classe>" e femminile "<classe>_f") con le prese dell'equipaggiamento
+## (VisualDB.PRESE). L'equipaggiamento NON fa parte del modello: lo aggiunge core/appearance.gd.
+## Parti con nome (7° elemento) = parti del corpo che un pezzo può nascondere (es. "Capelli" sotto l'elmo).
+## Prese: ["presa", nome, posizione].
+func _character_defs() -> Dictionary:
+	var skin := Color(0.85, 0.65, 0.5)
+	var tunics := {
+		"legionario": [RED, RED.darkened(0.2), Color(0.25, 0.16, 0.1)],
+		"gladiatore": [skin, Color(0.45, 0.2, 0.12), Color(0.2, 0.12, 0.08)],
+		"sagittario": [Color(0.25, 0.45, 0.25), Color(0.3, 0.25, 0.15), Color(0.5, 0.35, 0.18)],
+		"augure": [Color(0.9, 0.9, 0.95), Color(0.85, 0.85, 0.9), Color(0.15, 0.12, 0.1)],
 	}
+	var out := {}
+	for cls: String in tunics:
+		var c: Array = tunics[cls]
+		for fem: bool in [false, true]:
+			var k := 0.94 if fem else 1.0
+			var sh := 0.86 if fem else 1.0     # spalle più strette
+			var hip := 1.08 if fem else 1.0    # fianchi
+			var parts: Array = [
+				["capsule", Vector3(0.13 * hip, 0.46, 0), Vector3(0.11, 0.92, 0), skin],
+				["capsule", Vector3(-0.13 * hip, 0.46, 0), Vector3(0.11, 0.92, 0), skin],
+				["cyl", Vector3(0, 0.98, 0), Vector3(0.28 * sh, 0.5, 0.34 * hip), c[1], 0.0, Vector3.ZERO, "Tunica"],
+				["box", Vector3(0, 1.32, 0), Vector3(0.6 * sh, 0.5, 0.32), c[0], 0.0, Vector3.ZERO, "Busto"],
+				["capsule", Vector3(0.4 * sh, 1.1, 0), Vector3(0.085, 0.66, 0), skin],
+				["capsule", Vector3(-0.4 * sh, 1.1, 0), Vector3(0.085, 0.66, 0), skin],
+				["cyl", Vector3(0, 1.6, 0), Vector3(0.07, 0.12, 0.08), skin],
+				["sphere", Vector3(0, 1.74, 0), Vector3(0.16, 0.34, 0), skin, 0.0, Vector3.ZERO, "Testa"],
+				["sphere", Vector3(0, 1.8, 0.03), Vector3(0.17, 0.24, 0), c[2], 0.0, Vector3.ZERO, "Capelli"],
+			]
+			if fem:
+				parts.append(["box", Vector3(0, 1.6, 0.13), Vector3(0.26, 0.42, 0.08), c[2], 0.0, Vector3.ZERO, "Chioma"])
+			var prese := {
+				"Presa_Testa": Vector3(0, 1.74, 0), "Presa_Busto": Vector3(0, 1.32, 0), "Presa_Schiena": Vector3(0, 1.32, 0.2),
+				"Presa_Bacino": Vector3(0, 0.98, 0),
+				"Presa_ManoDx": Vector3(0.4 * sh, 0.78, -0.08), "Presa_ManoSx": Vector3(-0.4 * sh, 0.78, -0.08),
+				"Presa_AvambraccioDx": Vector3(0.4 * sh, 0.95, 0), "Presa_AvambraccioSx": Vector3(-0.4 * sh, 0.95, 0),
+				"Presa_StincoDx": Vector3(0.13 * hip, 0.3, 0), "Presa_StincoSx": Vector3(-0.13 * hip, 0.3, 0),
+				"Presa_PiedeDx": Vector3(0.13 * hip, 0.06, -0.03), "Presa_PiedeSx": Vector3(-0.13 * hip, 0.06, -0.03),
+			}
+			for pr: String in prese:
+				parts.append(["presa", pr, prese[pr]])
+			# Altezza femminile un po' minore: scala posizioni e misure
+			if fem:
+				for p: Array in parts:
+					p[2] = (p[2] as Vector3) * k if p[0] == "presa" else p[2]
+					if p[0] != "presa":
+						p[1] = (p[1] as Vector3) * k
+						p[2] = (p[2] as Vector3) * k
+			out["characters/%s%s" % [cls, "_f" if fem else ""]] = parts
+	return out
 
 
 # ==========================================================================================

@@ -17,6 +17,9 @@ var data: Dictionary = {}
 var level := 1
 var elite := false
 var unique := false
+var rare := false                # capo di un gruppo raro (nome giallo); i suoi servitori sono normali
+var affixes: Array = []          # affissi delle elite (EnemyDB.ELITE_AFFIXES)
+var pack_name := ""              # nome scelto dal gruppo (prefisso dei Campioni o nome del capo raro)
 var max_life := 30.0
 var life := 30.0
 var damage := 5.0
@@ -41,6 +44,16 @@ var _wander_target := Vector3.INF
 var _sleep_check := 0.0
 var _asleep := false
 var _summon_cd := 5.0
+var stun_timer := 0.0
+var _phase := 0                  # fasi del boss superate (EnemyDB.BOSSES)
+var _boss_cd := 4.0
+var _boss_attacks: Array = []
+var _shield_adds: Array = []
+var enraged := false
+var dot_dps := 0.0               # danno al secondo delle fiamme (varianti delle abilità)
+var dot_timer := 0.0
+var _dot_tick := 0.0
+var _dot_color := Color(1.0, 0.5, 0.15)
 
 var model: Node3D
 var nav: NavigationAgent3D
@@ -51,13 +64,20 @@ var name_label: Label3D
 const BAR_WIDTH := 1.3
 
 
-static func create(p_type: String, p_level: int, p_elite: bool = false) -> Enemy:
+static func create(p_type: String, p_level: int, p_elite: bool = false, p_affixes: Array = [], p_rare: bool = false, p_pack_name: String = "") -> Enemy:
 	var e := Enemy.new()
 	e.type_id = p_type
 	e.level = maxi(1, p_level)
-	e.elite = p_elite
+	e.elite = p_elite or p_rare
+	e.rare = p_rare
+	e.affixes = p_affixes.duplicate()
+	e.pack_name = p_pack_name
 	e._init_stats()
 	return e
+
+
+func has_affix(id: String) -> bool:
+	return affixes.has(id)
 
 
 func _init_stats() -> void:
@@ -65,15 +85,26 @@ func _init_stats() -> void:
 	unique = bool(data.get("unique", false))
 	if unique:
 		elite = false
-	max_life = float(data["hp"]) * (1.0 + 0.3 * (level - 1))
-	damage = float(data["damage"]) * (1.0 + 0.2 * (level - 1))
+		rare = false
+	# Difficoltà / grado del labirinto: da Esperto in su i nemici hanno almeno il livello dell'eroe
+	var sc: Dictionary = Game.enemy_scaling() if Game else {}
+	level = maxi(level, int(sc.get("min_level", 0)))
+	max_life = float(data["hp"]) * (1.0 + 0.3 * (level - 1)) * float(sc.get("hp", 1.0))
+	damage = float(data["damage"]) * (1.0 + 0.2 * (level - 1)) * float(sc.get("dmg", 1.0))
 	speed = float(data["speed"])
 	display_name = data["name"]
 	if elite:
-		max_life *= 3.0
+		max_life *= 4.0 if rare else 3.0
 		damage *= 1.4
 		speed *= 1.1
-		display_name = "%s %s" % [data["name"], ELITE_PREFIX.pick_random()]
+		if rare:
+			display_name = pack_name if pack_name != "" else "%s %s" % [EnemyDB.RARE_NAMES_A.pick_random(), EnemyDB.RARE_NAMES_B.pick_random()]
+		else:
+			display_name = "%s %s" % [data["name"], pack_name if pack_name != "" else ELITE_PREFIX.pick_random()]
+	if has_affix("rapido"):
+		speed *= 1.35
+	if unique:
+		_boss_attacks = (EnemyDB.BOSSES.get(type_id, {}).get("attacks", []) as Array).duplicate()
 	life = max_life
 
 
@@ -84,7 +115,9 @@ func radius() -> float:
 func xp_value() -> int:
 	var x := float(data["xp"]) * (1.0 + 0.25 * (level - 1))
 	if elite:
-		x *= 3.0
+		x *= 4.0 if rare else 3.0
+	if Game:
+		x *= float(Game.enemy_scaling().get("xp", 1.0))
 	return int(x)
 
 
@@ -133,7 +166,7 @@ func _ready() -> void:
 		tm.inner_radius = r + 0.2
 		tm.outer_radius = r + 0.45
 		aura.mesh = tm
-		var col := Color(0.35, 0.55, 1.0) if elite else Color(1.0, 0.5, 0.1)
+		var col := name_color()
 		aura.material_override = Fx.mat(col, 3.0, false, true)
 		aura.position.y = 0.05
 		aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -167,7 +200,9 @@ func _build_bar(h: float) -> void:
 	if always:
 		name_label = Label3D.new()
 		name_label.text = display_name
-		name_label.modulate = Color(0.45, 0.65, 1.0) if elite else Color(1.0, 0.6, 0.15)
+		if not affixes.is_empty():
+			name_label.text += "\n" + affix_text()
+		name_label.modulate = name_color()
 		name_label.font_size = 36
 		name_label.outline_size = 8
 		name_label.pixel_size = 0.01
@@ -175,6 +210,24 @@ func _build_bar(h: float) -> void:
 		name_label.no_depth_test = true
 		name_label.position.y = y + 0.35
 		add_child(name_label)
+
+
+## Colore del nome: blu i Campioni, giallo i capi rari, arancione i boss.
+func name_color() -> Color:
+	if unique:
+		return Color(1.0, 0.6, 0.15)
+	if rare:
+		return Color(1.0, 0.9, 0.3)
+	if elite:
+		return Color(0.45, 0.65, 1.0)
+	return Color.WHITE
+
+
+func affix_text() -> String:
+	var names: Array = []
+	for a: String in affixes:
+		names.append(String((EnemyDB.ELITE_AFFIXES.get(a, {"name": a}) as Dictionary)["name"]))
+	return " · ".join(names)
 
 
 func _bar_mat(c: Color, priority: int) -> StandardMaterial3D:
@@ -224,12 +277,26 @@ func _physics_process(delta: float) -> void:
 		return
 
 	knockback = knockback.move_toward(Vector3.ZERO, 30.0 * delta)
+	_tick_dot(delta)
+	if dead:
+		return
+	if stun_timer > 0.0:
+		stun_timer -= delta
+		velocity = knockback
+		velocity.y = 0.0
+		move_and_slide()
+		return
 	slow_timer -= delta
 	if slow_timer <= 0.0:
 		slow_mult = 1.0
 	state_timer -= delta
 	special_cd -= delta
 	_summon_cd -= delta
+	_boss_cd -= delta
+	if not _shield_adds.is_empty():
+		_check_shield_adds()
+	if not affixes.is_empty() and state != State.IDLE and state != State.RETURN and not p.dead:
+		_tick_affixes(delta, p, dist)
 	var spd := speed * slow_mult
 	var desired := Vector3.ZERO
 
@@ -242,6 +309,8 @@ func _physics_process(delta: float) -> void:
 		State.CHASE:
 			if p.dead or (global_position.distance_to(home) > LEASH and dist > 10.0):
 				_go_home()
+			elif not _boss_attacks.is_empty() and _boss_cd <= 0.0 and dist < 22.0:
+				_boss_attack(p)
 			elif data.has("summon") and _summon_cd <= 0.0:
 				_summon()
 			elif _can_charge(dist):
@@ -281,7 +350,7 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			if not _charge_hit and dist < radius() + 1.2:
 				_charge_hit = true
-				p.take_damage(damage * 1.3, level)
+				_hit_player(p, damage * 1.3)
 				p.shake(0.2)
 			if state_timer <= 0.0 or (get_slide_collision_count() > 0 and get_real_velocity().length() < 4.0):
 				state = State.RECOVER
@@ -387,11 +456,200 @@ func _attack(p: Player, dist: float, dir: Vector3) -> void:
 		Sfx.play("explosion", center, -6.0, 0.15)
 		var d := Vector2(p.global_position.x - center.x, p.global_position.z - center.z).length()
 		if d <= rad + 0.4:
-			p.take_damage(damage, level)
+			_hit_player(p, damage)
 			p.shake(0.15)
 		return
 	if dist <= attack_range() + 0.6:
-		p.take_damage(damage, level)
+		_hit_player(p, damage)
+
+
+func _hit_player(p: Player, amount: float) -> void:
+	var before := p.life
+	p.take_damage(amount, level)
+	if has_affix("vampirico") and p.life < before:
+		life = minf(max_life, life + (before - p.life) * 0.3)
+		_update_bar()
+
+
+# --- Boss: fasi e attacchi speciali --------------------------------------------------------------
+
+func _check_phase() -> void:
+	var phases: Array = EnemyDB.BOSSES.get(type_id, {}).get("phases", [])
+	while _phase < phases.size() and life / max_life <= float(phases[_phase]["at"]):
+		_enter_phase(phases[_phase])
+		_phase += 1
+
+
+func _enter_phase(ph: Dictionary) -> void:
+	if ph.has("say"):
+		Fx.popup_speech(self, String(ph["say"]), float(data["height"]) + 1.2, 2.5)
+	for act: String in ph.get("do", []):
+		if act == "enrage":
+			enraged = true
+			speed *= 1.3
+			damage *= 1.25
+			Fx.ring(Game.world_root(), global_position, 5.0, Color(1.0, 0.15, 0.1), 0.6)
+			Fx.burst(Game.world_root(), global_position + Vector3(0, 1.5, 0), Color(1.0, 0.2, 0.1), 30, 6.0, 0.15, 0.6, 2.0)
+		elif act == "summon" or act == "shield":
+			var adds := _spawn_adds(String(ph.get("type", data.get("summon", "predone"))), int(ph.get("n", 3)))
+			if act == "shield":
+				_shield_adds = adds
+				_shield_t = 9999.0
+				_show_shield(true)
+				if Game.level:
+					Game.level.hud.show_message("%s è protetto: uccidi i rinforzi!" % display_name, 3.0)
+		elif act.begins_with("attack:"):
+			_boss_attacks.append(act.substr(7))
+	_boss_cd = minf(_boss_cd, 2.0)
+
+
+func _spawn_adds(t: String, n: int) -> Array:
+	var out: Array = []
+	var container: Node = Game.level.enemies_root if Game.level else get_parent()
+	for i in n:
+		var a := TAU * i / n
+		var e := Enemy.create(t, level)
+		e.position = global_position + Vector3(cos(a), 0, sin(a)) * 4.5
+		container.add_child(e)
+		Fx.burst(Game.world_root(), e.position + Vector3(0, 1, 0), Color(0.3, 0.8, 1.0), 12, 4.0, 0.12, 0.5, 0.0)
+		e.aggro()
+		out.append(e)
+	return out
+
+
+func _check_shield_adds() -> void:
+	for i in range(_shield_adds.size() - 1, -1, -1):
+		if not is_instance_valid(_shield_adds[i]) or (_shield_adds[i] as Enemy).dead:
+			_shield_adds.remove_at(i)
+	if _shield_adds.is_empty():
+		_shield_t = 0.0
+		_show_shield(false)
+		Fx.ring(Game.world_root(), global_position, 4.0, Color(0.6, 0.8, 1.0), 0.4)
+
+
+func _show_shield(on: bool) -> void:
+	if _shield_mesh == null:
+		_shield_mesh = MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = radius() + 0.6
+		sm.height = (radius() + 0.6) * 2.0
+		_shield_mesh.mesh = sm
+		_shield_mesh.material_override = Fx.mat(Color(0.6, 0.8, 1.0, 0.3), 2.0, true, true)
+		_shield_mesh.position.y = float(data["height"]) * 0.5
+		_shield_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_shield_mesh)
+	_shield_mesh.visible = on
+
+
+func _boss_attack(p: Player) -> void:
+	_boss_cd = EnemyDB.BOSS_ATTACK_CD * (0.7 if enraged else 1.0)
+	var kind: String = _boss_attacks.pick_random()
+	match kind:
+		"nova":
+			Fx.ring(Game.world_root(), global_position, 3.0, Color(1.0, 0.4, 0.9), 0.4)
+			for i in 16:
+				var a := TAU * i / 16.0
+				Projectile.spawn_from_enemy(global_position + Vector3(0, 1.2, 0), Vector3(cos(a), 0, sin(a)), damage * 0.6, level,
+					Color(1.0, 0.4, 0.9), 9.0)
+		"pioggia":
+			for i in 6:
+				var a := randf() * TAU
+				Hazard.spawn(p.global_position + Vector3(cos(a), 0, sin(a)) * randf_range(0.0, 5.0), 2.2, 1.2, 0.0,
+					damage * 0.9, Color(1.0, 0.45, 0.1), level)
+		"onda":
+			Hazard.spawn(global_position, 7.0, 1.3, 0.0, damage * 1.3, Color(1.0, 0.6, 0.2), level)
+		"salto":
+			var dest := p.global_position
+			Hazard.spawn(dest, 3.5, 1.0, 0.0, damage * 1.2, Color(1.0, 0.3, 0.1), level)
+			var tw := create_tween()
+			tw.tween_interval(0.6)
+			tw.tween_property(self, "global_position", Vector3(dest.x, 0.0, dest.z), 0.35)
+
+
+# --- Affissi delle elite --------------------------------------------------------------------
+
+var _aff_cd: Dictionary = {}
+var _shield_t := 0.0
+var _shield_mesh: MeshInstance3D
+
+
+func _aff_ready(id: String, delta: float, every: float, first: float) -> bool:
+	var t := float(_aff_cd.get(id, first)) - delta
+	if t <= 0.0:
+		_aff_cd[id] = every * randf_range(0.85, 1.15)
+		return true
+	_aff_cd[id] = t
+	return false
+
+
+func _tick_affixes(delta: float, p: Player, dist: float) -> void:
+	if _shield_t > 0.0:
+		_shield_t -= delta
+		if _shield_t <= 0.0 and _shield_mesh:
+			_shield_mesh.visible = false
+	if has_affix("scudato") and _aff_ready("scudato", delta, 10.0, 3.0):
+		_shield_t = 3.0
+		_show_shield(true)
+	if has_affix("incendiario") and dist < 25.0 and _aff_ready("incendiario", delta, 5.0, 2.0):
+		Hazard.spawn(p.global_position, 2.5, 0.9, 4.0, damage * 0.6, Color(1.0, 0.4, 0.1), level)
+	if has_affix("gelido") and dist < 25.0 and _aff_ready("gelido", delta, 6.0, 3.0):
+		for i in 3:
+			var a := randf() * TAU
+			Hazard.spawn(p.global_position + Vector3(cos(a), 0, sin(a)) * randf_range(0.5, 3.0), 2.0, 1.4, 0.0,
+				damage * 1.1, Color(0.55, 0.85, 1.0), level, 0.5)
+	if has_affix("teletrasporto") and dist > 6.0 and dist < 35.0 and _aff_ready("teletrasporto", delta, 6.0, 2.0):
+		var a := randf() * TAU
+		Fx.burst(Game.world_root(), global_position + Vector3(0, 1, 0), Color(0.7, 0.4, 1.0), 14, 4.0, 0.1, 0.4, 0.0)
+		var dest := p.global_position + Vector3(cos(a), 0, sin(a)) * 2.5
+		var snapped := NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, dest)
+		if snapped != Vector3.ZERO and snapped.y < 1.0:
+			global_position = Vector3(snapped.x, 0.0, snapped.z)
+		Fx.burst(Game.world_root(), global_position + Vector3(0, 1, 0), Color(0.7, 0.4, 1.0), 14, 4.0, 0.1, 0.4, 0.0)
+	if has_affix("elettrico") and dist < 20.0 and _aff_ready("elettrico", delta, 4.0, 1.5):
+		for i in 6:
+			var a := TAU * i / 6.0 + randf() * 0.3
+			Projectile.spawn_from_enemy(global_position + Vector3(0, 1.0, 0), Vector3(cos(a), 0, sin(a)), damage * 0.5, level,
+				Color(0.6, 0.8, 1.0), 10.0)
+
+
+## Stordimento (varianti delle abilità): niente movimento né attacchi. Elite e boss la metà.
+func apply_stun(time: float) -> void:
+	if dead or _shield_t > 0.0:
+		return
+	var t := time * (0.5 if (elite or unique) else 1.0)
+	if stun_timer <= 0.0:
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, float(data["height"]) + 0.9, 0), "Stordito", Color(1.0, 0.95, 0.4), 26)
+	stun_timer = maxf(stun_timer, t)
+	if state == State.WINDUP:
+		Fx.set_base_overlay(model, null)
+		state = State.RECOVER
+		state_timer = 0.2
+	elif state == State.CHARGE:
+		state = State.RECOVER
+		state_timer = 0.2
+
+
+## Fiamme / veleno: dps danni al secondo per time secondi (la nuova applicazione sostituisce se è più forte).
+func apply_dot(dps: float, time: float, col: Color = Color(1.0, 0.5, 0.15)) -> void:
+	if dead or dps <= 0.0 or _shield_t > 0.0:
+		return
+	if dps >= dot_dps or dot_timer <= 0.0:
+		dot_dps = dps
+		_dot_color = col
+	dot_timer = maxf(dot_timer, time)
+
+
+func _tick_dot(delta: float) -> void:
+	if dot_timer <= 0.0:
+		return
+	dot_timer -= delta
+	_dot_tick -= delta
+	if _dot_tick <= 0.0:
+		_dot_tick = 0.5
+		Fx.burst(Game.world_root(), global_position + Vector3(0, float(data["height"]) * 0.6, 0), _dot_color, 4, 2.0, 0.08, 0.35, 3.0)
+		take_damage(dot_dps * 0.5, Vector3.ZERO, false, true)
+	if dot_timer <= 0.0:
+		dot_dps = 0.0
 
 
 func apply_slow(amount: float, time: float) -> void:
@@ -399,16 +657,37 @@ func apply_slow(amount: float, time: float) -> void:
 	slow_timer = maxf(slow_timer, time)
 
 
-func take_damage(amount: float, knock: Vector3 = Vector3.ZERO, crit: bool = false) -> void:
+func take_damage(amount: float, knock: Vector3 = Vector3.ZERO, crit: bool = false, quiet: bool = false, element: String = "fisico") -> void:
 	if dead:
 		return
+	if _shield_t > 0.0:
+		if not quiet:
+			Fx.popup_text(Game.world_root(), global_position + Vector3(0, float(data["height"]) + 0.6, 0), "Immune", Color(0.6, 0.8, 1.0), 30)
+		return
+	if has_affix("corazzato"):
+		amount *= 0.65
+		knock = Vector3.ZERO
 	life -= amount
 	knockback += knock * float(data.get("knock_resist", 1.0)) * (0.4 if elite else 1.0)
+	if unique and life > 0.0:
+		_check_phase()
 	var h := float(data["height"]) * (1.25 if elite else 1.0)
-	if crit:
-		Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.4, 0), "%d!" % roundi(amount), Color(1.0, 0.6, 0.1), 60)
+	if quiet:
+		if Settings.damage_numbers:
+			Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.2, 0), str(roundi(amount)), _dot_color.lightened(0.2), 30)
+		_update_bar()
+		if life <= 0.0:
+			_die()
+		return
+	# Numeri di danno: più grandi i critici e i colpi che tolgono tanta vita
+	var big := clampf(amount / maxf(max_life, 1.0), 0.0, 1.0)
+	var ecol: Color = (ItemDB.ELEMENTS.get(element, ItemDB.ELEMENTS["fisico"]) as Dictionary)["color"]
+	if not Settings.damage_numbers:
+		pass
+	elif crit:
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.4, 0), "%s!" % _fmt(amount), Color(1.0, 0.75, 0.1).lerp(ecol, 0.35), 64 + roundi(big * 30.0))
 	else:
-		Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.4, 0), str(roundi(amount)), Color(1, 0.95, 0.7))
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.4, 0), _fmt(amount), ecol, 40 + roundi(big * 24.0))
 	Fx.flash(model, Color(1, 1, 1, 0.7))
 	Fx.burst(Game.world_root(), global_position + Vector3(0, h * 0.6, 0), Color(1.0, 0.6, 0.15) if crit else Color(1.0, 0.85, 0.6),
 		10 if crit else 5, 6.0 if crit else 4.0, 0.08, 0.3)
@@ -424,6 +703,16 @@ func take_damage(amount: float, knock: Vector3 = Vector3.ZERO, crit: bool = fals
 		Game.level.on_enemy_hit(self)
 	if life <= 0.0:
 		_die()
+
+
+## 12345 -> "12.345", 1234567 -> "1,23 M" (i danni crescono molto nei Tormenti).
+static func _fmt(v: float) -> String:
+	var n := roundi(v)
+	if n >= 1000000:
+		return "%.2f M" % (n / 1000000.0)
+	if n >= 10000:
+		return "%d.%03d" % [n / 1000, n % 1000]
+	return str(n)
 
 
 func _update_bar() -> void:
@@ -457,11 +746,18 @@ func _die() -> void:
 	if p:
 		p.add_xp(xp_value())
 		p.on_enemy_killed(self)
-	if unique and Game.hero:
+	var in_rift := Game.level != null and int(Game.level.rift_grade) > 0
+	if unique and Game.hero and not in_rift:
 		Game.hero.flags["unique_" + type_id] = true
-	Quests.notify("kill", type_id)
-	if unique:
-		Quests.notify("kill_unique", type_id)
+	if has_affix("esplosivo"):
+		Hazard.spawn(global_position, 3.5, 1.0, 0.0, damage * 1.5, Color(1.0, 0.6, 0.2), level)
+	if Game.level and Game.level.has_method("on_enemy_died"):
+		Game.level.on_enemy_died(self)
+	if not in_rift:
+		Bounties.on_kill(self)
+		Quests.notify("kill", type_id)
+		if unique:
+			Quests.notify("kill_unique", type_id)
 	Loot.on_enemy_killed(self)
 	var tw := create_tween()
 	tw.tween_property(model, "rotation:x", deg_to_rad(-90.0), 0.25)

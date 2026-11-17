@@ -105,3 +105,46 @@ const DATA := {
 
 static func get_data(type_id: String) -> Dictionary:
 	return DATA.get(type_id, DATA["predone"])
+
+
+## Affissi delle elite (come in Diablo 3). Il numero di affissi dipende dalla difficoltà
+## (DifficultyDB). Comportamento in entities/enemy.gd (_tick_affixes, take_damage, _die).
+const ELITE_AFFIXES := {
+	"rapido": {"name": "Rapido", "desc": "Si muove e attacca più velocemente."},
+	"corazzato": {"name": "Corazzato", "desc": "Subisce il 35% di danni in meno e non viene respinto."},
+	"vampirico": {"name": "Vampirico", "desc": "Si cura del 30% dei danni che infligge."},
+	"scudato": {"name": "Scudato", "desc": "Ogni tanto diventa invulnerabile per qualche secondo."},
+	"incendiario": {"name": "Incendiario", "desc": "Fa comparire pozze di fuoco sotto i tuoi piedi."},
+	"gelido": {"name": "Gelido", "desc": "Sfere di ghiaccio esplodono attorno a te e ti rallentano."},
+	"teletrasporto": {"name": "Teletrasporto", "desc": "Ricompare accanto a te."},
+	"esplosivo": {"name": "Esplosivo", "desc": "Morendo esplode dopo un istante."},
+	"elettrico": {"name": "Elettrico", "desc": "Lancia scariche in tutte le direzioni."},
+	"orda": {"name": "Orda", "desc": "Il gruppo è più numeroso."},
+}
+## Nomi dei capi rari (gialli): prima parte + seconda parte.
+const RARE_NAMES_A := ["Vibio", "Tullo", "Opimia", "Gneo", "Marzia", "Ostorio", "Velia", "Sesto", "Fulvia", "Aulo"]
+const RARE_NAMES_B := ["il Crudele", "Mezzomorto", "Ferrocuore", "la Vipera", "Spaccaossa", "il Muto", "Senzanome", "l'Insonne"]
+
+
+## Boss: attacchi speciali (uno ogni BOSS_ATTACK_CD secondi) e fasi a soglie di vita.
+##   Attacchi: "nova" (anello di proiettili), "pioggia" (fuoco dal cielo attorno all'eroe),
+##             "onda" (onda d'urto attorno al boss: allontanati), "salto" (piomba dove sei).
+##   Azioni di fase: "enrage" (più veloce e forte), "summon" (rinforzi subito, tipo "type", quanti "n"),
+##             "shield" (invulnerabile finché non uccidi i rinforzi), "attack:<nome>" (nuovo attacco).
+const BOSS_ATTACK_CD := 6.0
+const BOSSES := {
+	"brenno": {"attacks": ["onda"], "phases": [
+		{"at": 0.66, "say": "Rinnegati, a me!", "do": ["summon"], "type": "rinnegato", "n": 3},
+		{"at": 0.33, "say": "Basta giocare!", "do": ["enrage", "attack:salto"]}]},
+	"custode": {"attacks": ["pioggia"], "phases": [
+		{"at": 0.66, "say": "Le ossa mi proteggono...", "do": ["shield"], "type": "lemure", "n": 4},
+		{"at": 0.33, "say": "Unitevi a loro!", "do": ["enrage", "attack:nova"]}]},
+	"tharvo": {"attacks": ["salto"], "phases": [
+		{"at": 0.5, "say": "TIIIHARVO!", "do": ["enrage", "attack:onda"]}]},
+	"vulso": {"attacks": ["nova"], "phases": [
+		{"at": 0.66, "say": "Ciurma, fate muro!", "do": ["shield"], "type": "pirata", "n": 4},
+		{"at": 0.33, "say": "Vi affondo tutti!", "do": ["enrage", "attack:pioggia"]}]},
+	"madre_granchi": {"attacks": ["onda"], "phases": [
+		{"at": 0.66, "say": "*stridio*", "do": ["summon"], "type": "granchio", "n": 6},
+		{"at": 0.33, "say": "*stridio furioso*", "do": ["enrage", "attack:pioggia"]}]},
+}

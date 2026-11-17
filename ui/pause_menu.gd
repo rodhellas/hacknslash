@@ -11,13 +11,19 @@ const CONTROLS := """[b]Movimento[/b]: clic sinistro sul terreno (tieni premuto 
 [b]Viaggio rapido[/b]: clicca un altare già attivato
 [b]Mercante / fabbro / forziere[/b]: clic destro su un oggetto dello zaino per vendere / smontare / depositare
 I tasti si cambiano in Opzioni > Comandi.
-[b]Inventario[/b]: I o C        [b]Mappa[/b]: TAB        [b]Zoom[/b]: rotellina
+[b]Inventario[/b]: I o C        [b]Abilità[/b]: K        [b]Mappa[/b]: TAB        [b]Zoom[/b]: rotellina
+[b]Nomi degli oggetti a terra[/b]: Alt (se nelle opzioni non sono sempre visibili)
+[b]Zaino[/b]: Ctrl + clic = secondo anello / arma nella mano sinistra; Shift sul tooltip = confronto completo
+[b]Taglie[/b]: Tabula nel foro di Ostia Nova        [b]Mappa grande[/b] (TAB): legenda e viaggio rapido
+[b]Labirinti di Dedalo[/b]: Obelisco nel foro di Ostia Nova
+[b]Controller[/b]: stick sinistro muove, A attacca / interagisce, X / B / Y / dorsali abilità, Start pausa, Back inventario
 [b]Pausa[/b]: ESC"""
 
 var root: Control
 var info: Label
 var controls: RichTextLabel
 var options: OptionsMenu
+var diff_button: OptionButton
 
 
 func _ready() -> void:
@@ -61,6 +67,17 @@ func _ready() -> void:
 		b.add_theme_font_size_override("font_size", 18)
 		b.pressed.connect(pair[1])
 		v.add_child(b)
+	# Difficoltà: vale per i nemici che compaiono da adesso
+	var drow := HBoxContainer.new()
+	drow.alignment = BoxContainer.ALIGNMENT_CENTER
+	var dl := Label.new()
+	dl.text = "Difficoltà: "
+	drow.add_child(dl)
+	diff_button = OptionButton.new()
+	diff_button.custom_minimum_size = Vector2(200, 40)
+	diff_button.item_selected.connect(_on_difficulty)
+	drow.add_child(diff_button)
+	v.add_child(drow)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.add_theme_color_override("font_color", Color(0.6, 1, 0.6))
@@ -92,7 +109,33 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	root.visible = true
 	info.text = ""
+	_fill_difficulty()
 	get_tree().paused = true
+	(root.find_children("*", "Button", true, false)[0] as Button).grab_focus()
+
+
+func _fill_difficulty() -> void:
+	diff_button.clear()
+	var lvl := Game.hero.level if Game.hero else 1
+	for i in DifficultyDB.LEVELS.size():
+		var d: Dictionary = DifficultyDB.LEVELS[i]
+		var label := String(d["name"])
+		if not DifficultyDB.is_unlocked(i, lvl):
+			label += "  (liv. %d)" % int(d["unlock"])
+		diff_button.add_item(label, i)
+		diff_button.set_item_disabled(i, not DifficultyDB.is_unlocked(i, lvl))
+	diff_button.select(Game.hero.difficulty if Game.hero else 0)
+	diff_button.disabled = Game.level != null and int(Game.level.rift_grade) > 0
+
+
+func _on_difficulty(index: int) -> void:
+	if Game.hero == null or not DifficultyDB.is_unlocked(index, Game.hero.level):
+		return
+	Game.hero.difficulty = index
+	var d := DifficultyDB.get_data(index)
+	info.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+	info.text = "Difficoltà %s: nemici ×%.1f vita, ×%.1f danni; esperienza ×%.1f, leggendari ×%.1f" % [
+		d["name"], float(d["hp"]), float(d["dmg"]), float(d["xp"]), float(d["leg"])]
 
 
 func close() -> void:

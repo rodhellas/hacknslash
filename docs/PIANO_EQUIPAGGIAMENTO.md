@@ -4,10 +4,21 @@ Obiettivo: quando l'eroe indossa un'arma, un elmo o un'armatura, si vede addosso
 **senza un modello completo per ogni combinazione**. Si fa con **un corpo base animato + pezzi separati**
 agganciati alle ossa.
 
+## Decisioni prese (17-11-2026)
+
+- **Due corpi per classe** (maschile e femminile): 8 corpi in tutto, ognuno con il suo rig Mixamo.
+  I pezzi rigidi sono condivisi tra tutti i corpi (si adattano con le prese); le vesti con pesi vanno
+  adattate a ogni corpo che le può indossare.
+- **Sesso scelto alla creazione** dell'eroe (`HeroData.sex`, "m"/"f"; i vecchi salvataggi sono maschili).
+- **Stile Diablo 3**: realistico ma non spinto all'inverosimile. Proporzioni credibili, un po' eroiche
+  (spalle e armi leggermente più grandi del vero, per leggerle dalla telecamera lontana), materiali
+  dipinti/leggibili, niente iperrealismo. Prompt base per Tripo: *"stylized realistic, Diablo 3 style,
+  hand-painted textures, game asset, low poly"*.
+
 ## L'idea in breve
 
 ```
-Corpo base (1 per sesso, riggato con Mixamo, animazioni condivise)
+Corpo base (2 per classe, M/F, riggati con Mixamo, animazioni condivise)
  ├─ Testa / capelli (pochi, per varietà)
  ├─ Arma          → agganciata all'osso della mano destra          (pezzo rigido)
  ├─ Mano secondaria→ mano sinistra / avambraccio sinistro           (pezzo rigido)
@@ -19,7 +30,7 @@ Corpo base (1 per sesso, riggato con Mixamo, animazioni condivise)
 ```
 
 Combinazioni possibili = prodotto dei pezzi; modelli da fare = **somma** dei pezzi.
-Con 4 classi e i 28 oggetti base attuali bastano **circa 30-35 pezzi piccoli + 2 corpi**,
+Con 4 classi e i 28 oggetti base attuali bastano **circa 30-35 pezzi piccoli + 8 corpi**,
 invece di centinaia di personaggi completi.
 
 ## Perché funziona bene per Legio 3000
@@ -77,7 +88,7 @@ il trasferimento dei pesi; il resto no.
 
 | Gruppo | Pezzi |
 |---|---|
-| Corpi base | 1-2 |
+| Corpi base | 8 (4 classi × M/F) |
 | Teste / capelli | 4-6 |
 | Armi (gladio, spatha, scure, arco, manuballista, lituo, bastone) | 7 |
 | Mano secondaria (scutum, parma, pugio, faretra, sfera) | 5 |
@@ -90,7 +101,10 @@ il trasferimento dei pesi; il resto no.
 
 ## Fasi
 
-1. **Sistema in grayboxing** (si può fare subito, senza asset): prese `Marker3D` nelle 4 scene delle classi,
+1. ✅ **FATTO** — **Sistema in grayboxing**: `data/visual_db.gd` (VISUALS, PRESE, MATERIALS), `core/appearance.gd`,
+   corpi `scenes/characters/<classe>.tscn` e `<classe>_f.tscn` con il nodo `Prese` (12 `Marker3D`),
+   scelta Uomo/Donna nel menu, test `tools/test_equipaggiamento.gd`. Dettagli originali:
+   **Sistema in grayboxing** (si può fare subito, senza asset): prese `Marker3D` nelle 4 scene delle classi,
    `VISUALS` con pezzi graybox (scatole/cilindri colorati per rarità), `core/appearance.gd`, test automatico
    (equipaggia → il pezzo compare nella presa giusta; togli → sparisce). Così il gioco mostra già l'equipaggiamento.
 2. **Prova con un solo personaggio vero**: corpo base Tripo + Mixamo per il Legionario, 3 animazioni,
@@ -100,10 +114,11 @@ il trasferimento dei pesi; il resto no.
 5. **Rifiniture**: tinte per rarità/set, effetti sulle armi leggendarie (bagliore, particelle),
    anteprima nello zaino, nemici umani vestiti con gli stessi pezzi.
 
-## Decisioni da prendere
+## Come sostituire un pezzo graybox con un modello vero
 
-- **Un corpo per tutte le classi** (più semplice, la classe si riconosce dall'equipaggiamento) oppure
-  **un corpo per classe** (più carattere, 4 rig invece di 1)? Consiglio: un corpo (o due, M/F) + teste diverse.
-- **Sesso dell'eroe** scelto alla creazione? Se sì, servono 2 corpi e i pezzi con pesi vanno adattati a entrambi.
-- **Stile grafico**: più realistico o più stilizzato? Conviene fissarlo prima di generare decine di pezzi
-  con Tripo, perché tutti i prompt devono dare lo stesso stile.
+1. Metti il .glb del pezzo in una scena (es. `scenes/equip/galea.tscn`), con l'origine nel punto della presa.
+2. In `VisualDB.VISUALS["galea"]` aggiungi `"scene": "res://scenes/equip/galea.tscn", "socket": "Presa_Testa"`
+   (per i pezzi doppi anche `"mirror": "Presa_StincoSx"`): `"parts"` viene ignorato.
+3. Corpo vero: sostituisci `Graybox` col .glb Mixamo e trasforma ogni `Marker3D` di `Prese` in un
+   `BoneAttachment3D` con lo **stesso nome**, agganciato all'osso giusto (`mixamorig_RightHand`...).
+   Le parti del corpo che un pezzo nasconde (es. `Capelli`) hanno il metadato `body_part`.

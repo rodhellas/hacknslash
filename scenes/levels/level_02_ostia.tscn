@@ -5,21 +5,19 @@
 [ext_resource type="PackedScene" path="res://scenes/props/porta_citta.tscn" id="3_6jajk"]
 [ext_resource type="PackedScene" path="res://scenes/props/stendardo.tscn" id="4_s2y50"]
 [ext_resource type="PackedScene" path="res://scenes/props/cartello.tscn" id="5_gnk3i"]
-[ext_resource type="Script" path="res://world/lore_sign.gd" id="6_23y0m"]
 [ext_resource type="PackedScene" path="res://scenes/props/muro_rovina.tscn" id="7_3yoax"]
 [ext_resource type="PackedScene" path="res://scenes/props/fontana.tscn" id="8_1pwhy"]
 [ext_resource type="PackedScene" path="res://scenes/props/colonna.tscn" id="9_t4gf2"]
 [ext_resource type="PackedScene" path="res://scenes/props/lampione_plasma.tscn" id="10_0nuqy"]
 [ext_resource type="PackedScene" path="res://scenes/props/statua.tscn" id="11_u7cxw"]
 [ext_resource type="PackedScene" path="res://scenes/props/altare.tscn" id="12_bkofx"]
-[ext_resource type="Script" path="res://world/checkpoint.gd" id="13_8muwv"]
+[ext_resource type="Script" path="res://world/rift_obelisk.gd" id="13_sbdl3"]
+[ext_resource type="Script" path="res://world/bounty_board.gd" id="14_rjgfm"]
 [ext_resource type="PackedScene" path="res://scenes/props/scrigno.tscn" id="14_ymucu"]
-[ext_resource type="Script" path="res://world/stash.gd" id="15_s4fbk"]
 [ext_resource type="PackedScene" path="res://scenes/props/bancarella.tscn" id="16_cfbpu"]
 [ext_resource type="PackedScene" path="res://scenes/props/cassa.tscn" id="17_fvno2"]
 [ext_resource type="PackedScene" path="res://scenes/props/barile.tscn" id="18_fqus0"]
 [ext_resource type="PackedScene" path="res://scenes/props/anfora.tscn" id="19_ax38y"]
-[ext_resource type="Script" path="res://world/breakable.gd" id="20_gh2pl"]
 [ext_resource type="PackedScene" path="res://scenes/props/fucina.tscn" id="21_d64ax"]
 [ext_resource type="PackedScene" path="res://scenes/props/basilica.tscn" id="22_it3no"]
 [ext_resource type="PackedScene" path="res://scenes/props/cipresso.tscn" id="23_smlgm"]
@@ -545,219 +543,165 @@ navigation_mesh = SubResource("NavigationMesh_vsxaw")
 
 [node name="Mura" type="Node3D" parent="World" unique_id=905131507]
 
-[node name="Muro" type="StaticBody3D" parent="World/Mura" unique_id=679679935 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="Muro" parent="World/Mura" unique_id=679679935 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@2" type="StaticBody3D" parent="World/Mura" unique_id=2122508821 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@2" parent="World/Mura" unique_id=2122508821 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@3" type="StaticBody3D" parent="World/Mura" unique_id=1821446732 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@3" parent="World/Mura" unique_id=1821446732 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@4" type="StaticBody3D" parent="World/Mura" unique_id=1321122644 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@4" parent="World/Mura" unique_id=1321122644 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@5" type="StaticBody3D" parent="World/Mura" unique_id=1219368121 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@5" parent="World/Mura" unique_id=1219368121 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@6" type="StaticBody3D" parent="World/Mura" unique_id=1396223366 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@6" parent="World/Mura" unique_id=1396223366 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@7" type="StaticBody3D" parent="World/Mura" unique_id=502435580 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@7" parent="World/Mura" unique_id=502435580 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@8" type="StaticBody3D" parent="World/Mura" unique_id=459430518 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@8" parent="World/Mura" unique_id=459430518 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@9" type="StaticBody3D" parent="World/Mura" unique_id=2132539658 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@9" parent="World/Mura" unique_id=2132539658 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@10" type="StaticBody3D" parent="World/Mura" unique_id=1165657423 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@10" parent="World/Mura" unique_id=1165657423 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@11" type="StaticBody3D" parent="World/Mura" unique_id=1376534993 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@11" parent="World/Mura" unique_id=1376534993 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@12" type="StaticBody3D" parent="World/Mura" unique_id=1095634534 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@12" parent="World/Mura" unique_id=1095634534 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@13" type="StaticBody3D" parent="World/Mura" unique_id=1814173139 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@13" parent="World/Mura" unique_id=1814173139 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@14" type="StaticBody3D" parent="World/Mura" unique_id=1697478680 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@14" parent="World/Mura" unique_id=1697478680 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@15" type="StaticBody3D" parent="World/Mura" unique_id=240802882 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@15" parent="World/Mura" unique_id=240802882 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@16" type="StaticBody3D" parent="World/Mura" unique_id=768100989 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@16" parent="World/Mura" unique_id=768100989 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@17" type="StaticBody3D" parent="World/Mura" unique_id=305690327 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@17" parent="World/Mura" unique_id=305690327 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@18" type="StaticBody3D" parent="World/Mura" unique_id=1646806583 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@18" parent="World/Mura" unique_id=1646806583 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@19" type="StaticBody3D" parent="World/Mura" unique_id=1583379655 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@19" parent="World/Mura" unique_id=1583379655 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@20" type="StaticBody3D" parent="World/Mura" unique_id=1476827655 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@20" parent="World/Mura" unique_id=1476827655 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 0, -58)
-collision_mask = 0
 
-[node name="@StaticBody3D@21" type="StaticBody3D" parent="World/Mura" unique_id=2072273881 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@21" parent="World/Mura" unique_id=2072273881 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -54)
-collision_mask = 0
 
-[node name="@StaticBody3D@22" type="StaticBody3D" parent="World/Mura" unique_id=812884687 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@22" parent="World/Mura" unique_id=812884687 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -54)
-collision_mask = 0
 
-[node name="@StaticBody3D@23" type="StaticBody3D" parent="World/Mura" unique_id=1540094977 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@23" parent="World/Mura" unique_id=1540094977 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -46)
-collision_mask = 0
 
-[node name="@StaticBody3D@24" type="StaticBody3D" parent="World/Mura" unique_id=1635103237 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@24" parent="World/Mura" unique_id=1635103237 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -46)
-collision_mask = 0
 
-[node name="@StaticBody3D@25" type="StaticBody3D" parent="World/Mura" unique_id=1860504290 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@25" parent="World/Mura" unique_id=1860504290 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -38)
-collision_mask = 0
 
-[node name="@StaticBody3D@26" type="StaticBody3D" parent="World/Mura" unique_id=2093280714 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@26" parent="World/Mura" unique_id=2093280714 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -38)
-collision_mask = 0
 
-[node name="@StaticBody3D@27" type="StaticBody3D" parent="World/Mura" unique_id=999326144 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@27" parent="World/Mura" unique_id=999326144 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -30)
-collision_mask = 0
 
-[node name="@StaticBody3D@28" type="StaticBody3D" parent="World/Mura" unique_id=1913904977 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@28" parent="World/Mura" unique_id=1913904977 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -30)
-collision_mask = 0
 
-[node name="@StaticBody3D@29" type="StaticBody3D" parent="World/Mura" unique_id=397562807 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@29" parent="World/Mura" unique_id=397562807 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -22)
-collision_mask = 0
 
-[node name="@StaticBody3D@30" type="StaticBody3D" parent="World/Mura" unique_id=1784401615 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@30" parent="World/Mura" unique_id=1784401615 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -22)
-collision_mask = 0
 
-[node name="@StaticBody3D@31" type="StaticBody3D" parent="World/Mura" unique_id=763428098 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@31" parent="World/Mura" unique_id=763428098 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -14)
-collision_mask = 0
 
-[node name="@StaticBody3D@32" type="StaticBody3D" parent="World/Mura" unique_id=1828029982 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@32" parent="World/Mura" unique_id=1828029982 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -14)
-collision_mask = 0
 
-[node name="@StaticBody3D@33" type="StaticBody3D" parent="World/Mura" unique_id=902787122 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@33" parent="World/Mura" unique_id=902787122 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, -6)
-collision_mask = 0
 
-[node name="@StaticBody3D@34" type="StaticBody3D" parent="World/Mura" unique_id=871838431 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@34" parent="World/Mura" unique_id=871838431 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, -6)
-collision_mask = 0
 
-[node name="@StaticBody3D@35" type="StaticBody3D" parent="World/Mura" unique_id=266019946 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@35" parent="World/Mura" unique_id=266019946 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 2)
-collision_mask = 0
 
-[node name="@StaticBody3D@36" type="StaticBody3D" parent="World/Mura" unique_id=2044172511 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@36" parent="World/Mura" unique_id=2044172511 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 2)
-collision_mask = 0
 
-[node name="@StaticBody3D@37" type="StaticBody3D" parent="World/Mura" unique_id=1907335847 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@37" parent="World/Mura" unique_id=1907335847 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 10)
-collision_mask = 0
 
-[node name="@StaticBody3D@38" type="StaticBody3D" parent="World/Mura" unique_id=1923551419 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@38" parent="World/Mura" unique_id=1923551419 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 10)
-collision_mask = 0
 
-[node name="@StaticBody3D@39" type="StaticBody3D" parent="World/Mura" unique_id=45041814 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@39" parent="World/Mura" unique_id=45041814 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 18)
-collision_mask = 0
 
-[node name="@StaticBody3D@40" type="StaticBody3D" parent="World/Mura" unique_id=1353557744 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@40" parent="World/Mura" unique_id=1353557744 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 18)
-collision_mask = 0
 
-[node name="@StaticBody3D@41" type="StaticBody3D" parent="World/Mura" unique_id=1333286800 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@41" parent="World/Mura" unique_id=1333286800 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 26)
-collision_mask = 0
 
-[node name="@StaticBody3D@42" type="StaticBody3D" parent="World/Mura" unique_id=765961339 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@42" parent="World/Mura" unique_id=765961339 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 26)
-collision_mask = 0
 
-[node name="@StaticBody3D@43" type="StaticBody3D" parent="World/Mura" unique_id=993110363 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@43" parent="World/Mura" unique_id=993110363 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 34)
-collision_mask = 0
 
-[node name="@StaticBody3D@44" type="StaticBody3D" parent="World/Mura" unique_id=367515270 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@44" parent="World/Mura" unique_id=367515270 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 34)
-collision_mask = 0
 
-[node name="@StaticBody3D@45" type="StaticBody3D" parent="World/Mura" unique_id=767271004 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@45" parent="World/Mura" unique_id=767271004 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 42)
-collision_mask = 0
 
-[node name="@StaticBody3D@46" type="StaticBody3D" parent="World/Mura" unique_id=726509380 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@46" parent="World/Mura" unique_id=726509380 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 42)
-collision_mask = 0
 
-[node name="@StaticBody3D@47" type="StaticBody3D" parent="World/Mura" unique_id=2027989665 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@47" parent="World/Mura" unique_id=2027989665 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -48, 0, 50)
-collision_mask = 0
 
-[node name="@StaticBody3D@48" type="StaticBody3D" parent="World/Mura" unique_id=113576855 groups=["fadeable"] instance=ExtResource("2_lp2wy")]
+[node name="@StaticBody3D@48" parent="World/Mura" unique_id=113576855 instance=ExtResource("2_lp2wy")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 48, 0, 50)
-collision_mask = 0
 
-[node name="PortaCitta" type="StaticBody3D" parent="World/Mura" unique_id=537994782 groups=["fadeable"] instance=ExtResource("3_6jajk")]
+[node name="PortaCitta" parent="World/Mura" unique_id=537994782 instance=ExtResource("3_6jajk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 52)
-collision_mask = 0
 
-[node name="@StaticBody3D@49" type="StaticBody3D" parent="World/Mura" unique_id=1874251063 groups=["fadeable"] instance=ExtResource("3_6jajk")]
+[node name="@StaticBody3D@49" parent="World/Mura" unique_id=1874251063 instance=ExtResource("3_6jajk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -58)
-collision_mask = 0
 
-[node name="Stendardo" type="StaticBody3D" parent="World/Mura" unique_id=2072514846 instance=ExtResource("4_s2y50")]
+[node name="Stendardo" parent="World/Mura" unique_id=2072514846 instance=ExtResource("4_s2y50")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, 47)
-collision_mask = 0
 
-[node name="@StaticBody3D@50" type="StaticBody3D" parent="World/Mura" unique_id=276665449 instance=ExtResource("4_s2y50")]
+[node name="@StaticBody3D@50" parent="World/Mura" unique_id=276665449 instance=ExtResource("4_s2y50")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 47)
-collision_mask = 0
 
-[node name="Cartello" type="StaticBody3D" parent="World/Mura" unique_id=429145587 instance=ExtResource("5_gnk3i")]
+[node name="Cartello" parent="World/Mura" unique_id=429145587 instance=ExtResource("5_gnk3i")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -52)
 collision_layer = 9
-collision_mask = 0
-script = ExtResource("6_23y0m")
 title = "Porto di Ostia Nova"
 text = "Oltre questo cancello c'è il porto di Ostia Nova. Si apre solo per ordine del prefetto.
 
@@ -767,408 +711,315 @@ text = "Oltre questo cancello c'è il porto di Ostia Nova. Si apre solo per ordi
 
 [node name="Piazzali" type="Node3D" parent="World/Luoghi" unique_id=1669648854]
 
-[node name="MuroRovina" type="StaticBody3D" parent="World/Luoghi/Piazzali" unique_id=930637067 groups=["fadeable"] instance=ExtResource("7_3yoax")]
+[node name="MuroRovina" parent="World/Luoghi/Piazzali" unique_id=930637067 instance=ExtResource("7_3yoax")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -7.5, 0, 58)
-collision_mask = 0
 
-[node name="@StaticBody3D@51" type="StaticBody3D" parent="World/Luoghi/Piazzali" unique_id=261687116 groups=["fadeable"] instance=ExtResource("7_3yoax")]
+[node name="@StaticBody3D@51" parent="World/Luoghi/Piazzali" unique_id=261687116 instance=ExtResource("7_3yoax")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 7.5, 0, 58)
-collision_mask = 0
 
-[node name="@StaticBody3D@52" type="StaticBody3D" parent="World/Luoghi/Piazzali" unique_id=1376201136 groups=["fadeable"] instance=ExtResource("7_3yoax")]
+[node name="@StaticBody3D@52" parent="World/Luoghi/Piazzali" unique_id=1376201136 instance=ExtResource("7_3yoax")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -7.5, 0, -64)
-collision_mask = 0
 
-[node name="@StaticBody3D@53" type="StaticBody3D" parent="World/Luoghi/Piazzali" unique_id=1521907640 groups=["fadeable"] instance=ExtResource("7_3yoax")]
+[node name="@StaticBody3D@53" parent="World/Luoghi/Piazzali" unique_id=1521907640 instance=ExtResource("7_3yoax")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 7.5, 0, -64)
-collision_mask = 0
 
 [node name="Foro" type="Node3D" parent="World/Luoghi" unique_id=1906410130]
 
-[node name="Fontana" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=29494020 instance=ExtResource("8_1pwhy")]
+[node name="Fontana" parent="World/Luoghi/Foro" unique_id=29494020 instance=ExtResource("8_1pwhy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
-collision_mask = 0
 
-[node name="Colonna" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1820736706 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="Colonna" parent="World/Luoghi/Foro" unique_id=1820736706 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, -16)
-collision_mask = 0
 
-[node name="@StaticBody3D@54" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1258701846 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@54" parent="World/Luoghi/Foro" unique_id=1258701846 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, -16)
-collision_mask = 0
 
-[node name="@StaticBody3D@55" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1717354969 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@55" parent="World/Luoghi/Foro" unique_id=1717354969 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, -11.6)
-collision_mask = 0
 
-[node name="@StaticBody3D@56" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1630811081 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@56" parent="World/Luoghi/Foro" unique_id=1630811081 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, -11.6)
-collision_mask = 0
 
-[node name="@StaticBody3D@57" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1303012529 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@57" parent="World/Luoghi/Foro" unique_id=1303012529 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, -7.2)
-collision_mask = 0
 
-[node name="@StaticBody3D@58" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=636329636 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@58" parent="World/Luoghi/Foro" unique_id=636329636 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, -7.2)
-collision_mask = 0
 
-[node name="@StaticBody3D@59" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1856098185 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@59" parent="World/Luoghi/Foro" unique_id=1856098185 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, -2.8)
-collision_mask = 0
 
-[node name="@StaticBody3D@60" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1142921780 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@60" parent="World/Luoghi/Foro" unique_id=1142921780 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, -2.8)
-collision_mask = 0
 
-[node name="@StaticBody3D@61" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=2127996862 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@61" parent="World/Luoghi/Foro" unique_id=2127996862 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, 1.6)
-collision_mask = 0
 
-[node name="@StaticBody3D@62" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=120284319 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@62" parent="World/Luoghi/Foro" unique_id=120284319 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, 1.6)
-collision_mask = 0
 
-[node name="@StaticBody3D@63" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1857290328 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@63" parent="World/Luoghi/Foro" unique_id=1857290328 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, 6)
-collision_mask = 0
 
-[node name="@StaticBody3D@64" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=313784058 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@64" parent="World/Luoghi/Foro" unique_id=313784058 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, 6)
-collision_mask = 0
 
-[node name="@StaticBody3D@65" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1858142151 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@65" parent="World/Luoghi/Foro" unique_id=1858142151 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0, 10.4)
-collision_mask = 0
 
-[node name="@StaticBody3D@66" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1472868338 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@66" parent="World/Luoghi/Foro" unique_id=1472868338 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0, 10.4)
-collision_mask = 0
 
-[node name="LampionePlasma" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=301212057 instance=ExtResource("10_0nuqy")]
+[node name="LampionePlasma" parent="World/Luoghi/Foro" unique_id=301212057 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -16)
-collision_mask = 0
 
-[node name="@StaticBody3D@67" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1973068213 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@67" parent="World/Luoghi/Foro" unique_id=1973068213 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -16)
-collision_mask = 0
 
-[node name="@StaticBody3D@68" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=562592872 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@68" parent="World/Luoghi/Foro" unique_id=562592872 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 12)
-collision_mask = 0
 
-[node name="@StaticBody3D@69" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1487638656 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@69" parent="World/Luoghi/Foro" unique_id=1487638656 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 12)
-collision_mask = 0
 
-[node name="Stendardo" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1009970383 instance=ExtResource("4_s2y50")]
+[node name="Stendardo" parent="World/Luoghi/Foro" unique_id=1009970383 instance=ExtResource("4_s2y50")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 13)
-collision_mask = 0
 
-[node name="@StaticBody3D@70" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=74161575 instance=ExtResource("4_s2y50")]
+[node name="@StaticBody3D@70" parent="World/Luoghi/Foro" unique_id=74161575 instance=ExtResource("4_s2y50")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 13)
-collision_mask = 0
 
-[node name="Statua" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=259243724 groups=["fadeable"] instance=ExtResource("11_u7cxw")]
+[node name="Statua" parent="World/Luoghi/Foro" unique_id=259243724 instance=ExtResource("11_u7cxw")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -9, 0, -16)
-collision_mask = 0
 
-[node name="@StaticBody3D@71" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1861221501 groups=["fadeable"] instance=ExtResource("11_u7cxw")]
+[node name="@StaticBody3D@71" parent="World/Luoghi/Foro" unique_id=1861221501 instance=ExtResource("11_u7cxw")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 9, 0, -16)
-collision_mask = 0
 
-[node name="Altare" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1807258692 instance=ExtResource("12_bkofx")]
+[node name="Altare" parent="World/Luoghi/Foro" unique_id=1807258692 instance=ExtResource("12_bkofx")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
 collision_layer = 9
-collision_mask = 0
-script = ExtResource("13_8muwv")
 checkpoint_id = "ostia_foro"
 title = "Altare del Foro"
 
-[node name="Scrigno" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=20164064 instance=ExtResource("14_ymucu")]
+[node name="Scrigno" parent="World/Luoghi/Foro" unique_id=20164064 instance=ExtResource("14_ymucu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 9)
 collision_layer = 9
-collision_mask = 0
-script = ExtResource("15_s4fbk")
+
+[node name="ObeliscoDedalo" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=732098552]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+script = ExtResource("13_sbdl3")
+
+[node name="TabulaTaglie" type="StaticBody3D" parent="World/Luoghi/Foro" unique_id=1900207341]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -9)
+script = ExtResource("14_rjgfm")
 
 [node name="Mercato" type="Node3D" parent="World/Luoghi" unique_id=849734383]
 
-[node name="Bancarella" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=1697988941 instance=ExtResource("16_cfbpu")]
+[node name="Bancarella" parent="World/Luoghi/Mercato" unique_id=1697988941 instance=ExtResource("16_cfbpu")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -15.5, 0, -9)
-collision_mask = 0
 
-[node name="@StaticBody3D@76" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=1678775951 instance=ExtResource("16_cfbpu")]
+[node name="@StaticBody3D@76" parent="World/Luoghi/Mercato" unique_id=1678775951 instance=ExtResource("16_cfbpu")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -15.5, 0, -2)
-collision_mask = 0
 
-[node name="@StaticBody3D@77" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=970676452 instance=ExtResource("16_cfbpu")]
+[node name="@StaticBody3D@77" parent="World/Luoghi/Mercato" unique_id=970676452 instance=ExtResource("16_cfbpu")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -15.5, 0, 5)
-collision_mask = 0
 
-[node name="Cassa" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=579517337 instance=ExtResource("17_fvno2")]
+[node name="Cassa" parent="World/Luoghi/Mercato" unique_id=579517337 instance=ExtResource("17_fvno2")]
 transform = Transform3D(0.9396926, 0, 0.34202012, 0, 1, 0, -0.34202012, 0, 0.9396926, -18.5, 0, -12)
-collision_mask = 0
 
-[node name="@StaticBody3D@78" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=1866064398 instance=ExtResource("17_fvno2")]
+[node name="@StaticBody3D@78" parent="World/Luoghi/Mercato" unique_id=1866064398 instance=ExtResource("17_fvno2")]
 transform = Transform3D(0.64278764, 0, 0.76604444, 0, 1, 0, -0.76604444, 0, 0.64278764, -18.8, 0, -10.6)
-collision_mask = 0
 
-[node name="Barile" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=811213771 instance=ExtResource("18_fqus0")]
+[node name="Barile" parent="World/Luoghi/Mercato" unique_id=811213771 instance=ExtResource("18_fqus0")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.5, 0, 8.5)
-collision_mask = 0
 
-[node name="@StaticBody3D@79" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=1160557261 instance=ExtResource("18_fqus0")]
+[node name="@StaticBody3D@79" parent="World/Luoghi/Mercato" unique_id=1160557261 instance=ExtResource("18_fqus0")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.6, 0, 9.3)
-collision_mask = 0
 
-[node name="Anfora" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=165627290 instance=ExtResource("19_ax38y")]
+[node name="Anfora" parent="World/Luoghi/Mercato" unique_id=165627290 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.5, 0, 1.6)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
-[node name="@StaticBody3D@80" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=1753158213 instance=ExtResource("19_ax38y")]
+[node name="@StaticBody3D@80" parent="World/Luoghi/Mercato" unique_id=1753158213 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.6, 0, 1.6)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
-[node name="@StaticBody3D@81" type="StaticBody3D" parent="World/Luoghi/Mercato" unique_id=538564260 instance=ExtResource("19_ax38y")]
+[node name="@StaticBody3D@81" parent="World/Luoghi/Mercato" unique_id=538564260 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.7, 0, 1.6)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
 [node name="Fucina" type="Node3D" parent="World/Luoghi" unique_id=198155858]
 
-[node name="Fucina" type="StaticBody3D" parent="World/Luoghi/Fucina" unique_id=1426519542 groups=["fadeable"] instance=ExtResource("21_d64ax")]
+[node name="Fucina" parent="World/Luoghi/Fucina" unique_id=1426519542 instance=ExtResource("21_d64ax")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -5)
-collision_mask = 0
 
-[node name="Cassa" type="StaticBody3D" parent="World/Luoghi/Fucina" unique_id=1844159494 instance=ExtResource("17_fvno2")]
+[node name="Cassa" parent="World/Luoghi/Fucina" unique_id=1844159494 instance=ExtResource("17_fvno2")]
 transform = Transform3D(0.9848077, 0, 0.17364818, 0, 1, 0, -0.17364818, 0, 0.9848077, 19, 0, 2)
-collision_mask = 0
 
-[node name="Barile" type="StaticBody3D" parent="World/Luoghi/Fucina" unique_id=558526013 instance=ExtResource("18_fqus0")]
+[node name="Barile" parent="World/Luoghi/Fucina" unique_id=558526013 instance=ExtResource("18_fqus0")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.5, 0, -9.5)
-collision_mask = 0
 
 [node name="Basilica" type="Node3D" parent="World/Luoghi" unique_id=2048462852]
 
-[node name="Basilica" type="StaticBody3D" parent="World/Luoghi/Basilica" unique_id=777156316 groups=["fadeable"] instance=ExtResource("22_it3no")]
+[node name="Basilica" parent="World/Luoghi/Basilica" unique_id=777156316 instance=ExtResource("22_it3no")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, -30)
-collision_mask = 0
 
-[node name="Cipresso" type="StaticBody3D" parent="World/Luoghi/Basilica" unique_id=432676594 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="Cipresso" parent="World/Luoghi/Basilica" unique_id=432676594 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -24)
-collision_mask = 0
 
-[node name="@StaticBody3D@82" type="StaticBody3D" parent="World/Luoghi/Basilica" unique_id=1409893668 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="@StaticBody3D@82" parent="World/Luoghi/Basilica" unique_id=1409893668 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -24)
-collision_mask = 0
 
 [node name="Quartieri" type="Node3D" parent="World/Luoghi" unique_id=1895058011]
 
-[node name="Insula" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1497309264 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="Insula" parent="World/Luoghi/Quartieri" unique_id=1497309264 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0, 40)
-collision_mask = 0
 
-[node name="@StaticBody3D@83" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1689164946 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="@StaticBody3D@83" parent="World/Luoghi/Quartieri" unique_id=1689164946 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0, 23)
-collision_mask = 0
 
-[node name="Casa" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=988799853 groups=["fadeable"] instance=ExtResource("25_auri5")]
+[node name="Casa" parent="World/Luoghi/Quartieri" unique_id=988799853 instance=ExtResource("25_auri5")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -16, 0, 31)
-collision_mask = 0
 
-[node name="Cipresso" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1274818669 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="Cipresso" parent="World/Luoghi/Quartieri" unique_id=1274818669 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, 8)
-collision_mask = 0
 
-[node name="@StaticBody3D@84" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1871906120 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="@StaticBody3D@84" parent="World/Luoghi/Quartieri" unique_id=1871906120 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, 1)
-collision_mask = 0
 
-[node name="@StaticBody3D@85" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1699903647 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="@StaticBody3D@85" parent="World/Luoghi/Quartieri" unique_id=1699903647 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 40)
-collision_mask = 0
 
-[node name="@StaticBody3D@86" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1718807497 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="@StaticBody3D@86" parent="World/Luoghi/Quartieri" unique_id=1718807497 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 23)
-collision_mask = 0
 
-[node name="@StaticBody3D@87" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=227630939 groups=["fadeable"] instance=ExtResource("25_auri5")]
+[node name="@StaticBody3D@87" parent="World/Luoghi/Quartieri" unique_id=227630939 instance=ExtResource("25_auri5")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 16, 0, 31)
-collision_mask = 0
 
-[node name="@StaticBody3D@88" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=619173994 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="@StaticBody3D@88" parent="World/Luoghi/Quartieri" unique_id=619173994 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, 8)
-collision_mask = 0
 
-[node name="@StaticBody3D@89" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=815450968 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="@StaticBody3D@89" parent="World/Luoghi/Quartieri" unique_id=815450968 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, 1)
-collision_mask = 0
 
-[node name="Pozzo" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1852542899 instance=ExtResource("26_mrfmg")]
+[node name="Pozzo" parent="World/Luoghi/Quartieri" unique_id=1852542899 instance=ExtResource("26_mrfmg")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, 13)
-collision_mask = 0
 
-[node name="Carro" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=2006671140 instance=ExtResource("27_o5ea1")]
+[node name="Carro" parent="World/Luoghi/Quartieri" unique_id=2006671140 instance=ExtResource("27_o5ea1")]
 transform = Transform3D(0.17364822, 0, 0.9848077, 0, 1, 0, -0.9848077, 0, 0.17364822, 22, 0, 46)
-collision_mask = 0
 
-[node name="Cassa" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=794918010 instance=ExtResource("17_fvno2")]
+[node name="Cassa" parent="World/Luoghi/Quartieri" unique_id=794918010 instance=ExtResource("17_fvno2")]
 transform = Transform3D(0.9659258, 0, 0.25881904, 0, 1, 0, -0.25881904, 0, 0.9659258, -21, 0, 46)
-collision_mask = 0
 
-[node name="Covone" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=870389533 instance=ExtResource("28_un1nd")]
+[node name="Covone" parent="World/Luoghi/Quartieri" unique_id=870389533 instance=ExtResource("28_un1nd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 47)
-collision_mask = 0
 
-[node name="LampionePlasma" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=345988701 instance=ExtResource("10_0nuqy")]
+[node name="LampionePlasma" parent="World/Luoghi/Quartieri" unique_id=345988701 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 46)
-collision_mask = 0
 
-[node name="@StaticBody3D@90" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=2128718400 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@90" parent="World/Luoghi/Quartieri" unique_id=2128718400 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 0, 36)
-collision_mask = 0
 
-[node name="@StaticBody3D@91" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=402676848 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@91" parent="World/Luoghi/Quartieri" unique_id=402676848 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 26)
-collision_mask = 0
 
-[node name="@StaticBody3D@92" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=641133510 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@92" parent="World/Luoghi/Quartieri" unique_id=641133510 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 0, 16)
-collision_mask = 0
 
-[node name="@StaticBody3D@93" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=759455678 groups=["fadeable"] instance=ExtResource("25_auri5")]
+[node name="@StaticBody3D@93" parent="World/Luoghi/Quartieri" unique_id=759455678 instance=ExtResource("25_auri5")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -35, 0, -3)
-collision_mask = 0
 
-[node name="@StaticBody3D@94" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=2055878445 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="@StaticBody3D@94" parent="World/Luoghi/Quartieri" unique_id=2055878445 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 36, 0, -3)
-collision_mask = 0
 
-[node name="PinoMarittimo" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=560605651 groups=["fadeable"] instance=ExtResource("29_52uxi")]
+[node name="PinoMarittimo" parent="World/Luoghi/Quartieri" unique_id=560605651 instance=ExtResource("29_52uxi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, -16)
-collision_mask = 0
 
-[node name="@StaticBody3D@95" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=358702226 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="@StaticBody3D@95" parent="World/Luoghi/Quartieri" unique_id=358702226 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31, 0, -31)
-collision_mask = 0
 
-[node name="@StaticBody3D@96" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=2115092996 groups=["fadeable"] instance=ExtResource("24_lxvq4")]
+[node name="@StaticBody3D@96" parent="World/Luoghi/Quartieri" unique_id=2115092996 instance=ExtResource("24_lxvq4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31, 0, -47)
-collision_mask = 0
 
-[node name="@StaticBody3D@97" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=2069672099 groups=["fadeable"] instance=ExtResource("25_auri5")]
+[node name="@StaticBody3D@97" parent="World/Luoghi/Quartieri" unique_id=2069672099 instance=ExtResource("25_auri5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, -48)
-collision_mask = 0
 
-[node name="AlberoQuercia" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=933401473 groups=["fadeable"] instance=ExtResource("30_afjlf")]
+[node name="AlberoQuercia" parent="World/Luoghi/Quartieri" unique_id=933401473 instance=ExtResource("30_afjlf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19, 0, -38)
-collision_mask = 0
 
-[node name="@StaticBody3D@98" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1793053842 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@98" parent="World/Luoghi/Quartieri" unique_id=1793053842 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 0, -44)
-collision_mask = 0
 
-[node name="@StaticBody3D@99" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1300932008 instance=ExtResource("10_0nuqy")]
+[node name="@StaticBody3D@99" parent="World/Luoghi/Quartieri" unique_id=1300932008 instance=ExtResource("10_0nuqy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, -50)
-collision_mask = 0
 
-[node name="Anfora" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1790658229 instance=ExtResource("19_ax38y")]
+[node name="Anfora" parent="World/Luoghi/Quartieri" unique_id=1790658229 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, -40)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
-[node name="@StaticBody3D@100" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=2096302106 instance=ExtResource("19_ax38y")]
+[node name="@StaticBody3D@100" parent="World/Luoghi/Quartieri" unique_id=2096302106 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.1, 0, -40)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
-[node name="@StaticBody3D@101" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1027733194 instance=ExtResource("19_ax38y")]
+[node name="@StaticBody3D@101" parent="World/Luoghi/Quartieri" unique_id=1027733194 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22.2, 0, -40)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
-[node name="@StaticBody3D@102" type="StaticBody3D" parent="World/Luoghi/Quartieri" unique_id=1752828933 instance=ExtResource("19_ax38y")]
+[node name="@StaticBody3D@102" parent="World/Luoghi/Quartieri" unique_id=1752828933 instance=ExtResource("19_ax38y")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.3, 0, -40)
 collision_layer = 8
-collision_mask = 0
-script = ExtResource("20_gh2pl")
 
 [node name="TempioDiVesta" type="Node3D" parent="World/Luoghi" unique_id=525230299]
 
-[node name="PavimentoTempio" type="Node3D" parent="World/Luoghi/TempioDiVesta" unique_id=1528518466 instance=ExtResource("31_v88dx")]
+[node name="PavimentoTempio" parent="World/Luoghi/TempioDiVesta" unique_id=1528518466 instance=ExtResource("31_v88dx")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0, -40)
 
-[node name="Colonna" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=869968997 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="Colonna" parent="World/Luoghi/TempioDiVesta" unique_id=869968997 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.5, 0, -51)
-collision_mask = 0
 
-[node name="@StaticBody3D@103" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=2062182703 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@103" parent="World/Luoghi/TempioDiVesta" unique_id=2062182703 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.5, 0, -51)
-collision_mask = 0
 
-[node name="@StaticBody3D@104" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=130832902 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@104" parent="World/Luoghi/TempioDiVesta" unique_id=130832902 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.5, 0, -46.6)
-collision_mask = 0
 
-[node name="@StaticBody3D@105" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=2119980912 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@105" parent="World/Luoghi/TempioDiVesta" unique_id=2119980912 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.5, 0, -46.6)
-collision_mask = 0
 
-[node name="@StaticBody3D@106" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=626040999 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@106" parent="World/Luoghi/TempioDiVesta" unique_id=626040999 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.5, 0, -42.2)
-collision_mask = 0
 
-[node name="@StaticBody3D@107" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=667315732 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@107" parent="World/Luoghi/TempioDiVesta" unique_id=667315732 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.5, 0, -42.2)
-collision_mask = 0
 
-[node name="@StaticBody3D@108" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=237876443 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@108" parent="World/Luoghi/TempioDiVesta" unique_id=237876443 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.5, 0, -37.8)
-collision_mask = 0
 
-[node name="@StaticBody3D@109" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=330554933 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@109" parent="World/Luoghi/TempioDiVesta" unique_id=330554933 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.5, 0, -37.8)
-collision_mask = 0
 
-[node name="@StaticBody3D@110" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=68055601 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@110" parent="World/Luoghi/TempioDiVesta" unique_id=68055601 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.5, 0, -33.4)
-collision_mask = 0
 
-[node name="@StaticBody3D@111" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=601384632 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@111" parent="World/Luoghi/TempioDiVesta" unique_id=601384632 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.5, 0, -33.4)
-collision_mask = 0
 
-[node name="@StaticBody3D@112" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=557981058 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@112" parent="World/Luoghi/TempioDiVesta" unique_id=557981058 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.5, 0, -29)
-collision_mask = 0
 
-[node name="@StaticBody3D@113" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=1440720224 groups=["fadeable"] instance=ExtResource("9_t4gf2")]
+[node name="@StaticBody3D@113" parent="World/Luoghi/TempioDiVesta" unique_id=1440720224 instance=ExtResource("9_t4gf2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.5, 0, -29)
-collision_mask = 0
 
-[node name="Statua" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=1691771067 groups=["fadeable"] instance=ExtResource("11_u7cxw")]
+[node name="Statua" parent="World/Luoghi/TempioDiVesta" unique_id=1691771067 instance=ExtResource("11_u7cxw")]
 transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 32, 0, -50)
-collision_mask = 0
 
-[node name="Falo" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=1845773121 instance=ExtResource("32_kpyw5")]
+[node name="Falo" parent="World/Luoghi/TempioDiVesta" unique_id=1845773121 instance=ExtResource("32_kpyw5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0, -43)
-collision_mask = 0
 
-[node name="Cipresso" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=704125994 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="Cipresso" parent="World/Luoghi/TempioDiVesta" unique_id=704125994 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -30)
-collision_mask = 0
 
-[node name="@StaticBody3D@114" type="StaticBody3D" parent="World/Luoghi/TempioDiVesta" unique_id=471048422 groups=["fadeable"] instance=ExtResource("23_smlgm")]
+[node name="@StaticBody3D@114" parent="World/Luoghi/TempioDiVesta" unique_id=471048422 instance=ExtResource("23_smlgm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -46)
-collision_mask = 0
 
 [node name="Abitanti" type="Node3D" parent="World" unique_id=136380268]
 
@@ -1979,9 +1830,8 @@ shape = SubResource("BoxShape3D_tx4br")
 
 [node name="Cancelli" type="Node3D" parent="." unique_id=75225506]
 
-[node name="Cancello" type="StaticBody3D" parent="Cancelli" unique_id=1981122037 instance=ExtResource("35_2x5ps")]
+[node name="Cancello" parent="Cancelli" unique_id=1981122037 instance=ExtResource("35_2x5ps")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -58)
-collision_mask = 0
 script = ExtResource("36_5voec")
 locked_text = "Il cancello del porto è sbarrato. Solo il prefetto può farlo aprire."
 

@@ -22,6 +22,9 @@ func set_ability(ab: Dictionary, key: String) -> void:
 	key_text = key
 	color = ab.get("color", Color.GRAY)
 	tooltip_text = "%s  [%s]\n%s" % [ab.get("name", ""), key, ab.get("desc", "")]
+	if String(ab.get("rune_name", "")) != "":
+		var r := SkillDB.find_rune(String(ab.get("id", "")), String(ab.get("rune", "")))
+		tooltip_text += "\nVariante: %s – %s" % [ab["rune_name"], r.get("desc", "")]
 	if ab.has("cost"):
 		tooltip_text += "\nCosto: %d" % int(ab["cost"])
 	if ab.has("cooldown"):

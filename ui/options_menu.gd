@@ -52,7 +52,8 @@ func _ready() -> void:
 	pages["video"] = _build_video()
 	pages["audio"] = _build_audio()
 	pages["comandi"] = _build_controls()
-	for id: String in ["video", "audio", "comandi"]:
+	pages["gioco"] = _build_gameplay()
+	for id: String in ["video", "audio", "gioco", "comandi"]:
 		stack.add_child(pages[id])
 		var b := Button.new()
 		b.text = id.capitalize()
@@ -121,6 +122,43 @@ func _build_video() -> VBoxContainer:
 			Settings.video["scale"] = x / 100.0
 			Settings.apply_video()))
 	v.add_child(_label("Abbassa la risoluzione 3D, le ombre o l'SSAO se il gioco va a scatti.", 13, Color(0.6, 0.6, 0.6)))
+	return v
+
+
+# --- Gioco ------------------------------------------------------------------------------------------
+
+func _build_gameplay() -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	var row := HBoxContainer.new()
+	row.add_child(_label("Filtro del loot  "))
+	var opt := OptionButton.new()
+	for pair: Array in [[0, "Mostra tutto"], [1, "Nascondi i comuni"], [2, "Nascondi comuni e magici"]]:
+		opt.add_item(pair[1], pair[0])
+	opt.select(clampi(Settings.loot_filter, 0, 2))
+	opt.item_selected.connect(func(i: int) -> void: Settings.loot_filter = opt.get_item_id(i))
+	row.add_child(opt)
+	v.add_child(row)
+	v.add_child(_label("Gli oggetti nascosti non cadono a terra: diventano qualche sesterzio.", 13, Color(0.6, 0.6, 0.6)))
+	var c := CheckBox.new()
+	c.text = "Nomi degli oggetti a terra sempre visibili"
+	c.button_pressed = Settings.always_show_items
+	c.toggled.connect(func(on: bool) -> void: Settings.always_show_items = on)
+	v.add_child(c)
+	v.add_child(_label("Se disattivato si vedono solo rari, leggendari e set; tieni premuto Alt per vederli tutti.", 13, Color(0.6, 0.6, 0.6)))
+	var dn := CheckBox.new()
+	dn.text = "Numeri di danno"
+	dn.button_pressed = Settings.damage_numbers
+	dn.toggled.connect(func(on: bool) -> void: Settings.damage_numbers = on)
+	v.add_child(dn)
+	var cb := CheckBox.new()
+	cb.text = "Modalità daltonici (lettera della rarità: C, M, R, L, S)"
+	cb.button_pressed = Settings.colorblind
+	cb.toggled.connect(func(on: bool) -> void: Settings.colorblind = on)
+	v.add_child(cb)
+	v.add_child(_slider_row("Scala dell'interfaccia (%)", 75.0, 150.0, 5.0, Settings.ui_scale * 100.0, func(x: float) -> void:
+		Settings.ui_scale = x / 100.0
+		Settings.apply_video()))
 	return v
 
 
@@ -199,8 +237,7 @@ func _input(event: InputEvent) -> void:
 	var ev: InputEvent = Settings.deserialize(Settings.serialize(event))
 	if ev == null:
 		return
-	InputMap.action_erase_events(_waiting_action)
-	InputMap.action_add_event(_waiting_action, ev)
+	Settings.rebind(_waiting_action, ev)
 	_waiting_action = ""
 	_refresh_binds()
 	get_viewport().set_input_as_handled()
