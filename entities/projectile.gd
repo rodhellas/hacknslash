@@ -13,6 +13,7 @@ var pierce := false
 var chain := 0
 var explode_radius := 0.0
 var color := Color.WHITE
+var element := "fisico"
 var _hit: Array = []
 
 
@@ -27,6 +28,7 @@ static func spawn_from_player(p: Player, ab: Dictionary, origin: Vector3, d: Vec
 	pr.chain = int(ab.get("chain", 0))
 	pr.explode_radius = float(ab.get("explode_radius", 0.0))
 	pr.color = ab.get("color", Color.WHITE)
+	pr.element = String(ab.get("element", "fisico"))
 	pr.collision_mask = Layers.WORLD | Layers.ENEMY
 	pr._build(float(ab.get("length", 0.8)), float(ab.get("thickness", 0.14)))
 	pr.position = origin
@@ -42,6 +44,7 @@ static func spawn_from_enemy(origin: Vector3, d: Vector3, damage: float, level: 
 	pr.fixed_damage = damage
 	pr.attacker_level = level
 	pr.color = col
+	pr.element = ""
 	pr.collision_mask = Layers.WORLD | Layers.PLAYER
 	pr._build(0.5, 0.25)
 	pr.position = origin
@@ -56,13 +59,7 @@ func _build(length: float, thickness: float) -> void:
 	sphere.radius = maxf(0.3, thickness * 0.6)
 	shape.shape = sphere
 	add_child(shape)
-	var mi := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(thickness, thickness, length)
-	mi.mesh = box
-	mi.material_override = Fx.mat(color, 5.0)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
+	_build_visual(length, thickness)
 	var light := OmniLight3D.new()
 	light.light_color = color
 	light.light_energy = 1.2
@@ -70,6 +67,67 @@ func _build(length: float, thickness: float) -> void:
 	add_child(light)
 	Fx.trail(self, color, clampf(thickness * 0.8, 0.08, 0.3))
 	body_entered.connect(_on_body_entered)
+
+
+## Aspetto per elemento (il proiettile vola lungo −Z locale).
+func _build_visual(length: float, thickness: float) -> void:
+	match element:
+		"fuoco":
+			var core := _part(SphereMesh.new(), Vector3.ZERO, Color(1.0, 0.8, 0.4))
+			(core.mesh as SphereMesh).radius = thickness * 0.6 + 0.1
+			(core.mesh as SphereMesh).height = (thickness * 0.6 + 0.1) * 2.0
+			var f := Vfx.fire(self, Vector3.ZERO, maxf(thickness * 2.4, 0.6), 0.0)
+			if f:
+				f.position = Vector3.ZERO
+			var g := Vfx.glow(self, Vector3.ZERO, color, maxf(thickness * 3.0, 0.8), 0.0)
+			if g:
+				g.position = Vector3.ZERO
+		"freddo":
+			var pm := PrismMesh.new()
+			pm.size = Vector3(thickness * 1.2 + 0.1, length, thickness + 0.1)
+			var c := _part(pm, Vector3.ZERO, Color(0.75, 0.95, 1.0))
+			c.rotation_degrees.x = -90.0
+			var g := Vfx.glow(self, Vector3.ZERO, color, maxf(thickness * 3.0, 0.7), 0.0)
+			if g:
+				g.position = Vector3.ZERO
+		"fulmine":
+			var g := Vfx.glow(self, Vector3.ZERO, color, maxf(thickness * 4.0, 0.9), 0.0)
+			if g:
+				g.position = Vector3.ZERO
+			var box := BoxMesh.new()
+			box.size = Vector3(thickness * 0.5, thickness * 0.5, length)
+			_part(box, Vector3.ZERO, color.lightened(0.5))
+		"":
+			# nemici: nucleo luminoso
+			var g := Vfx.glow(self, Vector3.ZERO, color, 0.9, 0.0)
+			if g:
+				g.position = Vector3.ZERO
+			var sm := SphereMesh.new()
+			sm.radius = thickness * 0.5
+			sm.height = thickness
+			_part(sm, Vector3.ZERO, color)
+		_:
+			# fisico: asta + punta (pilum, freccia, scure lanciata)
+			var shaft := BoxMesh.new()
+			shaft.size = Vector3(thickness * 0.5, thickness * 0.5, length)
+			_part(shaft, Vector3.ZERO, Color(0.75, 0.7, 0.6))
+			var tip := PrismMesh.new()
+			tip.size = Vector3(thickness * 1.4, length * 0.25, thickness * 0.6)
+			var t := _part(tip, Vector3(0, 0, -length * 0.55), color)
+			t.rotation_degrees.x = -90.0
+			var g := Vfx.glow(self, Vector3.ZERO, color, 0.6, 0.0)
+			if g:
+				g.position = Vector3(0, 0, -length * 0.5)
+
+
+func _part(mesh: Mesh, pos: Vector3, col: Color) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = Fx.mat(col, 4.0, false, true)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = pos
+	add_child(mi)
+	return mi
 
 
 func _ready() -> void:
@@ -117,6 +175,7 @@ func _on_body_entered(body: Node) -> void:
 		if body is Player:
 			(body as Player).take_damage(fixed_damage, attacker_level)
 			Fx.burst(Game.world_root(), global_position, color, 8, 4.0, 0.08, 0.3)
+			Vfx.glow(Game.world_root(), global_position, color, 1.2, 0.18)
 			queue_free()
 		elif body is CollisionObject3D and (body as CollisionObject3D).collision_layer & Layers.WORLD:
 			queue_free()
@@ -124,8 +183,7 @@ func _on_body_entered(body: Node) -> void:
 
 func _explode() -> void:
 	Abilities.damage_area(owner_player, global_position, explode_radius, float(ability.get("dmg", 1.0)), float(ability.get("knock", 6.0)), ability)
-	Fx.ring(Game.world_root(), global_position, explode_radius, color, 0.35)
-	Fx.explosion(Game.world_root(), Vector3(global_position.x, 0.0, global_position.z), explode_radius, color)
+	Fx.explosion(Game.world_root(), Vector3(global_position.x, 0.0, global_position.z), explode_radius, color, element)
 	Sfx.play("explosion", global_position, -4.0, 0.15)
 	owner_player.shake(0.08)
 
@@ -145,6 +203,8 @@ func _chain_to_next(from: Enemy) -> bool:
 		return false
 	chain -= 1
 	var target := best.global_position + Vector3(0, 1.0, 0)
+	if element == "fulmine":
+		Vfx.lightning(Game.world_root(), global_position, target, color, 0.2)
 	dir = (target - global_position).normalized()
 	life = 1.0
 	_orient()

@@ -121,6 +121,11 @@ func _build_video() -> VBoxContainer:
 		func(x: float) -> void:
 			Settings.video["scale"] = x / 100.0
 			Settings.apply_video()))
+	var rv := CheckBox.new()
+	rv.text = "Effetti ridotti (meno particelle, niente distorsioni e micro-pause)"
+	rv.button_pressed = Settings.reduced_vfx
+	rv.toggled.connect(func(on: bool) -> void: Settings.reduced_vfx = on)
+	v.add_child(rv)
 	v.add_child(_label("Abbassa la risoluzione 3D, le ombre o l'SSAO se il gioco va a scatti.", 13, Color(0.6, 0.6, 0.6)))
 	return v
 

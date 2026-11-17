@@ -55,8 +55,12 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 
+func _element() -> String:
+	return "freddo" if color.b > color.r else "fuoco"
+
+
 func _burst() -> void:
-	Fx.explosion(get_parent(), global_position, radius, color)
+	Fx.explosion(get_parent(), global_position, radius, color, _element())
 	Sfx.play("explosion", global_position, -6.0, 0.15)
 	var p := _player()
 	if p != null and _inside(p):
@@ -66,18 +70,13 @@ func _burst() -> void:
 
 
 func _make_pool() -> void:
-	var mi := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = radius
-	cm.bottom_radius = radius
-	cm.height = 0.05
-	mi.mesh = cm
-	var c := color
-	c.a = 0.55
-	mi.material_override = Fx.mat(c, 2.0, true, true)
-	mi.position.y = 0.06
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
+	Vfx.pool(self, radius, color)
+	if _element() == "fuoco":
+		for i in 3:
+			var a := TAU * i / 3.0
+			var f := Vfx.fire(self, global_position, radius * 0.5, 0.0)
+			if f:
+				f.position = Vector3(cos(a), 0.5, sin(a)) * radius * 0.45
 	var l := OmniLight3D.new()
 	l.light_color = color
 	l.omni_range = radius * 1.5

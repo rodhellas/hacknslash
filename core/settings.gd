@@ -32,6 +32,8 @@ static var damage_numbers := true
 static var ui_scale := 1.0
 ## Daltonici: la rarità si legge anche da una lettera (C, M, R, L, S) oltre che dal colore.
 static var colorblind := false
+## Effetti ridotti: niente distorsioni, segni a terra, immagini fantasma, micro-pause; meno particelle.
+static var reduced_vfx := false
 
 
 static func load_and_apply() -> void:
@@ -45,6 +47,7 @@ static func load_and_apply() -> void:
 	damage_numbers = bool(cfg.get_value("gameplay", "damage_numbers", true))
 	ui_scale = float(cfg.get_value("gameplay", "ui_scale", 1.0))
 	colorblind = bool(cfg.get_value("gameplay", "colorblind", false))
+	reduced_vfx = bool(cfg.get_value("video", "reduced_vfx", false))
 	Sfx.volume_db = float(cfg.get_value("audio", "sfx_db", Sfx.volume_db))
 	Music.volume_db = float(cfg.get_value("audio", "music_db", Music.volume_db))
 	if cfg.has_section("controls"):
@@ -66,6 +69,7 @@ static func save() -> void:
 	cfg.set_value("gameplay", "damage_numbers", damage_numbers)
 	cfg.set_value("gameplay", "ui_scale", ui_scale)
 	cfg.set_value("gameplay", "colorblind", colorblind)
+	cfg.set_value("video", "reduced_vfx", reduced_vfx)
 	cfg.set_value("audio", "sfx_db", Sfx.volume_db)
 	cfg.set_value("audio", "music_db", Music.volume_db)
 	if cfg.has_section("controls"):

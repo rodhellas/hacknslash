@@ -100,7 +100,7 @@ func _ready() -> void:
 	sb.radius = 1.3
 	sb.height = 2.6
 	buff_bubble.mesh = sb
-	buff_bubble.material_override = Fx.mat(Color(1.0, 0.85, 0.4, 0.18), 1.5, true, true)
+	Vfx.make_bubble(buff_bubble, Color(1.0, 0.85, 0.4, 0.6))
 	buff_bubble.position.y = 1.0
 	buff_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	buff_bubble.visible = false
@@ -572,8 +572,15 @@ func start_dash(dir: Vector3, distance: float, speed: float, ab: Dictionary) -> 
 	attack_target = null
 
 
+var _ghost_t := 0.0
+
+
 func _process_dash(delta: float) -> void:
 	var spd := float(_dash["speed"])
+	_ghost_t -= delta
+	if _ghost_t <= 0.0:
+		_ghost_t = 0.05
+		Vfx.afterimage(model, (_dash["ab"] as Dictionary).get("color", Color(0.6, 0.8, 1.0)), 0.3)
 	velocity = (_dash["dir"] as Vector3) * spd
 	move_and_slide()
 	_dash["remaining"] = float(_dash["remaining"]) - spd * delta

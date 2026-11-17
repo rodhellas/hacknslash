@@ -46,6 +46,9 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 	mult *= p.special_damage_mult(e)
 	var r := p.roll_damage(mult, float(ab.get("crit_bonus", 0.0)))
 	var pos := e.global_position
+	# Micro-pausa sui critici che tolgono tanta vita (sensazione d'impatto)
+	if r[1] and float(r[0]) >= e.max_life * 0.25:
+		Vfx.hitstop(0.045)
 	if ab.has("slow"):
 		e.apply_slow(float(ab["slow"]), float(ab.get("slow_time", 2.0)))
 	if float(ab.get("stun", 0.0)) > 0.0:
@@ -66,7 +69,7 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 	_proc_depth += 1
 	if r[1] and p.has_power("commodo"):
 		damage_area(p, pos, 3.0, 0.6, 3.0, {})
-		Fx.explosion(Game.world_root(), pos, 3.0, Color(1.0, 0.5, 0.15))
+		Fx.explosion(Game.world_root(), pos, 3.0, Color(1.0, 0.5, 0.15), "fuoco")
 		Sfx.play("explosion", pos, -8.0, 0.2)
 	if String(ab.get("slot", "")) == "lmb" and p.has_power("ercole") and randf() < 0.15:
 		damage_area(p, pos, 4.0, 1.5, 8.0, {})
@@ -126,6 +129,8 @@ static func _melee(p: Player, ab: Dictionary) -> void:
 			count += 1
 	break_props(p, p.global_position + fwd * reach * 0.5, reach * 0.6)
 	var col: Color = ab.get("color", Color.WHITE)
+	if String(ab.get("element", "fisico")) != "fisico":
+		col = col.lerp(Vfx.element_color(String(ab["element"])), 0.5)
 	Fx.swing(p, yaw, 360.0 if spin else arc, reach, col, 0.25 if spin else 0.14)
 	Sfx.play("swing", null, -6.0 if not spin else -2.0, 0.15)
 	if spin:
@@ -163,19 +168,23 @@ static func _aoe_point(p: Player, ab: Dictionary, point: Vector3) -> void:
 	var col: Color = ab.get("color", Color.WHITE)
 	var root := Game.world_root()
 	Fx.telegraph(root, point, radius, col, delay + interval * (ticks - 1) + 0.1)
+	var element := String(ab.get("element", "fisico"))
 	if ab.get("strike", false):
-		Fx.strike(root, point, delay, col, 0.9)
+		Fx.strike(root, point, delay, col, 0.9, element if element != "fisico" else "fuoco")
 	for i in ticks:
 		var t := delay + interval * i
 		p.create_tween().tween_callback(func() -> void:
 			damage_area(p, point, radius, float(ab.get("dmg", 1.0)), float(ab.get("knock", 4.0)), ab)
 			Fx.ring(root, point, radius, col, 0.3)
 			if ticks == 1:
-				Fx.explosion(root, point, radius, col)
+				Fx.explosion(root, point, radius, col, element)
 				Sfx.play("explosion", point)
 				p.shake(0.15)
 			else:
 				Fx.burst(root, point + Vector3(0, 0.2, 0), col, 10, 4.0, 0.1, 0.35, -8.0, 60.0)
+				for k in 3:
+					var o := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * radius * 0.7
+					Vfx.hit(root, point + o + Vector3(0, 0.4, 0), element)
 				Sfx.play("hit", point, -6.0)).set_delay(maxf(t, 0.01))
 	if delay > 0.2:
 		Sfx.play("cast", null, -6.0)
@@ -204,6 +213,17 @@ static func _aoe_self(p: Player, ab: Dictionary) -> void:
 			else:
 				Fx.ring(Game.world_root(), p.global_position, radius, col, 0.35)
 				Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.4, 0), col, 24, radius * 2.5, 0.12, 0.45, -2.0, 80.0)
+				var el := String(ab.get("element", "fisico"))
+				if el == "fuoco":
+					for k in 5:
+						var a := TAU * k / 5.0
+						Vfx.fire(Game.world_root(), p.global_position + Vector3(cos(a), 0.5, sin(a)) * radius * 0.7, radius * 0.35, 0.5)
+				elif el == "freddo":
+					Vfx.scorch(Game.world_root(), p.global_position, radius, Color(0.8, 0.95, 1.0), 3.0)
+				elif el == "fulmine":
+					for k in 4:
+						var a := randf() * TAU
+						Vfx.lightning(Game.world_root(), p.global_position + Vector3(0, 1.2, 0), p.global_position + Vector3(cos(a), 0.1, sin(a)) * radius, col, 0.15, 5)
 				Sfx.play("explosion", null, -6.0, 0.15)
 				p.shake(0.12)).set_delay(maxf(interval * i, 0.01))
 
@@ -226,6 +246,8 @@ static func _dash(p: Player, ab: Dictionary, point: Vector3) -> void:
 			var col: Color = ab.get("color", Color.WHITE)
 			Fx.ring(Game.world_root(), p.global_position, 2.0, col, 0.3)
 			Fx.burst(Game.world_root(), p.global_position + Vector3(0, 1.0, 0), col, 16, 4.0, 0.1, 0.4, 0.0)
+			Vfx.afterimage(p.model, col, 0.4)
+			Vfx.lightning(Game.world_root(), p.global_position + Vector3(0, 1.0, 0), target + Vector3(0, 1.0, 0), col, 0.15)
 			p.global_position = target
 			Fx.ring(Game.world_root(), target, 2.5, col, 0.4)
 			if float(ab.get("dmg", 0.0)) > 0.0:
@@ -239,6 +261,8 @@ static func land(p: Player, ab: Dictionary) -> void:
 	var col: Color = ab.get("color", Color.WHITE)
 	damage_area(p, p.global_position, float(ab.get("radius", 4.0)), float(ab.get("dmg", 1.0)), float(ab.get("knock", 8.0)), ab)
 	Fx.ring(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)), col, 0.35)
+	Vfx.scorch(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)) * 0.6, Color(0.2, 0.17, 0.13), 4.0)
+	Vfx.distortion(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)))
 	Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.2, 0), Color(0.5, 0.42, 0.32), 20, 7.0, 0.18, 0.5, -10.0, 70.0)
 	Sfx.play("explosion", null, -4.0)
 	p.shake(0.15)
@@ -247,6 +271,8 @@ static func land(p: Player, ab: Dictionary) -> void:
 static func _buff(p: Player, ab: Dictionary) -> void:
 	p.add_buff(ab)
 	var col: Color = ab.get("color", Color.WHITE)
+	Vfx.glow(Game.world_root(), p.global_position + Vector3(0, 1.0, 0), col, 2.5, 0.35)
+	Vfx.telegraph(Game.world_root(), p.global_position, 2.2, col, 0.5)
 	Sfx.play("cast")
 	Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.5, 0), col, 20, 5.0, 0.1, 0.7, 3.0, 40.0)
 	if ab.has("heal_pct"):

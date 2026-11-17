@@ -1,6 +1,7 @@
 class_name Fx
 extends RefCounted
-## Materiali condivisi ed effetti visivi segnaposto (da sostituire con particelle/shader veri).
+## Materiali condivisi ed effetti visivi. Gli effetti "veri" (shader, per elemento) sono in core/vfx.gd;
+## qui restano le particelle semplici e le funzioni storiche, che ora passano da Vfx.
 
 static var _mats: Dictionary = {}
 static var _overlays: Dictionary = {}
@@ -102,89 +103,22 @@ static func popup_text(parent: Node, pos: Vector3, text: String, color: Color, s
 
 ## Anello luminoso a terra che si espande (onde d'urto, colpi ad area).
 static func ring(parent: Node, pos: Vector3, radius: float, color: Color, duration: float = 0.35) -> void:
-	if parent == null:
-		return
-	var mi := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 1.0
-	cyl.bottom_radius = 1.0
-	cyl.height = 0.04
-	cyl.radial_segments = 32
-	mi.mesh = cyl
-	var c := color
-	c.a = 0.7
-	var m := new_mat(c, 3.0, true, true)
-	mi.material_override = m
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(mi)
-	mi.global_position = Vector3(pos.x, 0.06, pos.z)
-	mi.scale = Vector3(0.1, 1, 0.1)
-	var tw := mi.create_tween().set_parallel(true)
-	tw.tween_property(mi, "scale", Vector3(radius, 1, radius), duration).set_ease(Tween.EASE_OUT)
-	tw.tween_property(m, "albedo_color:a", 0.0, duration)
-	tw.chain().tween_callback(mi.queue_free)
+	Vfx.shockwave(parent, pos, radius, color, duration)
 
 
-## Indicatore a terra di un'area che sta per essere colpita.
+## Indicatore a terra di un'area che sta per essere colpita (si riempie fino al colpo).
 static func telegraph(parent: Node, pos: Vector3, radius: float, color: Color, time: float) -> void:
-	if parent == null:
-		return
-	var mi := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = radius
-	cyl.bottom_radius = radius
-	cyl.height = 0.03
-	cyl.radial_segments = 40
-	mi.mesh = cyl
-	var c := color
-	c.a = 0.0
-	var m := new_mat(c, 1.5, true, true)
-	mi.material_override = m
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(mi)
-	mi.global_position = Vector3(pos.x, 0.05, pos.z)
-	var tw := mi.create_tween()
-	tw.tween_property(m, "albedo_color:a", 0.35, min(0.25, time))
-	tw.tween_interval(max(time - 0.25, 0.0))
-	tw.tween_callback(mi.queue_free)
+	Vfx.telegraph(parent, pos, radius, color, time)
 
 
-## Sfera che cade dal cielo e arriva a terra dopo `delay` secondi (meteora, bombardamento).
-static func strike(parent: Node, pos: Vector3, delay: float, color: Color, size: float = 0.8) -> void:
-	if parent == null:
-		return
-	var mi := MeshInstance3D.new()
-	var sm := SphereMesh.new()
-	sm.radius = size
-	sm.height = size * 2.0
-	mi.mesh = sm
-	mi.material_override = mat(color, 6.0)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(mi)
-	mi.global_position = pos + Vector3(-4, 22, 4)
-	var tw := mi.create_tween()
-	tw.tween_property(mi, "global_position", pos, max(delay, 0.05)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_callback(mi.queue_free)
+## Colpo che cade dal cielo e arriva a terra dopo `delay` secondi (meteora, bombardamento, saetta).
+static func strike(parent: Node, pos: Vector3, delay: float, color: Color, size: float = 0.8, element: String = "fuoco") -> void:
+	Vfx.strike(parent, pos, delay, element, size)
 
 
-## Lama che ruota attorno al personaggio (attacchi in mischia).
+## Falce del fendente attorno al personaggio (attacchi in mischia).
 static func swing(owner: Node3D, yaw: float, arc_deg: float, reach: float, color: Color, time: float = 0.15) -> void:
-	var pivot := Node3D.new()
-	owner.add_child(pivot)
-	pivot.position = Vector3(0, 1.0, 0)
-	var blade := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(0.08, 0.05, reach)
-	blade.mesh = bm
-	blade.material_override = mat(color, 5.0)
-	blade.position.z = -reach * 0.55
-	blade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	pivot.add_child(blade)
-	var half := deg_to_rad(arc_deg) / 2.0
-	pivot.rotation.y = yaw + half
-	var tw := pivot.create_tween()
-	tw.tween_property(pivot, "rotation:y", yaw - half, time)
-	tw.tween_callback(pivot.queue_free)
+	Vfx.slash(owner, yaw, arc_deg, reach, color, time)
 
 
 ## Icona piatta visibile solo nella minimappa.
@@ -266,11 +200,12 @@ static func burst(parent: Node, pos: Vector3, color: Color, amount: int = 10, sp
 	p.finished.connect(p.queue_free)
 
 
-## Esplosione: schegge + lampo di luce + anello.
-static func explosion(parent: Node, pos: Vector3, radius: float, color: Color) -> void:
-	if parent == null:
+## Esplosione: lampo, anello, schegge, luce, segno a terra (per elemento, vedi Vfx.explosion).
+static func explosion(parent: Node, pos: Vector3, radius: float, color: Color, element: String = "") -> void:
+	if parent == null or not parent.is_inside_tree():
 		return
-	burst(parent, pos + Vector3(0, 0.5, 0), color, int(clampf(radius * 6.0, 10, 40)), radius * 3.0, 0.18, 0.5, -6.0)
+	Vfx.explosion(parent, pos, radius, element if element != "" else "fisico", color if element == "" else Color(0, 0, 0, 0))
+	burst(parent, pos + Vector3(0, 0.5, 0), color, int(clampf(radius * (3.0 if Settings.reduced_vfx else 6.0), 6, 40)), radius * 3.0, 0.16, 0.5, -6.0)
 	burst(parent, pos + Vector3(0, 0.3, 0), Color(0.25, 0.22, 0.2), int(clampf(radius * 3.0, 6, 20)), radius * 1.5, 0.35, 0.8, 1.5)
 	var light := OmniLight3D.new()
 	light.light_color = color
@@ -281,6 +216,35 @@ static func explosion(parent: Node, pos: Vector3, radius: float, color: Color) -
 	var tw := light.create_tween()
 	tw.tween_property(light, "light_energy", 0.0, 0.35)
 	tw.tween_callback(light.queue_free)
+
+
+## Schegge allungate che volano nella direzione del moto (scintille dei colpi fisici, ghiaccio).
+static func shards(parent: Node, pos: Vector3, color: Color, amount: int = 8, speed: float = 6.0, life: float = 0.35) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.amount = maxi(amount, 1)
+	p.lifetime = life
+	p.direction = Vector3.UP
+	p.spread = 180.0
+	p.initial_velocity_min = speed * 0.5
+	p.initial_velocity_max = speed
+	p.gravity = Vector3(0, -12.0, 0)
+	p.particle_flag_align_y = true
+	p.scale_amount_curve = _curve()
+	if not _particle_meshes.has("shard"):
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.04, 0.32, 0.04)
+		_particle_meshes["shard"] = bm
+	p.mesh = _particle_meshes["shard"]
+	p.material_override = mat(color, 5.0, false, true)
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(p)
+	p.global_position = pos
+	p.emitting = true
+	p.finished.connect(p.queue_free)
 
 
 ## Colonna di luce verticale (livello, checkpoint, portale).

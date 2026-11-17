@@ -19,7 +19,7 @@ Design e stato del gioco: `docs/GAME_DESIGN.md`. Panoramica: `README.md`.
 
 ## Struttura
 ```
-core/       game.gd (autoload "Game": partita, salvataggi, cambio scena, viaggi), hero_data.gd, item.gd,
+core/       vfx.gd (effetti visivi: shader procedurali per elemento), game.gd (autoload "Game": partita, salvataggi, cambio scena, viaggi), hero_data.gd, item.gd,
             abilities.gd (esecuzione abilità), loot.gd, fx.gd (materiali/effetti/particelle), sfx.gd (suoni),
             music.gd (musica dei livelli), settings.gd (opzioni video/audio/tasti), quests.gd (logica missioni), layers.gd,
             appearance.gd (pezzi dell'equipaggiamento nelle prese del modello), bounties.gd (taglie)
@@ -45,9 +45,9 @@ tools/      build_world.gd (GENERATORE grayboxing: props, modelli, livello 1 + n
             map_builder.gd ("Ricostruisci terreno" dalla Forma + navmesh), map_preview.gd / export_maps.gd (piante PNG),
             export_dungeons.gd (piante PNG dei dungeon, anche per provare altri semi),
             test_ostia.gd / test_atto2.gd / test_mappa.gd / test_gemme_set.gd / test_dungeon.gd /
-            test_equipaggiamento.gd / test_endgame.gd / test_interfaccia.gd / test_avventura.gd (test automatici)
+            test_equipaggiamento.gd / test_endgame.gd / test_interfaccia.gd / test_avventura.gd / test_effetti.gd (test automatici)
 addons/     legio_map/ (plugin dell'editor: pannello "Mappa")
-docs/       GAME_DESIGN.md, PIANO_EQUIPAGGIAMENTO.md (pezzi agganciati alle ossa), mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
+docs/       GAME_DESIGN.md, PIANO_EQUIPAGGIAMENTO.md (pezzi agganciati alle ossa), MODELLI_TRIPO.md (lista dei modelli a kit riutilizzabili), EFFETTI_VISIVI.md (kit degli effetti), mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
 audio/      music/ e sfx/ (vuote: vedi LEGGIMI.txt; i suoni sono sintetizzati, la musica manca)
 scenes/     main_menu.tscn, levels/level_01.tscn, level_02_ostia.tscn, level_03_porto.tscn (navmesh incorporata),
             levels/dungeon.tscn (vuota: il dungeon si costruisce da codice al caricamento),
@@ -150,6 +150,11 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Boss: `EnemyDB.BOSSES` (attacchi nova/pioggia/onda/salto ogni 6 s, fasi a soglie: enrage, summon, shield finché vivono i rinforzi, attack:<nome>). In `Enemy`: `_check_phase`, `_boss_attack`, `_show_shield`.
 - Hardcore: `HeroData.hardcore`, morte → `flags["dead"]` + salvataggio + pannello senza rinascita; slot non caricabile; forziere `user://stash_hardcore.json` (`Game._stash_path`, `_reset_stash` cambiando eroe).
 
+## Effetti visivi (core/vfx.gd, docs/EFFETTI_VISIVI.md)
+- 10 shader procedurali (codice in `Vfx.SHADER_CODE`, materiali in cache, colore per oggetto con *instance uniform* `tint`/`fade`...). Effetti per elemento: `Vfx.hit` (chiamato da `Enemy.take_damage` con l'elemento), `Vfx.explosion` (da `Fx.explosion(..., element)`), proiettili per elemento (`Projectile._build_visual`), stati sui nemici (`Enemy._update_status_fx`), dissolvenza alla morte, immagini fantasma negli scatti, micro-pausa sui critici forti (`Vfx.hitstop`, spenta in headless).
+- `Fx.ring/telegraph/swing/strike` ora passano da Vfx. `Settings.reduced_vfx` (Opzioni > Video).
+- **In headless gli shader non vengono compilati**: un errore di sintassi si vede solo a schermo (console di Godot).
+
 ## Missioni (data/quest_db.gd, core/quests.gd)
 - Obiettivi in sequenza: kill, kill_unique, enter, altar, talk, salvage, chest. Eventi inviati con `Quests.notify(tipo, bersaglio)`.
 - Gli NPC prima provano `Quests.talk(npc_id)` (consegna/affida), poi aprono negozio/dialogo. Segni "!" / "?" sopra la testa.
@@ -188,6 +193,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - **`tools/test_endgame.gd`** (53 controlli): dati delle 40 abilità/varianti/passive, leggendari e set nuovi, scelte dell'eroe e salvataggio, varianti in gioco (stordimento, fiamme, cura, seconda salva), leggendario che cambia Pilum, passiva Ultimo baluardo, affissi delle elite, Campioni e Rari, difficoltà (affissi, livello, vita, leggendari), Labirinto completo (obelisco, barra, Guardiano, ricompensa, gemma leggendaria e suo potenziamento, record, grado, uscita).
 - **`tools/test_interfaccia.gd`** (37 controlli): schermata di caricamento, finestra Abilità, zaino (ordina, dettagli, anteprima 3D), Aspetto e tinte, vendita in blocco, schede del forziere (ripristina il forziere vero), filtro del loot, Alt, nebbia di guerra, segnalini, controller (mira, A, stick, rimappatura), numeri di danno.
 - **`tools/test_avventura.gd`** (53 controlli): slot nuovi, secondo anello, doppia arma (e mano sinistra addosso), tipi di danno, gemme leggendarie (incastonare, effetti, potenziamento, salvataggio), boss a fasi (scudo + rinforzi, furia, attacchi), taglie (tabula, boss che ricompare, ricompense, cassa), santuari ed eventi nel livello 1, pilone del flusso, mappa grande, oggetti nuovi, daltonici, pulsanti del controller, riepilogo alla morte, hardcore (forziere separato, eroe perso, slot).
+- **`tools/test_effetti.gd`** (8 controlli): shader del kit, effetti per elemento che si creano e si tolgono, proiettili diversi per elemento, stati sui nemici, dissolvenza, immagini fantasma.
 - **`tools/test_mappa.gd`** (16 controlli): ogni livello ha la Forma; Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 

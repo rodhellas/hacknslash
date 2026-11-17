@@ -278,6 +278,7 @@ func _physics_process(delta: float) -> void:
 
 	knockback = knockback.move_toward(Vector3.ZERO, 30.0 * delta)
 	_tick_dot(delta)
+	_update_status_fx()
 	if dead:
 		return
 	if stun_timer > 0.0:
@@ -489,6 +490,7 @@ func _enter_phase(ph: Dictionary) -> void:
 			speed *= 1.3
 			damage *= 1.25
 			Fx.ring(Game.world_root(), global_position, 5.0, Color(1.0, 0.15, 0.1), 0.6)
+			Vfx.fire(self, global_position, radius() * 2.0, 1.2)
 			Fx.burst(Game.world_root(), global_position + Vector3(0, 1.5, 0), Color(1.0, 0.2, 0.1), 30, 6.0, 0.15, 0.6, 2.0)
 		elif act == "summon" or act == "shield":
 			var adds := _spawn_adds(String(ph.get("type", data.get("summon", "predone"))), int(ph.get("n", 3)))
@@ -534,7 +536,7 @@ func _show_shield(on: bool) -> void:
 		sm.radius = radius() + 0.6
 		sm.height = (radius() + 0.6) * 2.0
 		_shield_mesh.mesh = sm
-		_shield_mesh.material_override = Fx.mat(Color(0.6, 0.8, 1.0, 0.3), 2.0, true, true)
+		Vfx.make_bubble(_shield_mesh, Color(0.6, 0.8, 1.0, 0.8))
 		_shield_mesh.position.y = float(data["height"]) * 0.5
 		_shield_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_shield_mesh)
@@ -547,6 +549,7 @@ func _boss_attack(p: Player) -> void:
 	match kind:
 		"nova":
 			Fx.ring(Game.world_root(), global_position, 3.0, Color(1.0, 0.4, 0.9), 0.4)
+			Vfx.glow(Game.world_root(), global_position + Vector3(0, 1.5, 0), Color(1.0, 0.4, 0.9), 4.0, 0.3)
 			for i in 16:
 				var a := TAU * i / 16.0
 				Projectile.spawn_from_enemy(global_position + Vector3(0, 1.2, 0), Vector3(cos(a), 0, sin(a)), damage * 0.6, level,
@@ -563,6 +566,7 @@ func _boss_attack(p: Player) -> void:
 			Hazard.spawn(dest, 3.5, 1.0, 0.0, damage * 1.2, Color(1.0, 0.3, 0.1), level)
 			var tw := create_tween()
 			tw.tween_interval(0.6)
+			tw.tween_callback(func() -> void: Vfx.afterimage(model, Color(1.0, 0.4, 0.2), 0.4))
 			tw.tween_property(self, "global_position", Vector3(dest.x, 0.0, dest.z), 0.35)
 
 
@@ -639,6 +643,54 @@ func apply_dot(dps: float, time: float, col: Color = Color(1.0, 0.5, 0.15)) -> v
 	dot_timer = maxf(dot_timer, time)
 
 
+# --- Stati visibili (fiamme, stordimento, gelo) ------------------------------------------------------
+
+var _fx_fire: MeshInstance3D
+var _fx_stun: Node3D
+var _fx_frost: MeshInstance3D
+
+
+func _update_status_fx() -> void:
+	var h := float(data["height"]) * (1.25 if elite else 1.0) * float(data.get("model_scale", 1.0))
+	var burning := dot_timer > 0.0
+	if burning and _fx_fire == null:
+		_fx_fire = Vfx.fire(self, global_position, maxf(radius() * 2.2, 1.0), 0.0)
+		if _fx_fire:
+			_fx_fire.position = Vector3(0, h * 0.45, 0)
+	elif not burning and _fx_fire != null:
+		_fx_fire.queue_free()
+		_fx_fire = null
+	var stunned := stun_timer > 0.0
+	if stunned and _fx_stun == null:
+		_fx_stun = Node3D.new()
+		add_child(_fx_stun)
+		_fx_stun.position = Vector3(0, h + 0.3, 0)
+		for i in 3:
+			var g := Vfx.glow(_fx_stun, global_position, Color(1.0, 0.95, 0.4), 0.35, 0.0)
+			if g:
+				g.position = Vector3(cos(TAU * i / 3.0), 0, sin(TAU * i / 3.0)) * 0.5
+	elif not stunned and _fx_stun != null:
+		_fx_stun.queue_free()
+		_fx_stun = null
+	if _fx_stun != null:
+		_fx_stun.rotation.y += 0.12
+	var frozen := slow_timer > 0.0 and slow_mult < 0.95
+	if frozen and _fx_frost == null:
+		_fx_frost = Vfx.pool(self, radius() + 0.6, Color(0.55, 0.85, 1.0, 0.7))
+	elif not frozen and _fx_frost != null:
+		_fx_frost.queue_free()
+		_fx_frost = null
+
+
+func _clear_status_fx() -> void:
+	for n: Variant in [_fx_fire, _fx_stun, _fx_frost]:
+		if n != null and is_instance_valid(n):
+			(n as Node).queue_free()
+	_fx_fire = null
+	_fx_stun = null
+	_fx_frost = null
+
+
 func _tick_dot(delta: float) -> void:
 	if dot_timer <= 0.0:
 		return
@@ -689,8 +741,7 @@ func take_damage(amount: float, knock: Vector3 = Vector3.ZERO, crit: bool = fals
 	else:
 		Fx.popup_text(Game.world_root(), global_position + Vector3(0, h + 0.4, 0), _fmt(amount), ecol, 40 + roundi(big * 24.0))
 	Fx.flash(model, Color(1, 1, 1, 0.7))
-	Fx.burst(Game.world_root(), global_position + Vector3(0, h * 0.6, 0), Color(1.0, 0.6, 0.15) if crit else Color(1.0, 0.85, 0.6),
-		10 if crit else 5, 6.0 if crit else 4.0, 0.08, 0.3)
+	Vfx.hit(Game.world_root(), global_position + Vector3(0, h * 0.6, 0), element, crit)
 	_update_bar()
 	if state == State.WINDUP and data.get("interruptible", true) and not elite and _windup_kind == "attack":
 		Fx.set_base_overlay(model, null)
@@ -759,8 +810,10 @@ func _die() -> void:
 		if unique:
 			Quests.notify("kill_unique", type_id)
 	Loot.on_enemy_killed(self)
+	_clear_status_fx()
 	var tw := create_tween()
 	tw.tween_property(model, "rotation:x", deg_to_rad(-90.0), 0.25)
-	tw.tween_interval(1.2)
-	tw.tween_property(model, "scale", Vector3.ONE * 0.01, 0.4)
+	tw.tween_interval(0.5)
+	tw.tween_callback(func() -> void: Vfx.dissolve(model, 0.9, Color(1.0, 0.6, 0.2) if not unique else Color(1.0, 0.3, 0.1)))
+	tw.tween_interval(1.0)
 	tw.tween_callback(queue_free)
