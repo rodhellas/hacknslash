@@ -39,14 +39,16 @@ world/      level.gd (script radice dei livelli), iso_camera.gd, occlusion_fader
             shrine.gd (santuari / piloni), world_event.gd (eventi casuali)
 ui/         main_menu.gd, hud.gd, inventory_ui.gd, trade_ui.gd (mercante/fabbro+gioielliere/forziere), options_menu.gd,
             pause_menu.gd (+ difficoltà), minimap.gd, map_overlay.gd (nebbia di guerra + segnalini missioni), globe.gd,
-            skill_slot.gd, skills_ui.gd (finestra Abilità, K), character_preview.gd (eroe 3D nello zaino)
+            skill_slot.gd, skills_ui.gd (finestra Abilità, K), character_preview.gd (eroe 3D nello zaino),
+            touch_controls.gd (controlli a video per il touch / Android)
 tools/      build_world.gd (GENERATORE grayboxing: props, modelli, livello 1 + navmesh),
             build_ostia.gd / build_porto.gd (città e porto, estendono build_world.gd),
             map_builder.gd ("Ricostruisci terreno" dalla Forma + navmesh), map_preview.gd / export_maps.gd (piante PNG),
             export_dungeons.gd (piante PNG dei dungeon, anche per provare altri semi),
             test_ostia.gd / test_atto2.gd / test_mappa.gd / test_gemme_set.gd / test_dungeon.gd /
-            test_equipaggiamento.gd / test_endgame.gd / test_interfaccia.gd / test_avventura.gd / test_effetti.gd (test automatici)
+            test_equipaggiamento.gd / test_endgame.gd / test_interfaccia.gd / test_avventura.gd / test_effetti.gd / test_touch.gd (test automatici)
 addons/     legio_map/ (plugin dell'editor: pannello "Mappa")
+textures/   vfx/*.png (texture in scala di grigi degli effetti: glow, stella, fiamma, fumo, anello, rune, crepa, bruciatura, brina, fendente, fulmine_1-3, rumore)
 docs/       GAME_DESIGN.md, PIANO_EQUIPAGGIAMENTO.md (pezzi agganciati alle ossa), MODELLI_TRIPO.md (lista dei modelli a kit riutilizzabili), EFFETTI_VISIVI.md (kit degli effetti), mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
 audio/      music/ e sfx/ (vuote: vedi LEGGIMI.txt; i suoni sono sintetizzati, la musica manca)
 scenes/     main_menu.tscn, levels/level_01.tscn, level_02_ostia.tscn, level_03_porto.tscn (navmesh incorporata),
@@ -139,6 +141,13 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Schermata di caricamento: `Game.go_to_level` la mostra e carica dopo 2 frame (tree in pausa); `Level._ready` chiama `Game.hide_loading`. Game ha `process_mode = ALWAYS`.
 - Controller: eventi joypad aggiunti alle azioni in project.godot + azione `pad_primary` (A). `Player.using_pad`, `pad_aim()` (mira automatica), `_pad_primary()`. Con un pannello a fuoco il controller naviga i pulsanti e non muove l'eroe. `Settings.rebind` cambia tasto/mouse tenendo i pulsanti del controller.
 
+## Touch e Android
+- `TouchControls` (ui/touch_controls.gd, creato da `Level._ready`, `level.touch`): joystick mobile in basso a sinistra (`Player.touch_move`, letto da `_input_direction` come lo stick), pulsante d'attacco (`_pad_primary` + `Player.touch_attack` tenuto premuto), pozione e 5 abilità ad arco (tocca = `pad_aim`, trascina = mira a mano con anello a terra: `Player.touch_aim_point` / `touch_cast`), colonna dei menu a sinistra (manda `InputEventAction`). Multi-touch per indice del dito; ogni pulsante ha un Control "blocker" (STOP) così il clic emulato dal tocco non fa camminare l'eroe. Toccare il mondo altrove = clic del mouse.
+- Visibili se `Settings.touch_enabled()` (`touch_controls` 0 automatici = `DisplayServer.is_touchscreen_available()`, 1 sempre, 2 mai; Opzioni > Gioco). Nascosti con pannelli aperti (`Level.any_panel_open()`); i menu restano con zaino/mappa/diario.
+- Tasto indietro di Android = azione `pause` (`Game._notification`, `quit_on_go_back=false`).
+- project.godot: override `.mobile` (renderer Mobile, stretch `canvas_items`/`expand`, ombre 2048), orientamento orizzontale, ETC2/ASTC. `Settings._video_defaults()` su mobile: schermo intero, niente SSAO né MSAA, risoluzione 3D 80%.
+- Esportazione: preset "Android" in `export_presets.cfg` (arm64, `it.legio3000.gioco`, uscita `build/android/Legio3000.apk`, cartella ignorata da git). Riga di comando: `--headless --path . --export-debug "Android" build/android/Legio3000.apk`. Servono i modelli di esportazione 4.7.2, Android SDK (platform-tools, build-tools), JDK 17 e il keystore di debug nelle Impostazioni dell'editor (su Linux sono già configurati: `~/Android/Sdk`, `~/.local/share/godot/keystores/debug.keystore`).
+
 ## Slot, tipi di danno, gemme leggendarie
 - 13 caselle (`HeroData.EQUIP_SLOTS`): in più spalle, cintura, bracciali, `anello2` (secondo anello, oggetti con slot "anello"). `ITEM_SLOTS` = tipi di oggetto (per il fabbro). `target_slot(it, alt)` / `equip_from_inventory(i, alt)`: Ctrl+clic = casella secondaria. **Doppia arma**: il Gladiatore (offhands con "gladio", "ascia") tiene un'arma in "secondaria" (+50% danni dell'arma come il pugio, +15% velocità); `Appearance` la mette nella mano sinistra.
 - Tipi di danno `ItemDB.ELEMENTS` (fisico, fuoco, freddo, fulmine): `SkillDB.ELEMENTS` / `RUNE_ELEMENTS` → `ab["element"]`; affissi `<tipo>_pct`; il freddo rallenta; colore dei numeri di danno.
@@ -151,7 +160,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Hardcore: `HeroData.hardcore`, morte → `flags["dead"]` + salvataggio + pannello senza rinascita; slot non caricabile; forziere `user://stash_hardcore.json` (`Game._stash_path`, `_reset_stash` cambiando eroe).
 
 ## Effetti visivi (core/vfx.gd, docs/EFFETTI_VISIVI.md)
-- 10 shader procedurali (codice in `Vfx.SHADER_CODE`, materiali in cache, colore per oggetto con *instance uniform* `tint`/`fade`...). Effetti per elemento: `Vfx.hit` (chiamato da `Enemy.take_damage` con l'elemento), `Vfx.explosion` (da `Fx.explosion(..., element)`), proiettili per elemento (`Projectile._build_visual`), stati sui nemici (`Enemy._update_status_fx`), dissolvenza alla morte, immagini fantasma negli scatti, micro-pausa sui critici forti (`Vfx.hitstop`, spenta in headless).
+- 13 shader (codice in `Vfx.SHADER_CODE`, materiali in cache per "tipo" o "tipo:variante", colore per oggetto con *instance uniform* `tint`/`fade`...) e 14 texture in scala di grigi in `textures/vfx/` (`Vfx.TEXTURES`: materiale → file; uniform `mask`, rumore `noise_tex` = `rumore.png` usato da `fbm`). Segni a terra per tipo: `Vfx.scorch(..., pattern)` = crepa/bruciatura/brina; `Vfx.smoke`; fulmini = quad con `fulmine_N.png` girato verso la telecamera. Effetti per elemento: `Vfx.hit` (chiamato da `Enemy.take_damage` con l'elemento), `Vfx.explosion` (da `Fx.explosion(..., element)`), proiettili per elemento (`Projectile._build_visual`), stati sui nemici (`Enemy._update_status_fx`), dissolvenza alla morte, immagini fantasma negli scatti, micro-pausa sui critici forti (`Vfx.hitstop`, spenta in headless).
 - `Fx.ring/telegraph/swing/strike` ora passano da Vfx. `Settings.reduced_vfx` (Opzioni > Video).
 - **In headless gli shader non vengono compilati**: un errore di sintassi si vede solo a schermo (console di Godot).
 
@@ -193,7 +202,8 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - **`tools/test_endgame.gd`** (53 controlli): dati delle 40 abilità/varianti/passive, leggendari e set nuovi, scelte dell'eroe e salvataggio, varianti in gioco (stordimento, fiamme, cura, seconda salva), leggendario che cambia Pilum, passiva Ultimo baluardo, affissi delle elite, Campioni e Rari, difficoltà (affissi, livello, vita, leggendari), Labirinto completo (obelisco, barra, Guardiano, ricompensa, gemma leggendaria e suo potenziamento, record, grado, uscita).
 - **`tools/test_interfaccia.gd`** (37 controlli): schermata di caricamento, finestra Abilità, zaino (ordina, dettagli, anteprima 3D), Aspetto e tinte, vendita in blocco, schede del forziere (ripristina il forziere vero), filtro del loot, Alt, nebbia di guerra, segnalini, controller (mira, A, stick, rimappatura), numeri di danno.
 - **`tools/test_avventura.gd`** (53 controlli): slot nuovi, secondo anello, doppia arma (e mano sinistra addosso), tipi di danno, gemme leggendarie (incastonare, effetti, potenziamento, salvataggio), boss a fasi (scudo + rinforzi, furia, attacchi), taglie (tabula, boss che ricompare, ricompense, cassa), santuari ed eventi nel livello 1, pilone del flusso, mappa grande, oggetti nuovi, daltonici, pulsanti del controller, riepilogo alla morte, hardcore (forziere separato, eroe perso, slot).
-- **`tools/test_effetti.gd`** (8 controlli): shader del kit, effetti per elemento che si creano e si tolgono, proiettili diversi per elemento, stati sui nemici, dissolvenza, immagini fantasma.
+- **`tools/test_effetti.gd`** (9 controlli): shader del kit, texture collegate, effetti per elemento che si creano e si tolgono, proiettili diversi per elemento, stati sui nemici, dissolvenza, immagini fantasma.
+- **`tools/test_touch.gd`** (32 controlli): pulsanti touch dentro lo schermo e non sovrapposti, joystick che muove l'eroe, attacco tenuto premuto, abilità a mira automatica e trascinata (anello), menu, tocco sul joystick che non diventa clic, scala dell'interfaccia, tasto indietro, opzione Mai.
 - **`tools/test_mappa.gd`** (16 controlli): ogni livello ha la Forma; Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 

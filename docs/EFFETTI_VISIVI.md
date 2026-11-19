@@ -4,8 +4,8 @@ Come per i modelli (docs/MODELLI_TRIPO.md), gli effetti sono un **kit riutilizza
 poche mesh, poche texture, combinati e colorati per **elemento**. Il codice è in `core/vfx.gd`
 (kit nuovo) e `core/fx.gd` (particelle semplici e funzioni storiche, che ora passano da Vfx).
 
-Stato: **implementato in versione procedurale** (shader con rumore generato, niente file di immagini).
-Funziona già; con le texture vere (sezione 4) diventa più bello senza cambiare il resto del codice.
+Stato: **implementato con le texture** (19-11-2026): 14 immagini in scala di grigi in `textures/vfx/`
+(sezione 4), collegate agli shader da `Vfx.TEXTURES`; il rumore procedurale è stato sostituito da `rumore.png`.
 Non è ancora stato visto a schermo: i test girano senza scheda video, quindi gli shader vanno
 controllati su Windows (se uno shader ha un errore, Godot lo scrive nella console all'avvio dell'effetto).
 
@@ -73,27 +73,31 @@ che passa al fuoco (es. Lama ardente) cambia da sola anche l'aspetto dei colpi.
 Opzione **Effetti ridotti** (Opzioni > Video): niente distorsioni, segni a terra, immagini fantasma
 e micro-pause, meno particelle. Utile sui PC lenti.
 
-## 4. Texture da procurare (per la versione definitiva)
+## 4. Texture (fatte, in `textures/vfx/`)
 
 Tutte **in scala di grigi** (il colore lo mette il codice), 256 × 256 o 512 × 512, sfondo nero o trasparente.
 Fonti: pacchetti gratuiti CC0 (es. *Kenney Particle Pack*), generatori di immagini AI, o disegnate.
+Testi pronti per generarle con un'AI: `docs/TEXTURE_AI.md`.
 
 | ✓ | Texture | Sostituisce nello shader | Note |
 |---|---|---|---|
-| [ ] | Bagliore morbido | `glow` (cerchio calcolato) | quasi uguale all'attuale: priorità bassa |
-| [ ] | Scintilla / stella | `glow` per i critici | 4-8 punte |
-| [ ] | Fiamma (sequenza 4 × 4 fotogrammi) | `fire` (rumore) | il miglioramento più visibile |
-| [ ] | Fumo (sequenza 4 × 4) | nuovo: fumo dopo esplosioni e incendi | |
-| [ ] | Fulmine (striscia) | segmenti di `lightning` | 2-3 varianti |
-| [ ] | Anello d'urto | `ring` | bordo morbido |
-| [ ] | Falce del fendente | `slash` (sfumatura) | con striature |
-| [ ] | Rumore (Perlin/Voronoi) | `fbm` di tutti gli shader | uno solo, riusato ovunque |
-| [ ] | Crepa nel terreno | `scorch` fisico | decal |
-| [ ] | Bruciatura | `scorch` fuoco | decal |
-| [ ] | Brina / cristalli | `scorch` e `pool` freddo | decal |
-| [ ] | Cerchio di rune | `telegraph` | stile romano/augurale |
+| [x] | Bagliore morbido | `glow` (cerchio calcolato) | quasi uguale all'attuale: priorità bassa |
+| [x] | Scintilla / stella | `glow` per i critici | 4-8 punte |
+| [x] | Fiamma (sequenza 4 × 4 fotogrammi) | `fire` (rumore) | il miglioramento più visibile |
+| [x] | Fumo (sequenza 4 × 4) | nuovo: fumo dopo esplosioni e incendi | |
+| [x] | Fulmine (striscia) | segmenti di `lightning` | 2-3 varianti |
+| [x] | Anello d'urto | `ring` | bordo morbido |
+| [x] | Falce del fendente | `slash` (sfumatura) | con striature |
+| [x] | Rumore (Perlin/Voronoi) | `fbm` di tutti gli shader | uno solo, riusato ovunque |
+| [x] | Crepa nel terreno | `scorch` fisico | decal |
+| [x] | Bruciatura | `scorch` fuoco | decal |
+| [x] | Brina / cristalli | `scorch` e `pool` freddo | decal |
+| [x] | Cerchio di rune | `telegraph` | stile romano/augurale |
 
-**Totale: 12 texture** per tutto il gioco.
+**Totale: 12 texture** (14 file: i fulmini sono 3) per tutto il gioco. Per cambiarne una basta sostituire il PNG
+con lo stesso nome. Fiamma e fumo sono immagini singole: lo shader le fa guizzare/girare col rumore.
+La falce `fendente.png` è un piano a terra davanti all'eroe sopra la scia ad arco (`Vfx.slash`, archi < 300°);
+la stella compare sui critici (`glow:stella`); il fumo dopo le esplosioni di fuoco e la polvere dopo quelle fisiche.
 
 ## 5. Futuro
 

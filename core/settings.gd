@@ -32,21 +32,48 @@ static var damage_numbers := true
 static var ui_scale := 1.0
 ## Daltonici: la rarità si legge anche da una lettera (C, M, R, L, S) oltre che dal colore.
 static var colorblind := false
+## Controlli a video per il touch: 0 = automatici (se lo schermo è touch), 1 = sempre, 2 = mai.
+static var touch_controls := 0
 ## Effetti ridotti: niente distorsioni, segni a terra, immagini fantasma, micro-pause; meno particelle.
 static var reduced_vfx := false
 
 
+## I controlli touch sono attivi?
+static func touch_enabled() -> bool:
+	match touch_controls:
+		1:
+			return true
+		2:
+			return false
+	return DisplayServer.is_touchscreen_available()
+
+
+## Valori iniziali della grafica: più leggeri su telefoni e tablet.
+static func _video_defaults() -> Dictionary:
+	var d: Dictionary = VIDEO_DEFAULTS.duplicate()
+	if OS.has_feature("mobile"):
+		d["fullscreen"] = true
+		d["ssao"] = false
+		d["msaa"] = 0
+		d["scale"] = 0.8
+	return d
+
+
 static func load_and_apply() -> void:
+	var defaults := _video_defaults()
+	video = defaults.duplicate()
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
+		apply_video()
 		return
-	for k: String in VIDEO_DEFAULTS:
-		video[k] = cfg.get_value("video", k, VIDEO_DEFAULTS[k])
+	for k: String in defaults:
+		video[k] = cfg.get_value("video", k, defaults[k])
 	loot_filter = int(cfg.get_value("gameplay", "loot_filter", 0))
 	always_show_items = bool(cfg.get_value("gameplay", "always_show_items", true))
 	damage_numbers = bool(cfg.get_value("gameplay", "damage_numbers", true))
 	ui_scale = float(cfg.get_value("gameplay", "ui_scale", 1.0))
 	colorblind = bool(cfg.get_value("gameplay", "colorblind", false))
+	touch_controls = int(cfg.get_value("gameplay", "touch_controls", 0))
 	reduced_vfx = bool(cfg.get_value("video", "reduced_vfx", false))
 	Sfx.volume_db = float(cfg.get_value("audio", "sfx_db", Sfx.volume_db))
 	Music.volume_db = float(cfg.get_value("audio", "music_db", Music.volume_db))
@@ -69,6 +96,7 @@ static func save() -> void:
 	cfg.set_value("gameplay", "damage_numbers", damage_numbers)
 	cfg.set_value("gameplay", "ui_scale", ui_scale)
 	cfg.set_value("gameplay", "colorblind", colorblind)
+	cfg.set_value("gameplay", "touch_controls", touch_controls)
 	cfg.set_value("video", "reduced_vfx", reduced_vfx)
 	cfg.set_value("audio", "sfx_db", Sfx.volume_db)
 	cfg.set_value("audio", "music_db", Music.volume_db)

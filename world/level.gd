@@ -22,6 +22,7 @@ var camera: IsoCamera
 var hud: Hud
 var inventory_ui: InventoryUI
 var pause_menu: PauseMenu
+var touch: TouchControls
 var trade_ui: TradeUI
 var skills_ui: SkillsUI
 var dynamic_root: Node3D
@@ -69,6 +70,9 @@ func _ready() -> void:
 	skills_ui.bind(player)
 	pause_menu = PauseMenu.new()
 	add_child(pause_menu)
+	touch = TouchControls.new()
+	add_child(touch)
+	touch.bind(player, self)
 
 	_hover_ring = MeshInstance3D.new()
 	var tm := TorusMesh.new()
@@ -163,7 +167,10 @@ func _onboarding() -> void:
 	elif level_id == "dungeon":
 		hud.hint("dungeon", "i dungeon hanno sempre la stessa pianta; nemici e forzieri tornano a ogni ingresso. Cerca santuari nelle stanze.")
 	elif level_id == "level_01":
-		hud.hint("muovi", "clic sinistro per muoverti e attaccare, clic destro e 1-4 per le abilità, Q per la pozione.")
+		if Settings.touch_enabled():
+			hud.hint("muovi", "joystick a sinistra per muoverti, pulsante grande per attaccare; tocca un'abilità per la mira automatica o trascinala per mirare.")
+		else:
+			hud.hint("muovi", "clic sinistro per muoverti e attaccare, clic destro e 1-4 per le abilità, Q per la pozione.")
 
 
 func _exit_tree() -> void:
@@ -225,6 +232,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_quest_log()
 	elif event.is_action_pressed("skills"):
 		skills_ui.toggle()
+
+
+## C'è un pannello aperto (zaino, abilità, negozio, diario, mappa grande, pausa...)?
+func any_panel_open() -> bool:
+	return skills_ui.is_open or trade_ui.is_open or inventory_ui.is_open or hud.minimap.big \
+		or hud.quest_log.visible or hud.waypoint_panel.visible or hud.lore_panel.visible \
+		or hud.choice_panel.visible or hud.death_panel.visible or hud.end_panel.visible or pause_menu.root.visible
 
 
 ## Chiude il pannello aperto più in alto (ESC). Ritorna false se non c'era niente da chiudere.

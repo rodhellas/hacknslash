@@ -51,6 +51,19 @@ func _ready() -> void:
 	Settings.load_and_apply()
 
 
+## Tasto "indietro" di Android: come ESC (chiude il pannello in alto o apre la pausa).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		var ev := InputEventAction.new()
+		ev.action = "pause"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		var up := InputEventAction.new()
+		up.action = "pause"
+		up.pressed = false
+		Input.parse_input_event(up)
+
+
 func _process(delta: float) -> void:
 	_poll_loading()
 	if hero != null and level != null and not get_tree().paused:

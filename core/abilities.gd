@@ -219,7 +219,7 @@ static func _aoe_self(p: Player, ab: Dictionary) -> void:
 						var a := TAU * k / 5.0
 						Vfx.fire(Game.world_root(), p.global_position + Vector3(cos(a), 0.5, sin(a)) * radius * 0.7, radius * 0.35, 0.5)
 				elif el == "freddo":
-					Vfx.scorch(Game.world_root(), p.global_position, radius, Color(0.8, 0.95, 1.0), 3.0)
+					Vfx.scorch(Game.world_root(), p.global_position, radius, Color(0.8, 0.95, 1.0), 3.0, "brina")
 				elif el == "fulmine":
 					for k in 4:
 						var a := randf() * TAU
@@ -261,7 +261,7 @@ static func land(p: Player, ab: Dictionary) -> void:
 	var col: Color = ab.get("color", Color.WHITE)
 	damage_area(p, p.global_position, float(ab.get("radius", 4.0)), float(ab.get("dmg", 1.0)), float(ab.get("knock", 8.0)), ab)
 	Fx.ring(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)), col, 0.35)
-	Vfx.scorch(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)) * 0.6, Color(0.2, 0.17, 0.13), 4.0)
+	Vfx.scorch(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)) * 0.6, Color(0.2, 0.17, 0.13), 4.0, "crepa")
 	Vfx.distortion(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)))
 	Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.2, 0), Color(0.5, 0.42, 0.32), 20, 7.0, 0.18, 0.5, -10.0, 70.0)
 	Sfx.play("explosion", null, -4.0)

@@ -1,6 +1,6 @@
 extends SceneTree
 ## TEST AUTOMATICO degli effetti visivi (core/vfx.gd): ogni shader del kit si costruisce, ogni effetto
-## crea i suoi nodi e poi li toglie, proiettili diversi per elemento, stati sui nemici, dissolvenza.
+## usa la sua texture di textures/vfx, crea i suoi nodi e poi li toglie, proiettili diversi per elemento, stati sui nemici, dissolvenza.
 ## In headless gli shader non vengono compilati dalla scheda video: va guardato anche a schermo.
 ## Uso:  Godot_v4.7.2-stable_win64_console.exe --headless --path . --fixed-fps 60 --script res://tools/test_effetti.gd
 
@@ -36,6 +36,18 @@ func _run() -> void:
 			all_ok = false
 			print("    shader non pronto: ", k)
 	_check(all_ok, "%d shader del kit costruiti (senza segnaposto)" % V.SHADER_CODE.size())
+	var tex_ok := true
+	for k: String in V.TEXTURES:
+		var m: ShaderMaterial = V.material(k)
+		var t: Variant = m.get_shader_parameter("mask")
+		if not t is Texture2D or (t as Texture2D).get_width() < 256:
+			tex_ok = false
+			print("    texture mancante: ", k, " -> ", V.TEXTURES[k])
+	for k: String in ["fire", "scorch:crepa", "pool", "dissolve", "slash"]:
+		if not V.material(k).get_shader_parameter("noise_tex") is Texture2D:
+			tex_ok = false
+			print("    rumore mancante: ", k)
+	_check(tex_ok, "%d materiali con la loro texture di textures/vfx (e il rumore dove serve)" % V.TEXTURES.size())
 	var hero: Variant = load("res://core/hero_data.gd").create("Prova", "augure")
 	hero.level = 30
 	game.hero = hero

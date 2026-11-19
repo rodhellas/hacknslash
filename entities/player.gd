@@ -255,6 +255,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Ultimo input dal controller (cambia il modo di mirare).
 var using_pad := false
+## Controlli touch (ui/touch_controls.gd): direzione del joystick a video (come lo stick del
+## controller, y verso il basso) e pulsante d'attacco tenuto premuto.
+var touch_move := Vector2.ZERO
+var touch_attack := false
 
 
 ## Punto di mira col controller: il nemico più vicino nella direzione dello stick (o davanti), altrimenti avanti.
@@ -366,7 +370,8 @@ func _physics_process(delta: float) -> void:
 		_follow_mouse_hold()
 		wish = _auto_actions()
 		# Controller: tenendo premuto A si continua ad attaccare
-		if using_pad and wish == Vector3.ZERO and Input.is_action_pressed("pad_primary") and attack_cd <= 0.0 and cast_lock <= 0.0:
+		var holding := (using_pad and Input.is_action_pressed("pad_primary")) or touch_attack
+		if holding and wish == Vector3.ZERO and attack_cd <= 0.0 and cast_lock <= 0.0:
 			if not Abilities.enemies_in_radius(get_tree(), global_position, 14.0).is_empty():
 				_try_cast("lmb", pad_aim(abilities.get("lmb", {})))
 	if cast_lock > 0.0:
@@ -385,14 +390,37 @@ func move_speed() -> float:
 func _input_direction() -> Vector3:
 	if using_pad and get_viewport().gui_get_focus_owner() != null:
 		return Vector3.ZERO   # lo stick sta navigando in un pannello
-	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if input.length() < 0.1 or camera == null:
+	var input := touch_move if touch_move.length() >= 0.1 else Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if input.length() < 0.1:
+		return Vector3.ZERO
+	return screen_to_world_dir(input)
+
+
+## Direzione sullo schermo (x a destra, y in basso) -> direzione sul terreno vista dalla telecamera.
+func screen_to_world_dir(v: Vector2) -> Vector3:
+	if camera == null:
 		return Vector3.ZERO
 	var fwd := -camera.global_basis.z
 	fwd.y = 0.0
 	var right := camera.global_basis.x
 	right.y = 0.0
-	return (right.normalized() * input.x - fwd.normalized() * input.y).limit_length(1.0)
+	return (right.normalized() * v.x - fwd.normalized() * v.y).limit_length(1.0)
+
+
+## Touch: punto di mira di un'abilità. aim = trascinamento dal pulsante (lunghezza 0..1, y in basso);
+## quasi zero = mira automatica come col controller.
+func touch_aim_point(slot: String, aim: Vector2) -> Vector3:
+	var ab: Dictionary = abilities.get(slot, {})
+	if aim.length() < 0.05:
+		return pad_aim(ab)
+	var reach := _ability_reach(ab) if not ab.is_empty() else 6.0
+	var dir := screen_to_world_dir(aim.normalized())
+	return global_position + dir.normalized() * maxf(reach * clampf(aim.length(), 0.15, 1.0), 1.5)
+
+
+## Touch: lancia l'abilità del tasto `slot` (vedi touch_aim_point).
+func touch_cast(slot: String, aim: Vector2) -> bool:
+	return _try_cast(slot, touch_aim_point(slot, aim))
 
 
 func _auto_actions() -> Vector3:

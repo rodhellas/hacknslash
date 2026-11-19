@@ -1,17 +1,18 @@
 class_name Vfx
 extends RefCounted
-## Kit degli effetti visivi (vedi docs/EFFETTI_VISIVI.md): pochi shader procedurali e poche mesh,
-## riusati da tutti gli effetti e colorati per elemento. Niente texture: quando arriveranno
-## (fumo, fiamme, fulmini...) si mettono negli shader al posto del rumore procedurale.
+## Kit degli effetti visivi (vedi docs/EFFETTI_VISIVI.md): pochi shader, poche mesh e 14 texture in scala
+## di grigi (textures/vfx/, vedi TEXTURES), riusati da tutti gli effetti e colorati per elemento.
 ##
 ## Shader (in cache, condivisi; il colore è un "instance uniform" per oggetto):
-##   glow      bagliore morbido rivolto alla telecamera (lampi, nuclei dei proiettili, stelle)
-##   fire      fiamma procedurale rivolta alla telecamera (fuoco, braci, nemici in fiamme)
+##   glow      bagliore rivolto alla telecamera (lampi, nuclei dei proiettili); "glow:stella" per i critici
+##   fire      fiamma dipinta deformata dal rumore, rivolta alla telecamera (fuoco, nemici in fiamme)
+##   smoke     fumo che sale e ruota (dopo esplosioni e incendi)
 ##   ring      anello d'urto a terra che si allarga
-##   telegraph avviso a terra che si riempie fino al colpo (aree, boss, pericoli)
-##   scorch    segno a terra che svanisce (bruciatura, brina, crepa)
+##   telegraph avviso a terra con cerchio di rune che si riempie fino al colpo (aree, boss, pericoli)
+##   scorch    segno a terra che svanisce: "scorch:crepa" / "scorch:bruciatura" / "scorch:brina"
 ##   pool      pozza animata (fuoco, ghiaccio) per i pericoli a terra
-##   slash     falce del fendente con scia
+##   slash     falce del fendente con scia e striature; "slash_tex" = falce dipinta sopra
+##   bolt      fulmine dipinto tra due punti ("bolt:1".."bolt:3")
 ##   fresnel   bolla luminosa sui bordi (scudi, aura)
 ##   dissolve  dissolvenza con bordo luminoso (morte dei nemici)
 ##   distort   distorsione dell'aria (onde d'urto grandi)
@@ -26,13 +27,10 @@ static var _materials: Dictionary = {}
 static var _meshes: Dictionary = {}
 static var _hitstop_until := 0
 
+## Rumore: la texture ripetibile rumore.png (prima era calcolato con fbm procedurale).
 const _NOISE := """
-float vhash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float vnoise(vec2 p) {
-	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
-	return mix(mix(vhash(i), vhash(i + vec2(1.0, 0.0)), f.x), mix(vhash(i + vec2(0.0, 1.0)), vhash(i + vec2(1.0, 1.0)), f.x), f.y);
-}
-float fbm(vec2 p) { vec2 q = p; float v = 0.0; float a = 0.5; for (int i = 0; i < 4; i++) { v += a * vnoise(q); q *= 2.03; a *= 0.5; } return v; }
+uniform sampler2D noise_tex : hint_default_white, repeat_enable, filter_linear_mipmap;
+float fbm(vec2 p) { return texture(noise_tex, p * 0.16).r; }
 """
 
 const _BILLBOARD := """
@@ -43,16 +41,25 @@ void vertex() {
 }
 """
 
+## Texture in scala di grigi (textures/vfx/<nome>.png) per ogni materiale: "tipo" o "tipo:variante".
+## Il bianco è l'effetto, il nero è vuoto; il colore lo mette `tint`.
+const TEXTURES := {
+	"glow": "glow", "glow:stella": "stella", "fire": "fiamma", "smoke": "fumo", "ring": "anello",
+	"telegraph": "rune", "scorch:crepa": "crepa", "scorch:bruciatura": "bruciatura", "scorch:brina": "brina",
+	"slash_tex": "fendente", "bolt:1": "fulmine_1", "bolt:2": "fulmine_2", "bolt:3": "fulmine_3",
+}
+const TEX_DIR := "res://textures/vfx/"
+
 const SHADER_CODE := {
 	"glow": """shader_type spatial;
 render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 instance uniform vec4 tint : source_color = vec4(1.0);
 instance uniform float fade = 1.0;
 instance uniform float intensity = 2.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
 %s
 void fragment() {
-	float d = length(UV - 0.5) * 2.0;
-	float a = pow(clamp(1.0 - d, 0.0, 1.0), 2.2);
+	float a = texture(mask, UV).r;
 	ALBEDO = tint.rgb * intensity * (0.6 + 0.8 * a);
 	ALPHA = a * tint.a * fade;
 }""",
@@ -61,58 +68,79 @@ render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabl
 instance uniform vec4 tint : source_color = vec4(1.0);
 instance uniform float fade = 1.0;
 instance uniform float seed = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
 %s
 %s
 void fragment() {
-	vec2 uv = vec2(UV.x, 1.0 - UV.y);
-	float n = fbm(vec2(uv.x * 3.0 + seed, uv.y * 2.5 - TIME * 2.6 + seed));
-	float shape = (1.0 - abs(uv.x - 0.5) * 2.0) * (1.0 - uv.y * 0.9);
-	float f = clamp(shape * 1.7 + (n - 0.5) * 1.1 - uv.y * 0.5, 0.0, 1.0);
-	vec3 col = mix(vec3(0.9, 0.18, 0.03), vec3(1.0, 0.85, 0.35), f) * tint.rgb;
+	float up = 1.0 - UV.y;
+	// La fiamma dipinta viene deformata dal rumore che sale: guizza senza bisogno di fotogrammi
+	float n = fbm(vec2(UV.x * 5.0 + seed, UV.y * 4.5 + TIME * 10.0)) - 0.5;
+	vec2 uv = UV + vec2(n * 0.2, n * 0.1) * (0.2 + up);
+	float f = texture(mask, uv).r * (0.85 + 0.3 * fbm(vec2(seed * 3.0, TIME * 4.0)));
+	vec3 col = mix(vec3(0.9, 0.18, 0.03), vec3(1.0, 0.85, 0.35), clamp(f * 1.3, 0.0, 1.0)) * tint.rgb;
 	ALBEDO = col * 2.2;
-	ALPHA = smoothstep(0.12, 0.55, f) * fade * tint.a;
+	ALPHA = clamp(f * 1.4, 0.0, 1.0) * fade * tint.a;
+}""",
+	"smoke": """shader_type spatial;
+render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(0.25, 0.23, 0.21, 0.6);
+instance uniform float fade = 1.0;
+instance uniform float seed = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+%s
+void fragment() {
+	float a = seed + TIME * 0.25;
+	vec2 p = UV - 0.5;
+	p = vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a));
+	float m = texture(mask, p + 0.5).r;
+	ALBEDO = tint.rgb * (0.7 + 0.5 * m);
+	ALPHA = m * tint.a * fade;
 }""",
 	"ring": """shader_type spatial;
 render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 instance uniform vec4 tint : source_color = vec4(1.0);
 instance uniform float fade = 1.0;
 instance uniform float width = 0.25;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
 void fragment() {
 	float d = length(UV - 0.5) * 2.0;
-	float a = smoothstep(1.0 - width, 1.0 - width * 0.35, d) * (1.0 - smoothstep(0.96, 1.0, d));
+	float a = texture(mask, UV).r * (0.8 + width * 1.5);
 	a += (1.0 - smoothstep(0.0, 1.0, d)) * 0.08;
 	ALBEDO = tint.rgb * 2.5;
-	ALPHA = a * fade * tint.a;
+	ALPHA = clamp(a, 0.0, 1.0) * fade * tint.a;
 }""",
 	"telegraph": """shader_type spatial;
 render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 instance uniform vec4 tint : source_color = vec4(1.0);
 instance uniform float fade = 1.0;
 instance uniform float progress = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
 void fragment() {
 	vec2 p = UV - 0.5;
 	float d = length(p) * 2.0;
 	if (d > 1.0) { discard; }
 	float edge = smoothstep(0.9, 0.96, d) * (1.0 - smoothstep(0.985, 1.0, d));
 	float fill = (1.0 - smoothstep(progress - 0.04, progress, d)) * 0.35;
-	float ang = atan(p.y, p.x) / 6.28318;
-	float dash = step(0.5, fract(ang * 24.0 + TIME * 0.25)) * smoothstep(0.78, 0.8, d) * (1.0 - smoothstep(0.84, 0.86, d));
+	// Cerchio di rune che gira piano e si accende man mano che il colpo si avvicina
+	float a = TIME * 0.35;
+	vec2 r = vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a)) * 1.04 + 0.5;
+	float rune = texture(mask, r).r;
 	float pulse = 0.85 + 0.15 * sin(TIME * 10.0);
 	ALBEDO = tint.rgb * 1.6;
-	ALPHA = clamp(edge * pulse + fill + dash * 0.5 + 0.06, 0.0, 1.0) * fade * tint.a;
+	ALPHA = clamp(edge * pulse + fill + rune * (0.35 + 0.45 * progress) + 0.04, 0.0, 1.0) * fade * tint.a;
 }""",
 	"scorch": """shader_type spatial;
 render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 instance uniform vec4 tint : source_color = vec4(0.1, 0.08, 0.06, 1.0);
 instance uniform float fade = 1.0;
 instance uniform float seed = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
 %s
 void fragment() {
-	float d = length(UV - 0.5) * 2.0;
+	float m = texture(mask, UV).r;
 	float n = fbm(UV * 6.0 + seed);
-	float a = 1.0 - smoothstep(0.25, 1.0, d + (n - 0.5) * 0.6);
 	ALBEDO = tint.rgb * (0.7 + 0.6 * n);
-	ALPHA = a * 0.75 * fade * tint.a;
+	ALPHA = clamp(m * 1.4, 0.0, 1.0) * 0.85 * fade * tint.a;
 }""",
 	"pool": """shader_type spatial;
 render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
@@ -121,7 +149,7 @@ instance uniform float fade = 1.0;
 %s
 void fragment() {
 	float d = length(UV - 0.5) * 2.0;
-	float n = fbm(UV * 5.0 + vec2(TIME * 0.25, -TIME * 0.18));
+	float n = fbm(UV * 5.0 + vec2(TIME * 1.5, -TIME * 1.1)) * 0.6 + fbm(UV * 9.0 - vec2(TIME * 1.0, TIME * 1.4)) * 0.4;
 	float a = (1.0 - smoothstep(0.75, 1.0, d)) * (0.35 + 0.65 * n);
 	ALBEDO = tint.rgb * (0.8 + 1.6 * n);
 	ALPHA = a * fade * tint.a;
@@ -131,12 +159,34 @@ render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabl
 instance uniform vec4 tint : source_color = vec4(1.0);
 instance uniform float fade = 1.0;
 instance uniform float head = 0.0;
+%s
 void fragment() {
 	float along = UV.x;
 	float trail = clamp(1.0 - (head - along) / 0.55, 0.0, 1.0) * step(along, head);
 	float radial = smoothstep(0.0, 0.75, UV.y) * (1.0 - smoothstep(0.9, 1.0, UV.y));
+	float streak = 0.55 + 0.9 * fbm(vec2(along * 2.0, UV.y * 30.0));   // striature lungo l'arco
 	ALBEDO = tint.rgb * (1.0 + trail * 2.5);
-	ALPHA = trail * radial * fade * tint.a;
+	ALPHA = clamp(trail * radial * streak, 0.0, 1.0) * fade * tint.a;
+}""",
+	"slash_tex": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+void fragment() {
+	float m = texture(mask, vec2(UV.x, 1.0 - UV.y)).r;
+	ALBEDO = tint.rgb * (1.2 + 1.8 * m);
+	ALPHA = m * fade * tint.a;
+}""",
+	"bolt": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+void fragment() {
+	float m = texture(mask, UV).r;
+	ALBEDO = mix(tint.rgb, vec3(1.0), m * m) * 3.0;
+	ALPHA = m * fade * tint.a;
 }""",
 	"fresnel": """shader_type spatial;
 render_mode blend_add, unshaded, cull_back, depth_draw_never, shadows_disabled;
@@ -181,17 +231,33 @@ void fragment() {
 static func material(kind: String) -> ShaderMaterial:
 	if _materials.has(kind):
 		return _materials[kind]
-	var code: String = SHADER_CODE[kind]
-	match kind:
-		"glow": code = code % _BILLBOARD
-		"fire": code = code % [_NOISE, _BILLBOARD]
-		"scorch", "pool", "dissolve": code = code % _NOISE
-	var sh := Shader.new()
-	sh.code = code
+	var base := kind.get_slice(":", 0)
+	if not _shaders.has(base):
+		var code: String = SHADER_CODE[base]
+		match base:
+			"glow", "smoke": code = code % _BILLBOARD
+			"fire": code = code % [_NOISE, _BILLBOARD]
+			"scorch", "pool", "dissolve", "slash": code = code % _NOISE
+		var sh := Shader.new()
+		sh.code = code
+		_shaders[base] = sh
 	var m := ShaderMaterial.new()
-	m.shader = sh
+	m.shader = _shaders[base]
+	if TEXTURES.has(kind):
+		m.set_shader_parameter("mask", texture(TEXTURES[kind]))
+	if base in ["fire", "scorch", "pool", "dissolve", "slash"]:
+		m.set_shader_parameter("noise_tex", texture("rumore"))
 	_materials[kind] = m
 	return m
+
+
+## Texture degli effetti (textures/vfx/<nome>.png), in cache. null se manca il file.
+static func texture(tex_name: String) -> Texture2D:
+	var key := "tex_" + tex_name
+	if not _meshes.has(key):
+		var path := TEX_DIR + tex_name + ".png"
+		_meshes[key] = load(path) if ResourceLoader.exists(path) else null
+	return _meshes[key]
 
 
 static func quad() -> QuadMesh:
@@ -240,10 +306,10 @@ static func reduced() -> bool:
 
 ## Bagliore che si allarga e svanisce (lampi dei colpi, esplosioni).
 ## life <= 0: resta attaccato a `parent` (anche se non è ancora nella scena: posizione locale zero).
-static func glow(parent: Node, pos: Vector3, color: Color, size: float = 1.0, life: float = 0.2, grow: float = 1.6) -> MeshInstance3D:
+static func glow(parent: Node, pos: Vector3, color: Color, size: float = 1.0, life: float = 0.2, grow: float = 1.6, kind: String = "glow") -> MeshInstance3D:
 	if parent == null or (not parent.is_inside_tree() and life > 0.0):
 		return null
-	var mi := _mi(quad(), "glow", color)
+	var mi := _mi(quad(), kind, color)
 	parent.add_child(mi)
 	if parent.is_inside_tree():
 		mi.global_position = pos
@@ -272,6 +338,22 @@ static func fire(parent: Node, pos: Vector3, size: float = 1.0, life: float = 0.
 		tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life)
 		tw.chain().tween_callback(mi.queue_free)
 	return mi
+
+
+## Fumo che sale, si allarga e svanisce (spento con "effetti ridotti").
+static func smoke(parent: Node, pos: Vector3, size: float = 2.0, life: float = 1.8, color: Color = Color(0.25, 0.23, 0.21, 0.6)) -> void:
+	if parent == null or not parent.is_inside_tree() or reduced():
+		return
+	var mi := _mi(quad(), "smoke", color)
+	mi.set_instance_shader_parameter("seed", randf() * TAU)
+	parent.add_child(mi)
+	mi.global_position = pos
+	mi.scale = Vector3.ONE * size
+	var tw := mi.create_tween().set_parallel(true)
+	tw.tween_property(mi, "global_position", pos + Vector3(randf_range(-0.4, 0.4), size * 0.8, randf_range(-0.4, 0.4)), life).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mi, "scale", Vector3.ONE * size * 1.7, life).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(mi.queue_free)
 
 
 ## Anello d'urto a terra che si allarga.
@@ -304,11 +386,11 @@ static func telegraph(parent: Node, pos: Vector3, radius: float, color: Color, t
 	return mi
 
 
-## Segno a terra che svanisce piano (bruciatura, brina, crepa).
-static func scorch(parent: Node, pos: Vector3, radius: float, color: Color, life: float = 6.0) -> void:
+## Segno a terra che svanisce piano. pattern: "bruciatura", "brina" o "crepa".
+static func scorch(parent: Node, pos: Vector3, radius: float, color: Color, life: float = 6.0, pattern: String = "bruciatura") -> void:
 	if parent == null or not parent.is_inside_tree() or reduced():
 		return
-	var mi := _mi(plane(), "scorch", color)
+	var mi := _mi(plane(), "scorch:" + pattern, color)
 	mi.set_instance_shader_parameter("seed", randf() * 30.0)
 	parent.add_child(mi)
 	mi.global_position = Vector3(pos.x, 0.04 + randf() * 0.01, pos.z)
@@ -353,6 +435,20 @@ static func slash(owner: Node3D, yaw: float, arc_deg: float, reach: float, color
 	var tw := mi.create_tween()
 	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("head", v), 0.0, 1.55, time + 0.12)
 	tw.tween_callback(mi.queue_free)
+	if arc_deg < 300.0:
+		# Falce dipinta davanti all'eroe, che si allarga e svanisce
+		var d := _mi(plane(), "slash_tex", color)
+		owner.add_child(d)
+		d.position = Vector3(0, 1.0, 0)
+		d.rotation.y = yaw
+		if randf() < 0.5:
+			d.scale.x = -1.0
+		var s0 := Vector3(reach * 0.85 * signf(d.scale.x), 1.0, reach * 0.85)
+		d.scale = s0
+		var td := d.create_tween().set_parallel(true)
+		td.tween_property(d, "scale", s0 * Vector3(1.15, 1.0, 1.15), time + 0.15).set_ease(Tween.EASE_OUT)
+		td.tween_method(func(v: float) -> void: d.set_instance_shader_parameter("fade", v), 1.0, 0.0, time + 0.15).set_ease(Tween.EASE_IN)
+		td.chain().tween_callback(d.queue_free)
 
 
 ## Nastro ad arco (UV.x lungo l'arco, UV.y dal centro al bordo), centrato su −Z.
@@ -383,44 +479,32 @@ static func _slash_mesh(arc_deg: float, reach: float) -> ArrayMesh:
 	return m
 
 
-## Fulmine a zig-zag da a a b, che sfarfalla e sparisce.
-static func lightning(parent: Node, a: Vector3, b: Vector3, color: Color, life: float = 0.18, segments: int = 7) -> void:
+## Fulmine dipinto da a a b (una delle 3 texture, stirata tra i due punti e girata verso la telecamera),
+## che sfarfalla e sparisce. `segments` non serve più (resta per compatibilità).
+static func lightning(parent: Node, a: Vector3, b: Vector3, color: Color, life: float = 0.18, _segments: int = 7) -> void:
 	if parent == null or not parent.is_inside_tree():
 		return
-	var root := Node3D.new()
-	parent.add_child(root)
-	var pts: Array = [a]
-	var dir := b - a
-	var side := dir.cross(Vector3.UP).normalized()
-	if side.length() < 0.1:
-		side = Vector3.RIGHT
-	for i in range(1, segments):
-		var t := float(i) / segments
-		pts.append(a + dir * t + side * randf_range(-0.5, 0.5) + Vector3.UP * randf_range(-0.35, 0.35))
-	pts.append(b)
-	var m := Fx.mat(color.lightened(0.4), 6.0, false, true)
-	for i in pts.size() - 1:
-		var p0: Vector3 = pts[i]
-		var p1: Vector3 = pts[i + 1]
-		var len := p0.distance_to(p1)
-		if len < 0.01:
-			continue
-		var seg := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = Vector3(0.06, 0.06, len)
-		seg.mesh = bm
-		seg.material_override = m
-		seg.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		root.add_child(seg)
-		seg.global_position = (p0 + p1) * 0.5
-		if absf((p1 - p0).normalized().dot(Vector3.UP)) < 0.99:
-			seg.look_at(p1, Vector3.UP)
+	var axis := b - a
+	var length := axis.length()
+	if length < 0.05:
+		return
+	var cam := parent.get_viewport().get_camera_3d()
+	var mid := (a + b) * 0.5
+	var view := (cam.global_position - mid).normalized() if cam != null else Vector3.UP
+	var side := axis.cross(view)
+	if side.length() < 0.001:
+		side = axis.cross(Vector3.RIGHT)
+	var width := clampf(length * 0.3, 0.8, 3.5) * (1.0 if randf() < 0.5 else -1.0)
+	side = side.normalized() * width
+	var mi := _mi(quad(), "bolt:%d" % randi_range(1, 3), color.lightened(0.2))
+	parent.add_child(mi)
+	mi.global_transform = Transform3D(Basis(axis, side, axis.normalized().cross(side).normalized()), mid)
 	glow(parent, b, color, 0.9, life)
-	var tw := root.create_tween()
-	tw.tween_property(root, "visible", false, 0.04).set_delay(life * 0.4)
-	tw.tween_property(root, "visible", true, 0.0).set_delay(0.03)
-	tw.tween_interval(life * 0.4)
-	tw.tween_callback(root.queue_free)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "visible", false, 0.04).set_delay(life * 0.4)
+	tw.tween_property(mi, "visible", true, 0.0).set_delay(0.03)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life * 0.5)
+	tw.tween_callback(mi.queue_free)
 
 
 # --- Colpi per elemento ---------------------------------------------------------------------------
@@ -448,6 +532,7 @@ static func hit(parent: Node, pos: Vector3, element: String, crit: bool = false)
 			Fx.shards(parent, pos, Color(1.0, 0.85, 0.5), 4 * n, 6.0 * k, 0.25)
 	if crit:
 		shockwave(parent, pos - Vector3(0, pos.y, 0), 1.6, col, 0.25, 0.4)
+		glow(parent, pos, col.lightened(0.3), 2.2, 0.22, 1.3, "glow:stella")
 
 
 ## Esplosione per elemento: lampo, anello, schegge, segno a terra, distorsione se grande.
@@ -463,17 +548,19 @@ static func explosion(parent: Node, pos: Vector3, radius: float, element: String
 			for i in (3 if reduced() else 6):
 				var o := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * radius * 0.5
 				fire(parent, ground + o + Vector3(0, 0.6, 0), radius * 0.45, randf_range(0.5, 0.9))
-			scorch(parent, ground, radius * 0.8, Color(0.08, 0.05, 0.04))
+			scorch(parent, ground, radius * 0.8, Color(0.08, 0.05, 0.04), 6.0, "bruciatura")
+			smoke(parent, ground + Vector3(0, 1.0, 0), radius * 0.9, 2.0)
 		"freddo":
 			Fx.shards(parent, ground + Vector3(0, 0.4, 0), Color(0.75, 0.93, 1.0), 14, radius * 3.0, 0.7)
-			scorch(parent, ground, radius * 0.9, Color(0.8, 0.95, 1.0), 4.0)
+			scorch(parent, ground, radius * 0.9, Color(0.8, 0.95, 1.0), 4.0, "brina")
 		"fulmine":
 			for i in (3 if reduced() else 6):
 				var a := randf() * TAU
 				lightning(parent, ground + Vector3(0, 2.5, 0), ground + Vector3(cos(a), 0.1, sin(a)) * radius * randf_range(0.3, 1.0), col, 0.2, 5)
-			scorch(parent, ground, radius * 0.6, Color(0.12, 0.1, 0.16), 3.0)
+			scorch(parent, ground, radius * 0.6, Color(0.12, 0.1, 0.16), 3.0, "bruciatura")
 		_:
-			scorch(parent, ground, radius * 0.7, Color(0.18, 0.15, 0.12), 4.0)
+			scorch(parent, ground, radius * 0.7, Color(0.18, 0.15, 0.12), 4.0, "crepa")
+			smoke(parent, ground + Vector3(0, 0.5, 0), radius * 0.7, 1.2, Color(0.45, 0.4, 0.33, 0.45))
 	if radius >= 4.0:
 		distortion(parent, ground, radius)
 

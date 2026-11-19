@@ -161,6 +161,16 @@ func _build_gameplay() -> VBoxContainer:
 	cb.button_pressed = Settings.colorblind
 	cb.toggled.connect(func(on: bool) -> void: Settings.colorblind = on)
 	v.add_child(cb)
+	var trow := HBoxContainer.new()
+	trow.add_child(_label("Controlli touch a video  "))
+	var topt := OptionButton.new()
+	for pair: Array in [[0, "Automatici"], [1, "Sempre"], [2, "Mai"]]:
+		topt.add_item(pair[1], pair[0])
+	topt.select(clampi(Settings.touch_controls, 0, 2))
+	topt.item_selected.connect(func(i: int) -> void: Settings.touch_controls = topt.get_item_id(i))
+	trow.add_child(topt)
+	v.add_child(trow)
+	v.add_child(_label("Automatici: compaiono solo se lo schermo è touch (telefoni, tablet).", 13, Color(0.6, 0.6, 0.6)))
 	v.add_child(_slider_row("Scala dell'interfaccia (%)", 75.0, 150.0, 5.0, Settings.ui_scale * 100.0, func(x: float) -> void:
 		Settings.ui_scale = x / 100.0
 		Settings.apply_video()))
