@@ -803,6 +803,7 @@ func _die() -> void:
 	var in_rift := Game.level != null and int(Game.level.rift_grade) > 0
 	if unique and Game.hero and not in_rift:
 		Game.hero.flags["unique_" + type_id] = true
+		Cutscene.trigger.call_deferred("boss:" + type_id)
 	if has_affix("esplosivo"):
 		Hazard.spawn(global_position, 3.5, 1.0, 0.0, damage * 1.5, Color(1.0, 0.6, 0.2), level)
 	if Game.level and Game.level.has_method("on_enemy_died"):

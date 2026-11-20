@@ -1,0 +1,4 @@
+Immagini delle cutscene (fumetto animato). Formato e testi per generarle: docs/CUTSCENE.md.
+Una cartella per cutscene: textures/cutscene/<id cutscene>/<nome>.png, citate in data/cutscene_db.gd come "<id>/<nome>".
+Dimensioni consigliate 2560x1440 (16:9; il motore le ingrandisce del 20% per zoom e panoramiche).
+Livelli in parallasse: PNG con trasparenza (sfondo, piano medio, primo piano), stessa dimensione.

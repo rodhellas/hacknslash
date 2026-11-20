@@ -102,6 +102,8 @@ func _ready() -> void:
 	Settings.apply_to_level(self)
 	_place_world_extras()
 	_onboarding()
+	# Cutscene legate all'ingresso nel livello (data/cutscene_db.gd, trigger "enter:<id>"), dopo la schermata di caricamento
+	_trigger_enter_cutscenes.call_deferred()
 	# Salva subito dopo un cambio di livello (così il salvataggio sa dove si trova l'eroe)
 	Game.save_game.call_deferred()
 
@@ -211,6 +213,11 @@ func _free_point_near(center: Vector3, map: RID) -> Vector3:
 	return Vector3.INF
 
 
+func _trigger_enter_cutscenes() -> void:
+	if is_inside_tree() and rift_grade <= 0:
+		Cutscene.trigger("enter:" + level_id)
+
+
 ## Suggerimenti dei primi minuti (una volta per eroe).
 func _onboarding() -> void:
 	if is_town:
@@ -294,7 +301,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## C'è un pannello aperto (zaino, abilità, negozio, diario, mappa grande, pausa...)?
 func any_panel_open() -> bool:
-	return skills_ui.is_open or trade_ui.is_open or inventory_ui.is_open or hud.minimap.big \
+	return Cutscene.is_playing() or skills_ui.is_open or trade_ui.is_open or inventory_ui.is_open or hud.minimap.big \
 		or hud.quest_log.visible or hud.waypoint_panel.visible or hud.lore_panel.visible \
 		or hud.choice_panel.visible or hud.death_panel.visible or hud.end_panel.visible or pause_menu.root.visible
 

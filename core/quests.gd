@@ -65,6 +65,7 @@ static func start(id: String, announce: bool = true) -> void:
 		Sfx.play("missione_nuova")
 	_check_already(id)
 	Game.quests_changed.emit()
+	Cutscene.trigger("quest_start:" + id)
 
 
 ## Avvia le missioni senza NPC (giver "") i cui requisiti sono soddisfatti.
@@ -166,6 +167,7 @@ static func _check_already(id: String) -> void:
 static func _complete(id: String) -> void:
 	var q := QuestDB.get_data(id)
 	Game.hero.quests[id]["state"] = "done"
+	Cutscene.trigger.call_deferred("quest_done:" + id)
 	var r: Dictionary = q.get("reward", {})
 	var lines: Array = []
 	var lvl: Level = Game.level if Game.level != null and is_instance_valid(Game.level) else null

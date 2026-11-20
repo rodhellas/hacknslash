@@ -1,0 +1,3 @@
+Filmati delle cutscene (inquadrature "video" in data/cutscene_db.gd): Ogg Theora (.ogv), 1920x1080, 30 fps.
+Conversione: ffmpeg -i filmato.mp4 -c:v libtheora -q:v 7 -c:a libvorbis -q:a 5 filmato.ogv
+Pesano molto: su Android preferisci le immagini animate.

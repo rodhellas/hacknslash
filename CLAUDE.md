@@ -25,12 +25,14 @@ core/       sfx.gd (effetti sonori: file con versioni a caso, riserva sintetizza
             appearance.gd (pezzi dell'equipaggiamento nelle prese del modello), bounties.gd (taglie),
             icons.gd (icone di abilità/passive/pozione/oggetti/gemme/materiali da textures/icone, null se mancano → sigla),
             terrain.gd (texture del terreno/strade/dungeon: shader triplanare in coordinate del mondo),
-            dressing.gd (arredo stile D3 dei livelli all'aperto: copertura del suolo + massa oltre i confini)
+            dressing.gd (arredo stile D3 dei livelli all'aperto: copertura del suolo + massa oltre i confini),
+            cutscene.gd (riproduttore delle cutscene: titoli, immagini animate in parallasse, video, scene nel motore)
 data/       hero_classes.gd (classi+abilità), enemy_db.gd, item_db.gd (basi, affissi, leggendari+poteri, drop,
             prezzi, materiali, ricette del fabbro, gemme, set), npc_db.gd (NPC e i loro dialoghi), quest_db.gd (missioni e loro testi),
             map_zones.gd (zone del terreno: colore, bordo, vegetazione sparsa), dungeon_db.gd (dungeon generati),
             world_db.gd (santuari, piloni, eventi, taglie), visual_db.gd (aspetto dell'equipaggiamento indossato), skill_db.gd (abilità alternative, varianti,
             passive, leggendari che cambiano le abilità), difficulty_db.gd (difficoltà e Labirinti di Dedalo),
+            cutscene_db.gd (catalogo delle cutscene e loro trigger),
             sound_db.gd (catalogo dei suoni: nome -> riserva sintetizzata e volume; suoni per abilità, elemento, famiglia di nemici)
 entities/   player.gd, enemy.gd (+ affissi delle elite), npc.gd, projectile.gd, loot_drop.gd, health_globe.gd,
             hazard.gd (pozze di fuoco / sfere di ghiaccio / esplosioni delle elite)
@@ -186,6 +188,11 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - `Fx.ring/telegraph/swing/strike` ora passano da Vfx. `Settings.reduced_vfx` (Opzioni > Video).
 - **In headless gli shader non vengono compilati**: un errore di sintassi si vede solo a schermo (console di Godot).
 
+## Trama e cutscene (docs/TRAMA.md, docs/STRUTTURA_ATTI.md, docs/CUTSCENE.md)
+- Trama ufficiale decisa dall'utente: `docs/TRAMA.md` (le `PROPOSTE_TRAMA*.md` sono superate). Struttura degli atti proposta dal narrative designer: `docs/STRUTTURA_ATTI.md` (da approvare).
+- Cutscene: `Cutscene.play(id)` / `Cutscene.trigger(evento)` (una volta per eroe, flag `cs_<id>`). Trigger chiamati da `Level._ready` (`enter:<livello>`), `Quests.start`/`_complete` (`quest_start:`/`quest_done:`), `Enemy._die` dei boss unici (`boss:<id>`), `CutsceneTrigger` (world/cutscene_trigger.gd, `area:<nome>`). Durante la cutscene il gioco è in pausa (gli attori delle scene si muovono con tween del riproduttore, `PROCESS_MODE_ALWAYS`), HUD e touch nascosti, `Level.any_panel_open()` vero. Immagini mancanti = segnaposto col nome.
+- Agenti del progetto in `.claude/agents/`: `level-designer`, `narrative-designer`, `qa-tester`. Il disco condiviso a volte rifiuta le scritture degli agenti (ETXTBSY): falli scrivere nello scratchpad e copia il file.
+
 ## Missioni (data/quest_db.gd, core/quests.gd)
 - Obiettivi in sequenza: kill, kill_unique, enter, altar, talk, salvage, chest. Eventi inviati con `Quests.notify(tipo, bersaglio)`.
 - Gli NPC prima provano `Quests.talk(npc_id)` (consegna/affida), poi aprono negozio/dialogo. Segni "!" / "?" sopra la testa.
@@ -248,6 +255,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - **`tools/test_grafica.gd`** (29 controlli): forme e arredo dei livelli, texture del terreno e delle strade nei 3 livelli, pavimenti/muri dei 3 dungeon, dipinti di caricamento, icone di oggetti/gemme/materiali nello zaino, cornici dei pannelli, barra delle abilità decorata e globi, sfondo del menu, icona dell'app e icone Android.
 - **`tools/test_audio.gd`** (9 controlli, senza `--fixed-fps`): suoni usati nel codice tutti nel catalogo, abilità/elementi/nemici con un suono, riserve sintetizzate, documento = catalogo, nomi dei file in audio/, ordine di ricerca della musica.
 - **`tools/test_livelli.gd`** (22 controlli, anche scene sul percorso e molo 1 collegato): level design dei livelli (elite sul percorso, riposi, arene, segreti con forzieri unici, punti fissi e santuari/eventi che ci finiscono davvero, missioni di uccisione ancora fattibili).
+- **`tools/test_cutscene.gd`** (22 controlli): catalogo, cutscene di prova con tutti i tipi di inquadratura (titolo, livelli in parallasse, scena nel motore con telecamera e attore che si muove col gioco in pausa, video mancante), avanti/salta (tastiera, clic, Esc senza menu di pausa), HUD e telecamera ripristinati, flag, trigger una volta, coda, area nel livello.
 - **`tools/test_mappa.gd`** (16 controlli): ogni livello ha la Forma; Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 
