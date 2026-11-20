@@ -158,7 +158,9 @@ static func add_ribbon(am: ArrayMesh, pts: PackedVector2Array, ws: PackedFloat32
 		var v2 := Vector3(pa.x - na.x, y, pa.y - na.y)
 		var v3 := Vector3(pb.x + nb.x, y, pb.y + nb.y)
 		var v4 := Vector3(pb.x - nb.x, y, pb.y - nb.y)
-		for v: Vector3 in [v1, v3, v2, v2, v3, v4]:
+		# Senso orario visto dall'alto = faccia davanti per Godot (prima era al contrario: vedi Terrain.fix_ribbon).
+		# Nelle curve strette i triangoli ripiegati restano girati al contrario e il culling li nasconde.
+		for v: Vector3 in [v1, v2, v3, v2, v4, v3]:
 			st.add_vertex(v)
 	st.set_material(mat)
 	st.commit(am)

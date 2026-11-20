@@ -17,7 +17,7 @@ const ACTIONS := [
 	["skill_1", "Abilità 1"], ["skill_2", "Abilità 2"], ["skill_3", "Abilità 3"], ["skill_4", "Abilità 4"],
 	["potion", "Pozione"], ["interact", "Interagisci"], ["town_portal", "Portale cittadino"],
 	["inventory", "Inventario"], ["skills", "Abilità"], ["map", "Mappa"], ["quest_log", "Diario missioni"],
-	["show_items", "Mostra oggetti a terra"],
+	["show_items", "Mostra oggetti a terra"], ["turbo", "Movimento veloce ×5 (prove)"],
 ]
 
 static var video: Dictionary = VIDEO_DEFAULTS.duplicate()
@@ -32,20 +32,31 @@ static var damage_numbers := true
 static var ui_scale := 1.0
 ## Daltonici: la rarità si legge anche da una lettera (C, M, R, L, S) oltre che dal colore.
 static var colorblind := false
-## Controlli a video per il touch: 0 = automatici (se lo schermo è touch), 1 = sempre, 2 = mai.
+## Controlli a video per il touch (solo nella versione per telefoni/tablet): 0 = automatici
+## (se lo schermo è touch), 1 = sempre, 2 = mai.
 static var touch_controls := 0
+## Solo per i test: attiva i controlli touch anche sul PC.
+static var force_touch := false
 ## Effetti ridotti: niente distorsioni, segni a terra, immagini fantasma, micro-pause; meno particelle.
 static var reduced_vfx := false
 
 
 ## I controlli touch sono attivi?
+## Esistono solo nella versione Android (feature "mobile"): sul PC mai, anche con uno schermo touch.
 static func touch_enabled() -> bool:
+	if not (touch_build() or force_touch):
+		return false
 	match touch_controls:
 		1:
 			return true
 		2:
 			return false
 	return DisplayServer.is_touchscreen_available()
+
+
+## Versione per telefoni/tablet (esportazione Android).
+static func touch_build() -> bool:
+	return OS.has_feature("mobile")
 
 
 ## Valori iniziali della grafica: più leggeri su telefoni e tablet.

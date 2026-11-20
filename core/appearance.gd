@@ -75,6 +75,16 @@ static func _add_part(model: Node3D, slot: String, p: Array, rarity: int, dye: S
 	if p.size() > 5:
 		mi.rotation_degrees = p[5]
 	var mat_id := String(p[4])
+	if mat_id == "energia":
+		# Guscio di energia attorno al metallo (colore della rarità per leggendari e set)
+		var ec: Color = VisualDB.MATERIALS["energia"]
+		if rarity >= Item.Rarity.LEGGENDARIO:
+			ec = Item.RARITY_COLORS[rarity]
+		Vfx.make_energy(mi, ec)
+		mi.name = "Equip_%s_%d" % [slot, s.get_child_count()]
+		mi.set_meta(META, slot)
+		s.add_child(mi)
+		return
 	var col: Color = VisualDB.MATERIALS.get(mat_id, Color.MAGENTA)
 	var glow: float = VisualDB.GLOW.get(mat_id, 0.0)
 	if dye != "" and glow <= 0.0:

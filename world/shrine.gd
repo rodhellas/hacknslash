@@ -83,7 +83,7 @@ func interact(p: Player) -> void:
 	p.add_buff(b)
 	Fx.pillar(Game.world_root(), global_position, d["color"], 10.0, 1.0)
 	Fx.ring(Game.world_root(), global_position, 3.0, d["color"], 0.5)
-	Sfx.play("checkpoint", global_position)
+	Sfx.play("santuario", global_position)
 	if Game.level:
 		Game.level.hud.show_banner(String(d["name"]))
 		Game.level.hud.show_message(String(d["desc"]) + " per %d s" % int(d["duration"]), 3.0)

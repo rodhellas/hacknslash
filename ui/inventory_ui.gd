@@ -16,7 +16,7 @@ var equip_buttons: Dictionary = {}
 var bag_buttons: Array = []
 var stats_label: RichTextLabel
 var gold_label: Label
-var mats_label: Label
+var mats_label: RichTextLabel
 var hint_label: Label
 var trade: TradeUI = null
 var tooltip: PanelContainer
@@ -76,6 +76,12 @@ func _ready() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(spacer)
+	var coin := TextureRect.new()
+	coin.texture = Icons.material("sesterzi")
+	coin.custom_minimum_size = Vector2(24, 24)
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hb.add_child(coin)
 	gold_label = _label(16, GOLD)
 	hb.add_child(gold_label)
 	v.add_child(hb)
@@ -97,7 +103,12 @@ func _ready() -> void:
 		details = on
 		_refresh_stats())
 	tools.add_child(det_b)
-	mats_label = _label(13, Color(0.75, 0.7, 0.6))
+	mats_label = RichTextLabel.new()
+	mats_label.bbcode_enabled = true
+	mats_label.fit_content = true
+	mats_label.scroll_active = false
+	mats_label.add_theme_font_size_override("normal_font_size", 13)
+	mats_label.add_theme_color_override("default_color", Color(0.75, 0.7, 0.6))
 	v.add_child(mats_label)
 	var bag := GridContainer.new()
 	bag.columns = 8
@@ -117,7 +128,7 @@ func _ready() -> void:
 	v.add_child(hint_label)
 
 	tooltip = PanelContainer.new()
-	tooltip.add_theme_stylebox_override("panel", Hud._panel_style(0.97))
+	tooltip.add_theme_stylebox_override("panel", Hud._panel_style(0.97, false))
 	tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tooltip_text = RichTextLabel.new()
 	tooltip_text.bbcode_enabled = true
@@ -142,13 +153,30 @@ func _ready() -> void:
 
 func bind(p: Player) -> void:
 	player = p
+	preview.prewarm(p.hero)
+	_preload_icons()
 	p.inventory_changed.connect(refresh)
 	p.xp_changed.connect(func(_a: int, _b: int, _c: int) -> void: refresh())
+
+
+## Icone di tutto ciò che l'eroe ha addosso e nello zaino caricate subito (non alla prima apertura).
+func _preload_icons() -> void:
+	var h := player.hero
+	for it: Variant in h.equipment.values() + h.inventory:
+		if it != null:
+			Icons.item(it as Item)
+	for id: String in ItemDB.MATERIALS:
+		Icons.material(id)
+	Icons.material("sesterzi")
+	for k: String in h.gems:
+		Icons.gem(k)
+	refresh()
 
 
 func toggle() -> void:
 	is_open = not is_open
 	panel.visible = is_open
+	Sfx.play("zaino")
 	preview.visible = is_open and (trade == null or not trade.is_open)
 	_hide_tooltip()
 	if is_open:
@@ -193,7 +221,8 @@ func refresh() -> void:
 	gold_label.text = "%d sesterzi" % h.gold
 	var m := ""
 	for id: String in ItemDB.MATERIALS:
-		m += "%s: %d    " % [ItemDB.MATERIALS[id]["name"], h.material(id)]
+		var img := "[img=20x20]%s[/img] " % Icons.material_path(id) if Icons.material(id) != null else ""
+		m += "%s%s: %d    " % [img, ItemDB.MATERIALS[id]["name"], h.material(id)]
 	var ng := 0
 	for k: String in h.gems:
 		ng += h.gem_count(k)
@@ -284,15 +313,27 @@ static func paint_slot(b: Button, it: Item, empty_text: String, usable: bool = t
 		sb.bg_color = it.color().darkened(0.82)
 		if not usable:
 			sb.bg_color = Color(0.3, 0.05, 0.05)
-		b.text = it.short_label() if b.custom_minimum_size.x < 100 else it.item_name
+		var small := b.custom_minimum_size.x < 100
+		var icon := Icons.item(it)
+		b.icon = icon
+		if icon != null:
+			# Casella piccola: solo l'icona (più la lettera della rarità per i daltonici / la stellina)
+			b.expand_icon = small
+			b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER if small else HORIZONTAL_ALIGNMENT_LEFT
+			b.add_theme_constant_override("icon_max_width", 0 if small else 52)
+			b.text = "" if small else it.item_name
+		else:
+			b.text = it.short_label() if small else it.item_name
 		if Settings.colorblind:
-			b.text = "[%s] %s" % [it.rarity_letter(), b.text]
+			b.text = ("[%s] %s" % [it.rarity_letter(), b.text]).strip_edges()
 		if it.is_new:
-			b.text = "✦ " + b.text
+			b.text = ("✦ " + b.text).strip_edges()
 			sb.border_color = Color(1.0, 0.95, 0.6)
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP if small and icon != null and b.text != "" else VERTICAL_ALIGNMENT_CENTER
 		b.add_theme_color_override("font_color", it.color())
 		b.add_theme_color_override("font_hover_color", it.color().lightened(0.3))
 	else:
+		b.icon = null
 		b.text = empty_text
 		b.add_theme_color_override("font_color", Color(0.45, 0.42, 0.38))
 	var hover := sb.duplicate() as StyleBoxFlat
@@ -322,6 +363,7 @@ func _on_bag_input(event: InputEvent, index: int) -> void:
 			get_viewport().set_input_as_handled()
 			if player.hero.can_equip(it0):
 				player.hero.equip_from_inventory(index)
+				Sfx.play("equipaggia")
 				player.refresh_stats()
 				player.inventory_changed.emit()
 		elif it0 != null and jb == JOY_BUTTON_Y and trade != null and trade.is_open:
@@ -350,6 +392,7 @@ func _on_bag_input(event: InputEvent, index: int) -> void:
 	else:
 		h.equip_from_inventory(index, mb.ctrl_pressed)
 		player.refresh_stats()
+		Sfx.play("equipaggia")
 	_hide_tooltip()
 	player.inventory_changed.emit()
 

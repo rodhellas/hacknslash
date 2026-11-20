@@ -53,6 +53,15 @@ var _pad_glyphs := false
 var boss_box: PanelContainer
 var boss_name: Label
 var boss_bar: ProgressBar
+## Barra in basso (globi + barra delle abilità); sul touch la barra delle abilità si nasconde (ci sono i
+## pulsanti a video) e il resto si stringe per non finire sotto il joystick e l'arco delle abilità.
+var bottom: HBoxContainer
+var skill_row: HBoxContainer
+var _touch_layout := -1
+const BAR_TEXTURE := "res://textures/ui/barra_abilita.png"
+const BAR_SCALE := 0.75
+## Centri dei 6 fori della barra (pixel dell'immagine da 1024 × 256).
+const BAR_HOLES := [Vector2(234, 127), Vector2(345, 127), Vector2(457, 127), Vector2(568, 127), Vector2(678, 127), Vector2(790, 127)]
 var _banner_t := 0.0
 var _msg_t := 0.0
 var _warn_t := 0.0
@@ -65,20 +74,19 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# --- Barra in basso ---
-	var bottom := HBoxContainer.new()
+	# --- Barra in basso: globi con la cornice, barra delle abilità decorata (textures/ui) ---
+	bottom = HBoxContainer.new()
 	bottom.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	bottom.offset_left = -430
-	bottom.offset_right = 430
-	bottom.offset_top = -150
-	bottom.offset_bottom = -6
+	bottom.offset_left = -640
+	bottom.offset_right = 640
+	bottom.offset_bottom = -18   # la cornice dei globi sporge di ~13 px
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 14)
+	bottom.add_theme_constant_override("separation", 30)
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bottom)
 
 	life_globe = Globe.new()
-	life_globe.custom_minimum_size = Vector2(140, 140)
+	life_globe.custom_minimum_size = Vector2(160, 160)
 	life_globe.fill_color = Color(0.75, 0.06, 0.08)
 	life_globe.caption = "Vita"
 	life_globe.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -93,24 +101,51 @@ func _ready() -> void:
 	mid.add_child(xp_label)
 	xp_bar = _bar(Color(0.85, 0.65, 0.2), Vector2(520, 8))
 	mid.add_child(xp_bar)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mid.add_child(row)
+	skill_row = HBoxContainer.new()
+	skill_row.add_theme_constant_override("separation", 6)
+	skill_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	skill_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_child(skill_row)
 	potion_slot = SkillSlot.new()
 	potion_slot.set_ability({"name": "Pozione", "color": Color(0.9, 0.15, 0.2), "desc": "Cura il 60% della vita. Ricarica 30 s."}, "Q")
 	potion_slot.label_override = "POZ"
-	row.add_child(potion_slot)
+	potion_slot.icon = Icons.potion()
+	potion_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	skill_row.add_child(potion_slot)
 	var sep := Control.new()
-	sep.custom_minimum_size = Vector2(10, 0)
-	row.add_child(sep)
-	for s: String in HeroClasses.SLOT_ORDER:
-		var sl := SkillSlot.new()
-		row.add_child(sl)
-		slots[s] = sl
+	sep.custom_minimum_size = Vector2(4, 0)
+	skill_row.add_child(sep)
+	var bar_tex: Texture2D = load(BAR_TEXTURE) if ResourceLoader.exists(BAR_TEXTURE) else null
+	if bar_tex != null:
+		# Le 6 abilità nei 6 fori della barra decorata
+		var bar := Control.new()
+		bar.name = "BarraAbilita"
+		bar.custom_minimum_size = Vector2(bar_tex.get_size()) * BAR_SCALE
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		skill_row.add_child(bar)
+		var tr := TextureRect.new()
+		tr.texture = bar_tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_SCALE
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.add_child(tr)
+		var i := 0
+		for s: String in HeroClasses.SLOT_ORDER:
+			var sl := SkillSlot.new()
+			bar.add_child(sl)
+			sl.size = Vector2(62, 62)
+			sl.position = BAR_HOLES[i] * BAR_SCALE - Vector2(31, 31)
+			slots[s] = sl
+			i += 1
+	else:
+		for s: String in HeroClasses.SLOT_ORDER:
+			var sl := SkillSlot.new()
+			skill_row.add_child(sl)
+			slots[s] = sl
 
 	res_globe = Globe.new()
-	res_globe.custom_minimum_size = Vector2(140, 140)
+	res_globe.custom_minimum_size = Vector2(160, 160)
 	res_globe.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bottom.add_child(res_globe)
 
@@ -334,6 +369,19 @@ func _bind_slots() -> void:
 	potion_slot.key_text = "RT" if _pad_glyphs else "Q"
 
 
+## Disposizione della barra in basso: completa (mouse/controller) o stretta (touch, abilità sui pulsanti a video).
+func _set_touch_layout(touch: bool) -> void:
+	_touch_layout = 1 if touch else 0
+	skill_row.visible = not touch
+	xp_bar.custom_minimum_size.x = 440.0 if touch else skill_row.get_combined_minimum_size().x
+	bottom.offset_top = -188.0 if touch else -248.0
+	buff_label.offset_top = bottom.offset_top - 30.0
+	buff_label.offset_bottom = bottom.offset_top - 6.0
+	var cast_box: Control = cast_bar.get_meta("box")
+	cast_box.offset_top = bottom.offset_top - 80.0
+	cast_box.offset_bottom = bottom.offset_top - 40.0
+
+
 ## Suggerimento mostrato una sola volta per eroe (primi minuti di gioco).
 func hint(id: String, text: String) -> void:
 	if Game.hero == null or Game.hero.flags.has("hint_" + id):
@@ -361,6 +409,9 @@ func _update_xp() -> void:
 func _process(delta: float) -> void:
 	if player == null:
 		return
+	var touch_on := 1 if Settings.touch_enabled() else 0
+	if touch_on != _touch_layout:
+		_set_touch_layout(touch_on == 1)
 	life_globe.value = player.life
 	life_globe.max_value = player.stats["max_life"]
 	res_globe.value = player.resource
@@ -398,6 +449,7 @@ func _process(delta: float) -> void:
 	_target_timer -= delta
 	# Barra del boss: un nemico unico che ti ha notato, entro 45 m
 	var boss: Enemy = _active_boss()
+	Music.set_boss(boss != null)
 	boss_box.visible = boss != null
 	if boss != null:
 		boss_name.text = boss.display_name
@@ -661,7 +713,17 @@ func _center(l: Label, y: float, h: float) -> void:
 	l.modulate.a = 0.0
 
 
-static func _panel_style(alpha: float = 0.92) -> StyleBoxFlat:
+## Stile dei pannelli. Le finestre grandi (alpha >= 0.9) hanno la cornice di bronzo (textures/ui/cornice_pannello.png);
+## i riquadri piccoli e semitrasparenti (bersaglio, boss, eventi) e i tooltip restano semplici.
+static func _panel_style(alpha: float = 0.92, framed: bool = true) -> StyleBox:
+	if framed and alpha >= 0.9:
+		var tex := _frame_texture(alpha)
+		if tex != null:
+			var st := StyleBoxTexture.new()
+			st.texture = tex
+			st.set_texture_margin_all(FRAME_MARGIN)
+			st.set_content_margin_all(16)
+			return st
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.05, 0.04, alpha)
 	sb.border_color = Color(0.6, 0.48, 0.25)
@@ -669,6 +731,33 @@ static func _panel_style(alpha: float = 0.92) -> StyleBoxFlat:
 	sb.set_corner_radius_all(4)
 	sb.set_content_margin_all(14)
 	return sb
+
+
+const FRAME_TEXTURE := "res://textures/ui/cornice_pannello.png"
+const FRAME_SIZE := 128     # la cornice da 512 px ridotta: bordo di circa 20 px
+const FRAME_MARGIN := 21.0
+static var _frames: Dictionary = {}
+
+
+## Cornice ridotta con il fondo scuro dentro (l'immagine originale ha il centro trasparente).
+static func _frame_texture(alpha: float) -> Texture2D:
+	var key := snappedf(alpha, 0.01)
+	if _frames.has(key):
+		return _frames[key]
+	if not ResourceLoader.exists(FRAME_TEXTURE):
+		_frames[key] = null
+		return null
+	var frame := (load(FRAME_TEXTURE) as Texture2D).get_image()
+	if frame.is_compressed():
+		frame.decompress()
+	frame.convert(Image.FORMAT_RGBA8)
+	frame.resize(FRAME_SIZE, FRAME_SIZE, Image.INTERPOLATE_LANCZOS)
+	var img := Image.create(FRAME_SIZE, FRAME_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill_rect(Rect2i(8, 8, FRAME_SIZE - 16, FRAME_SIZE - 16), Color(0.07, 0.05, 0.04, alpha))
+	img.blend_rect(frame, Rect2i(0, 0, FRAME_SIZE, FRAME_SIZE), Vector2i.ZERO)
+	var tex := ImageTexture.create_from_image(img)
+	_frames[key] = tex
+	return tex
 
 
 func _make_panel(root: Control, title: String, body: String, buttons: Array) -> Control:

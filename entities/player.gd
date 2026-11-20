@@ -251,6 +251,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_interact_nearest()
 	elif event.is_action_pressed("town_portal"):
 		start_town_portal()
+	elif event.is_action_pressed("turbo"):
+		turbo = not turbo
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.6, 0), "Velocità ×5" if turbo else "Velocità normale",
+			Color(0.5, 0.9, 1.0), 36)
 
 
 ## Ultimo input dal controller (cambia il modo di mirare).
@@ -384,7 +388,12 @@ func _physics_process(delta: float) -> void:
 
 
 func move_speed() -> float:
-	return float(stats["move_speed"]) * (1.0 + buff_sum("move"))
+	return float(stats["move_speed"]) * (1.0 + buff_sum("move")) * (TURBO_MULT if turbo else 1.0)
+
+
+## Movimento veloce per le prove (tasto F2, azione "turbo"): velocità ×5, si accende e si spegne.
+const TURBO_MULT := 5.0
+static var turbo := false
 
 
 func _input_direction() -> Vector3:
@@ -526,7 +535,23 @@ func _tick(delta: float) -> void:
 	resource = clampf(resource + float(stats["resource_regen"]) * delta, 0.0, stats["resource_max"])
 
 
+## Passi: un suono ogni mezzo passo (terra all'aperto, pietra in città, al porto e nei dungeon).
+var _step_t := 0.0
+
+
+func _footsteps(delta: float, moving: bool) -> void:
+	if not moving:
+		_step_t = 0.0
+		return
+	_step_t -= delta * move_speed() / 7.0
+	if _step_t <= 0.0:
+		_step_t = 0.36
+		var stone := Game.level != null and (Game.level.is_town or Game.level.level_id in ["dungeon", "level_03_porto"])
+		Sfx.play("passo_pietra" if stone else "passo_terra", null, 0.0, 0.12)
+
+
 func _animate(delta: float, wish: Vector3) -> void:
+	_footsteps(delta, wish.length() > 0.1 and _dash.is_empty())
 	if anim != null:
 		if cast_lock <= 0.0:
 			_play_anim("run" if wish.length() > 0.1 else "idle")
@@ -666,7 +691,7 @@ func use_potion() -> void:
 	heal(float(stats["max_life"]) * POTION_HEAL)
 	Fx.ring(Game.world_root(), global_position, 2.0, Color(1, 0.2, 0.3), 0.4)
 	Fx.burst(Game.world_root(), global_position + Vector3(0, 1.0, 0), Color(1, 0.25, 0.35), 14, 3.0, 0.12, 0.6, 3.0)
-	Sfx.play("potion")
+	Sfx.play("pozione")
 	if has_power("achille"):
 		add_buff({"id": "achille", "duration": 2.0, "invuln": 1.0})
 
@@ -688,7 +713,7 @@ func start_town_portal() -> void:
 	interact_target = null
 	lmb_held = false
 	_play_anim("cast")
-	Sfx.play("cast", null, -4.0)
+	Sfx.play("portale", null, -4.0)
 	Fx.ring(Game.world_root(), global_position, 1.6, Color(0.35, 0.65, 1.0), PORTAL_TIME)
 
 
@@ -745,7 +770,7 @@ func take_damage(raw: float, attacker_level: int = 1) -> void:
 	life -= amount
 	Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.3, 0), str(roundi(amount)), Color(1, 0.25, 0.25), 38)
 	Fx.flash(model, Color(1, 0.15, 0.15, 0.6))
-	Sfx.play("player_hurt", null, -3.0)
+	Sfx.play("eroe_ferito_" + ("f" if hero.sex == "f" else "m"))
 	shake(0.08)
 	if life <= 0.0:
 		_die()
@@ -807,7 +832,7 @@ func add_xp(amount: int) -> void:
 		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 3.0, 0), "LIVELLO %d!" % hero.level, Color(1, 0.85, 0.3), 80)
 		Fx.ring(Game.world_root(), global_position, 4.0, Color(1, 0.85, 0.3), 0.7)
 		Fx.pillar(Game.world_root(), global_position, Color(1, 0.85, 0.3), 12.0, 1.4)
-		Sfx.play("levelup")
+		Sfx.play("livello")
 	xp_changed.emit(hero.xp, HeroData.xp_to_next(hero.level), hero.level)
 
 
@@ -819,6 +844,7 @@ func _die() -> void:
 	portal_t = 0.0
 	shield = 0.0
 	_play_anim("death")
+	Sfx.play("eroe_morte_" + ("f" if hero.sex == "f" else "m"))
 	if anim == null:
 		create_tween().tween_property(model, "rotation:x", deg_to_rad(-90.0), 0.5)
 	died.emit()
@@ -850,3 +876,4 @@ func _warn(text: String) -> void:
 		return
 	_warn_cd = 0.8
 	Game.level.hud.show_warning(text)
+	Sfx.play("errore")

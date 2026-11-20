@@ -68,6 +68,6 @@ func interact(_p: Player) -> void:
 
 func claim(act: int) -> void:
 	if Bounties.claim_cache(act, global_position + global_basis.z * 2.0):
-		Sfx.play("legendary", global_position)
+		Sfx.play("ricompensa", global_position)
 		Game.level.hud.show_banner("Cassa del Prefetto!")
 	Game.level.hud.hide_choice()

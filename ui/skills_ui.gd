@@ -108,6 +108,7 @@ func refresh() -> void:
 		if String(ab.get("rune_name", "")) != "":
 			txt += "\n      %s" % ab["rune_name"]
 		b.text = txt
+		_set_icon(b, Icons.ability(String(ab.get("id", ""))), 44)
 		_style(b, ab.get("color", Color.GRAY), selected == s)
 	for i in passive_buttons.size():
 		var b: Button = passive_buttons[i]
@@ -117,6 +118,7 @@ func refresh() -> void:
 			b.text = "Casella bloccata (livello %d)" % need
 		else:
 			b.text = SkillDB.find_passive(h.class_id, pid).get("name", "— vuota —") if pid != "" else "— vuota —"
+		_set_icon(b, Icons.passive(pid) if h.level >= need else null, 36)
 		_style(b, Color(0.8, 0.7, 0.4), selected == "passiva:%d" % i)
 	_build_chooser()
 
@@ -144,6 +146,7 @@ func _build_chooser() -> void:
 			var ok := h.level >= int(pd.get("unlock", 1))
 			var b := _button("%s%s" % [pd["name"], "" if ok else "   (liv. %d)" % int(pd["unlock"])], Vector2(0, 36))
 			b.disabled = not ok
+			_set_icon(b, Icons.passive(String(pd["id"])), 30)
 			_style(b, Color(0.8, 0.7, 0.4), h.passives[idx] == pd["id"])
 			b.pressed.connect(_pick_passive.bind(idx, String(pd["id"])))
 			b.mouse_entered.connect(func() -> void: info.text = "[b]%s[/b]\n%s" % [pd["name"], pd["desc"]])
@@ -160,6 +163,7 @@ func _build_chooser() -> void:
 		var ok := h.level >= int(ab.get("unlock", 1))
 		var b := _button("%s%s" % [ab["name"], "" if ok else "   (liv. %d)" % int(ab["unlock"])], Vector2(0, 38))
 		b.disabled = not ok
+		_set_icon(b, Icons.ability(String(ab["id"])), 32)
 		_style(b, ab.get("color", Color.GRAY), ab["id"] == cur_id)
 		b.pressed.connect(_pick.bind(slot, String(ab["id"]), "" if ab["id"] != cur_id else cur_rune))
 		b.mouse_entered.connect(_show_ability.bind(ab, ""))
@@ -240,6 +244,14 @@ func _style(b: Button, col: Color, active: bool) -> void:
 	b.add_theme_stylebox_override("pressed", hv)
 	b.add_theme_stylebox_override("focus", hv)
 	b.add_theme_color_override("font_color", col.lightened(0.5) if active else Color(0.85, 0.8, 0.7))
+
+
+## Icona a sinistra del testo del pulsante (null = niente icona).
+func _set_icon(b: Button, tex: Texture2D, px: int) -> void:
+	b.icon = tex
+	b.expand_icon = false
+	b.add_theme_constant_override("icon_max_width", px)
+	b.add_theme_constant_override("h_separation", 10)
 
 
 func _button(text: String, min_size: Vector2) -> Button:

@@ -23,7 +23,7 @@ func can_interact() -> bool:
 func interact(_p: Player) -> void:
 	if Game.level == null:
 		return
-	Sfx.play("chest", global_position)
+	Sfx.play("forziere", global_position)
 	var lid := find_child("Lid", true, false) as Node3D
 	if lid:
 		var tw := create_tween()

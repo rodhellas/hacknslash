@@ -1,10 +1,9 @@
 class_name Sfx
 extends RefCounted
-## Effetti sonori SEGNAPOSTO sintetizzati da codice (nessun file audio richiesto).
-## Uso: Sfx.play("hit", posizione)   — la posizione è facoltativa (serve per attenuare i suoni lontani).
-##
-## Per usare un suono vero: metti il file in res://audio/sfx/<nome>.wav (o .ogg) e verrà usato
-## al posto di quello sintetizzato, senza toccare il codice.
+## Effetti sonori. Uso: Sfx.play("colpo_fuoco", posizione) — la posizione è facoltativa (attenua i suoni lontani).
+## I nomi sono nel catalogo data/sound_db.gd (testi per generarli: docs/AUDIO_AI.md).
+## File: res://audio/sfx/<nome>.ogg/.wav oppure più versioni <nome>_1, <nome>_2... (scelta a caso, mai la stessa
+## due volte di fila). Senza file si sente il suono SEGNAPOSTO sintetizzato da codice ("fallback" del catalogo).
 
 const SAMPLE_RATE := 22050
 const POOL_SIZE := 20
@@ -20,7 +19,13 @@ static var _last_play: Dictionary = {}
 static var _settings_loaded := false
 
 ## Intervallo minimo tra due riproduzioni dello stesso suono (evita il "muro di rumore").
-const THROTTLE := {"hit": 0.045, "crit": 0.06, "swing": 0.05, "projectile": 0.05, "gold": 0.06, "enemy_die": 0.05, "break": 0.05}
+const THROTTLE := {"colpo_fisico": 0.045, "colpo_fuoco": 0.045, "colpo_freddo": 0.045, "colpo_fulmine": 0.045,
+	"critico": 0.06, "fendente": 0.05, "turbine": 0.08, "dardo": 0.05, "monete": 0.06, "rottura": 0.05,
+	"umano_morte": 0.05, "lupo_morte": 0.05, "macchina_morte": 0.05, "spettro_morte": 0.05, "granchio_morte": 0.05,
+	"passo_terra": 0.12, "passo_pietra": 0.12, "proiettile_nemico": 0.05}
+## Versioni di ogni suono trovate su disco (nome -> Array di AudioStream) e ultima usata.
+static var _variants: Dictionary = {}
+static var _last_variant: Dictionary = {}
 
 
 static func play(sound: String, pos: Variant = null, vol_db: float = 0.0, pitch_var: float = 0.08) -> void:
@@ -45,7 +50,7 @@ static func play(sound: String, pos: Variant = null, vol_db: float = 0.0, pitch_
 		return
 	var p := _player(tree)
 	p.stream = stream
-	p.volume_db = volume_db + vol_db + att
+	p.volume_db = volume_db + vol_db + att + SoundDB.volume(sound)
 	p.pitch_scale = 1.0 + randf_range(-pitch_var, pitch_var)
 	p.play()
 
@@ -89,18 +94,37 @@ static func _player(tree: SceneTree) -> AudioStreamPlayer:
 
 
 static func _stream(sound: String) -> AudioStream:
-	if _streams.has(sound):
-		return _streams[sound]
-	var s: AudioStream = null
-	for ext in ["wav", "ogg"]:
-		var path := "res://audio/sfx/%s.%s" % [sound, ext]
-		if ResourceLoader.exists(path):
-			s = load(path)
-			break
-	if s == null:
-		s = _synth(sound)
-	_streams[sound] = s
-	return s
+	var list := variants(sound)
+	if not list.is_empty():
+		var i := randi() % list.size()
+		if list.size() > 1 and i == int(_last_variant.get(sound, -1)):
+			i = (i + 1) % list.size()
+		_last_variant[sound] = i
+		return list[i]
+	var fb := SoundDB.fallback(sound)
+	if fb == "":
+		return null   # nessun segnaposto (es. i passi): silenzio finché non c'è il file
+	if not _streams.has(fb):
+		_streams[fb] = _synth(fb)
+	return _streams[fb]
+
+
+## File veri di un suono: <nome>.ogg/.wav e <nome>_1 ... <nome>_9 (in cache).
+static func variants(sound: String) -> Array:
+	if _variants.has(sound):
+		return _variants[sound]
+	var list: Array = []
+	var names: Array = [sound]
+	for i in range(1, 10):
+		names.append("%s_%d" % [sound, i])
+	for n: String in names:
+		for ext in ["ogg", "wav"]:
+			var path := "res://audio/sfx/%s.%s" % [n, ext]
+			if ResourceLoader.exists(path):
+				list.append(load(path))
+				break
+	_variants[sound] = list
+	return list
 
 
 # --- Sintesi ---------------------------------------------------------------------------------

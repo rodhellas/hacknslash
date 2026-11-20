@@ -36,6 +36,10 @@ func _ready() -> void:
 	Game.ensure_debug_hero()
 	Game.hero.level_id = level_id
 	Game.hide_loading.call_deferred()
+	# Texture del terreno e delle strade al posto dei colori delle zone (core/terrain.gd)
+	Terrain.texture_world(get_node_or_null("World"))
+	# Arredo stile D3: erba, sassi, bosco/rocce/case oltre i confini (core/dressing.gd; la Forma c'è ancora)
+	Dressing.build(self)
 
 	dynamic_root = Node3D.new()
 	dynamic_root.name = "Dynamic"
@@ -94,7 +98,7 @@ func _ready() -> void:
 		hud.show_lore(level_title, intro_text)
 	Quests.start_automatic()
 	Quests.notify("enter", level_id)
-	Music.play_level(level_id, music)
+	Music.play_level(music_names(), music)
 	Settings.apply_to_level(self)
 	_place_world_extras()
 	_onboarding()
@@ -125,6 +129,43 @@ func _place_world_extras() -> void:
 	var holder := Node3D.new()
 	holder.name = "Extra"
 	add_child(holder)
+	# Punti fissi scelti dal level design (World/Luoghi/PuntiExtra: Marker3D con metadato "tipo" =
+	# "santuario" o "evento"): i santuari nei tratti di riposo, gli eventi negli spazi larghi. Quale
+	# santuario/evento e quali punti usare resta casuale. Senza punti fissi: vicino a zone a caso.
+	var points := {"santuario": [], "evento": []}
+	var pe := get_node_or_null("World/Luoghi/PuntiExtra")
+	if pe != null:
+		for m: Node in pe.get_children():
+			var kind := String(m.get_meta("tipo", ""))
+			if points.has(kind):
+				(points[kind] as Array).append(m)
+	if not (points["santuario"] as Array).is_empty() or not (points["evento"] as Array).is_empty():
+		for kind: String in points:
+			var list: Array = points[kind]
+			list.shuffle()
+			var want := WorldDB.SHRINES_PER_MAP if kind == "santuario" else WorldDB.EVENTS_PER_MAP
+			for m: Node3D in list:
+				if want <= 0:
+					break
+				var s := NavigationServer3D.map_get_closest_point(map, m.global_position)
+				if s == Vector3.ZERO or s.y > 1.0 or Vector2(s.x - m.global_position.x, s.z - m.global_position.z).length() > 3.0:
+					continue
+				var pos := Vector3(s.x, 0.0, s.z)
+				if kind == "santuario":
+					var sh := Shrine.new()
+					sh.shrine_id = WorldDB.SHRINES.keys().pick_random()
+					sh.position = pos
+					holder.add_child(sh)
+				else:
+					var near := _nearest_zone(pos, zones)
+					var ev := WorldEvent.new()
+					ev.event_id = WorldDB.EVENTS.keys().pick_random()
+					ev.enemy_types = near.get("enemy_types") if near != null else PackedStringArray(["predone"])
+					ev.enemy_level = int(near.get("enemy_level")) if near != null else 1
+					ev.position = pos
+					holder.add_child(ev)
+				want -= 1
+		return
 	var used := 0
 	for z: Node3D in zones:
 		var pos := _free_point_near(z.global_position, map)
@@ -145,6 +186,18 @@ func _place_world_extras() -> void:
 		else:
 			break
 		used += 1
+
+
+## Zona di nemici (non boss) più vicina a un punto: dà tipi e livello ai nemici degli eventi.
+func _nearest_zone(pos: Vector3, zones: Array) -> Node3D:
+	var best: Node3D = null
+	var bd := INF
+	for z: Node3D in zones:
+		var d := z.global_position.distance_to(pos)
+		if d < bd:
+			bd = d
+			best = z
+	return best
 
 
 ## Punto calpestabile a 8-12 m dal centro di una zona (lontano dai nemici che ci stanno).
@@ -214,6 +267,11 @@ func _find_checkpoint(id: String) -> Checkpoint:
 
 
 ## Chiamato da Game.save_game() prima di scrivere il file.
+## Nomi da provare per musica e ambiente (audio/music, audio/ambience): vedi core/music.gd.
+func music_names() -> Array:
+	return [level_id]
+
+
 func store_state() -> void:
 	if player and not player.dead:
 		Game.hero.position = player.global_position
@@ -370,7 +428,7 @@ func respawn_player() -> void:
 func on_exit_reached(exit: LevelExit) -> void:
 	Game.hero.flags["completed_" + level_id] = true
 	if exit.target_level != "" and Game.LEVELS.has(exit.target_level):
-		Sfx.play("portal")
+		Sfx.play("portale")
 		Game.travel(exit.target_level, exit.target_spawn)
 		return
 	Game.save_game()
@@ -385,7 +443,7 @@ func travel_to_waypoint(id: String) -> void:
 	if w.is_empty() or player.dead:
 		return
 	hud.waypoint_panel.visible = false
-	Sfx.play("portal")
+	Sfx.play("portale")
 	if String(w["level"]) == level_id:
 		var cp := _find_checkpoint(id)
 		if cp:
@@ -406,7 +464,7 @@ func teleport_player(pos: Vector3) -> void:
 func use_town_portal() -> void:
 	Game.hero.flags["portal_return"] = {"level": level_id, "x": player.global_position.x, "z": player.global_position.z}
 	Fx.pillar(dynamic_root, player.global_position, Color(0.35, 0.65, 1.0), 8.0, 0.8)
-	Sfx.play("portal")
+	Sfx.play("portale")
 	Game.travel(Game.HUB, "PortaleArrivo")
 
 

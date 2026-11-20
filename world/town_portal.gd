@@ -77,5 +77,5 @@ func interact(_p: Player) -> void:
 	if Game.hero == null:
 		return
 	Game.hero.flags.erase("portal_return")
-	Sfx.play("portal")
+	Sfx.play("portale")
 	Game.travel(return_level, "", return_pos)

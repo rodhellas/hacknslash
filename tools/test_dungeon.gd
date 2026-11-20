@@ -110,7 +110,8 @@ func _run() -> void:
 	var end := res.path[res.path.size() - 1] if res.path.size() > 0 else Vector3.ZERO
 	_check(res.path.size() > 2 and _flat(end, boss_pos) < 3.0, "si arriva a piedi alla stanza del boss (%d punti)" % res.path.size())
 	var zones: Array = lvl.get_node("Incontri").get_children()
-	_check(zones.size() == lvl.gen.rooms.size() - 1, "una zona di nemici per stanza (%d)" % zones.size())
+	var rest: int = Array(lvl.gen.kinds).count("sacello")
+	_check(zones.size() == lvl.gen.rooms.size() - 1 - rest, "una zona di nemici per stanza, tranne partenza e sacelli (%d)" % zones.size())
 	var boss_zone: Variant = null
 	for z: Variant in zones:
 		if z.unique_id == "custode":
@@ -132,6 +133,40 @@ func _run() -> void:
 		if n.get_script() == chest_script:
 			chests += 1
 	_check(chests >= 2, "forzieri nelle stanze (%d)" % chests)
+	# Proposte dei livelli (docs/PROPOSTE_LIVELLI.md, D2-D6)
+	var sac: int = Array(lvl.gen.kinds).find("sacello")
+	var shrine_in_sac := false
+	if sac >= 0:
+		var sr: Rect2i = lvl.gen.rooms[sac]
+		for sh: Node in lvl.get_node("Extra").get_children():
+			if sr.has_point(lvl.gen.world_to_cell((sh as Node3D).global_position)):
+				shrine_in_sac = true
+	_check(sac >= 0 and lvl.get_node("Incontri").get_node_or_null("Stanza%d" % sac) == null and shrine_in_sac,
+		"c'è un sacello: stanza senza nemici con un santuario")
+	_check(boss_zone.count == 2, "pochi servitori accanto al boss (%d): i rinforzi li chiamano le sue fasi" % boss_zone.count)
+	var ante: int = lvl.antechamber()
+	var az: Variant = lvl.get_node("Incontri").get_node_or_null("Stanza%d" % ante)
+	_check(ante >= 0 and az != null and az.elite, "l'anticamera del boss ha un gruppo elite (stanza %d)" % ante)
+	var dead_ends := 0
+	var dead_with_chest := 0
+	for i in lvl.gen.rooms.size():
+		if i == lvl.gen.start_room or i == lvl.gen.boss_room or lvl.gen.kinds[i] == "tesoro" or lvl.room_exits(i) != 1:
+			continue
+		dead_ends += 1
+		var rr: Rect2i = lvl.gen.rooms[i]
+		for n: Variant in get_nodes_in_group("interactable"):
+			if n.get_script() == chest_script and rr.grow(1).has_point(lvl.gen.world_to_cell(n.global_position)):
+				dead_with_chest += 1
+				break
+	_check(dead_with_chest >= mini(dead_ends, 3), "forzieri nei vicoli ciechi (%d stanze con un solo sbocco, %d con il forziere)" % [dead_ends, dead_with_chest])
+	# (l'eroe si allontana: l'uscita compare dove stava, e ci entrerebbe subito)
+	lvl.teleport_player(lvl.gen.room_center_world(lvl.gen.start_room))
+	await _frames(2)
+	for e: Variant in get_nodes_in_group("enemies"):
+		if e.type_id == "custode":
+			e.take_damage(e.life * 100.0, Vector3.ZERO, false)
+	await _frames(5)
+	_check(lvl.get_node_or_null("UscitaBoss") != null, "sconfitto il boss, compare un'uscita nella sua stanza")
 
 	print("\n== 4. Uscita")
 	for e: Variant in get_nodes_in_group("enemies"):

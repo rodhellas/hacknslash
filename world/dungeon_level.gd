@@ -14,6 +14,10 @@ const WALL_LOW_H := 1.2
 var cfg: Dictionary = {}
 var gen: DungeonGen
 var dungeon_id := ""
+
+
+func music_names() -> Array:
+	return ["labirinto", "dungeon"] if rift_grade > 0 else ["dungeon_" + dungeon_id, "dungeon"]
 ## Labirinti di Dedalo (rift_grade > 0, vedi Level): avanzamento, tempo e Guardiano.
 var rift_progress := 0.0
 var rift_target := 1.0
@@ -79,6 +83,10 @@ func build() -> void:
 	_build_exit()
 	_build_encounters(rng)
 	_build_shrines(rng)
+	# Boss già sconfitto in passato: l'uscita è già lì
+	var boss_id := String(cfg.get("boss", ""))
+	if rift_grade <= 0 and boss_id != "" and Game.hero != null and Game.hero.flags.has("unique_" + boss_id):
+		_build_boss_exit()
 
 
 # --- Geometria ------------------------------------------------------------------------------
@@ -98,7 +106,7 @@ func _build_floor(world: Node3D) -> void:
 			while x < gen.w and gen.is_floor(x, y):
 				x += 1
 			_box(body, st, x0, y, x - x0, -0.5, 0.5)
-	_mesh(body, st, cfg["floor"])
+	_mesh(body, st, cfg["floor"], String(cfg.get("floor_tex", "")))
 
 
 ## Muri: le celle vuote che toccano il pavimento (anche in diagonale) diventano blocchi pieni.
@@ -123,8 +131,8 @@ func _build_walls(world: Node3D) -> void:
 			else:
 				_box(body, low, x0, y, x - x0, 0.0, WALL_LOW_H)
 	var col: Color = cfg["wall"]
-	_mesh(body, tall, col)
-	_mesh(body, low, col.darkened(0.15))
+	_mesh(body, tall, col, String(cfg.get("wall_tex", "")))
+	_mesh(body, low, col.darkened(0.15), String(cfg.get("wall_tex", "")))
 
 
 ## 0 = niente muro, 1 = muro alto, 2 = muro basso (pavimento subito a nord: il muro sta tra eroe e telecamera).
@@ -181,13 +189,17 @@ func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: V
 		st.add_vertex(v)
 
 
-func _mesh(body: Node3D, st: SurfaceTool, col: Color) -> void:
+func _mesh(body: Node3D, st: SurfaceTool, col: Color, tex: String = "") -> void:
 	var mi := MeshInstance3D.new()
 	var m := st.commit()
 	mi.mesh = m
-	var mat := Fx.new_mat(col)
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mi.material_override = mat
+	var tm := Terrain.material(tex, col, 0.2, true)
+	if tm != null:
+		mi.material_override = tm   # texture in coordinate del mondo (anche sui muri)
+	else:
+		var mat := Fx.new_mat(col)
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mi.material_override = mat
 	body.add_child(mi)
 
 
@@ -212,6 +224,12 @@ func _build_rooms(world: Node3D, rng: RandomNumberGenerator) -> void:
 		match gen.kinds[i]:
 			"colonne": _room_columns(deco, r)
 			"cripta": _room_crypt(deco, r)
+			"sacello":
+				# Stanza di riposo: niente nemici, due fuochi ai lati del santuario (vedi _build_shrines)
+				for dx: int in [-2, 2]:
+					var cc := r.position + r.size / 2 + Vector2i(dx, 0)
+					if gen.is_open(cc):
+						_prop(deco, "falo", gen.cell_to_world(Vector2(cc)), 0.0)
 			"tesoro":
 				_chest(deco, c + Vector3(0, 0, -1.5), true)
 				for k in 4:
@@ -227,10 +245,67 @@ func _build_rooms(world: Node3D, rng: RandomNumberGenerator) -> void:
 	var boss_c := gen.room_center_world(gen.boss_room)
 	if _chest(deco, boss_c + Vector3(0, 0, -gen.rooms[gen.boss_room].size.y * gen.tile * 0.35), true) == null:
 		_chest(deco, boss_c + Vector3(0, 0, -gen.tile), true)
-	for k in 2:
-		var i := rng.randi_range(1, gen.rooms.size() - 1)
-		if i != gen.boss_room and gen.kinds[i] != "tesoro":
-			_chest(deco, _room_edge_point(gen.rooms[i], rng), false)
+	# Forzieri normali nei vicoli ciechi (stanze con un solo sbocco): esplorare i rami morti paga sempre.
+	# Se non ce ne sono, nelle stanze più lontane dalla partenza (tranne boss e tesoro).
+	var picks: Array = []
+	for i in gen.rooms.size():
+		if i != gen.start_room and i != gen.boss_room and gen.kinds[i] != "tesoro" and room_exits(i) == 1:
+			picks.append(i)
+	if picks.is_empty():
+		var others: Array = []
+		for i in gen.rooms.size():
+			if i != gen.start_room and i != gen.boss_room and gen.kinds[i] != "tesoro":
+				others.append(i)
+		others.sort_custom(func(a: int, b: int) -> bool: return _room_dist(a) > _room_dist(b))
+		picks = others.slice(0, 2)
+	for i: int in picks.slice(0, 3):
+		_chest(deco, _room_edge_point(gen.rooms[i], rng), false)
+
+
+## Sbocchi di una stanza: gruppi di celle di pavimento appena fuori dal suo rettangolo (giro in senso orario).
+func room_exits(i: int) -> int:
+	var r := gen.rooms[i]
+	var ring: Array[Vector2i] = []
+	for x in range(r.position.x, r.end.x):
+		ring.append(Vector2i(x, r.position.y - 1))
+	for y in range(r.position.y, r.end.y):
+		ring.append(Vector2i(r.end.x, y))
+	for x in range(r.end.x - 1, r.position.x - 1, -1):
+		ring.append(Vector2i(x, r.end.y))
+	for y in range(r.end.y - 1, r.position.y - 1, -1):
+		ring.append(Vector2i(r.position.x - 1, y))
+	var runs := 0
+	var n := ring.size()
+	for k in n:
+		var cur := gen.is_floor(ring[k].x, ring[k].y)
+		var prev := gen.is_floor(ring[(k - 1 + n) % n].x, ring[(k - 1 + n) % n].y)
+		if cur and not prev:
+			runs += 1
+	if runs == 0 and n > 0 and gen.is_floor(ring[0].x, ring[0].y):
+		runs = 1   # tutto il bordo è pavimento (caverne aperte)
+	return runs
+
+
+## Distanza a piedi (celle) del centro di una stanza dalla partenza.
+func _room_dist(i: int) -> int:
+	var c := gen.rooms[i].position + gen.rooms[i].size / 2
+	return gen.dist[c.y * gen.w + c.x]
+
+
+## Anticamera del boss: la stanza collegata a quella del boss più vicina alla partenza (-1 se non c'è).
+func antechamber() -> int:
+	var best := -1
+	for l: Array in gen.links:
+		var other := -1
+		if int(l[0]) == gen.boss_room:
+			other = int(l[1])
+		elif int(l[1]) == gen.boss_room:
+			other = int(l[0])
+		if other < 0 or other == gen.start_room:
+			continue
+		if best < 0 or _room_dist(other) < _room_dist(best):
+			best = other
+	return best
 
 
 ## Sala a colonne: una griglia di colonne (una ogni 3 celle), lontano dal centro e dagli sbocchi.
@@ -376,9 +451,10 @@ func _build_encounters(rng: RandomNumberGenerator) -> void:
 	add_child(zones)
 	var enemies: Array = cfg["enemies"]
 	var elites: Array = cfg["elites"]
+	var ante := antechamber() if rift_grade <= 0 else -1
 	for i in gen.rooms.size():
-		if i == gen.start_room:
-			continue
+		if i == gen.start_room or gen.kinds[i] == "sacello":
+			continue   # partenza e sacelli: stanze di riposo
 		var r := gen.rooms[i]
 		var z := EncounterZone.new()
 		z.name = "Stanza%d" % i
@@ -389,7 +465,13 @@ func _build_encounters(rng: RandomNumberGenerator) -> void:
 		if i == gen.boss_room:
 			z.unique_id = String(cfg.get("boss", ""))
 			z.enemy_types = PackedStringArray(enemies)
-			z.count = 4 if rift_grade <= 0 else 7
+			# Pochi servitori: le fasi del boss chiamano già i rinforzi (arena leggibile)
+			z.count = 2 if rift_grade <= 0 else 7
+		elif i == ante:
+			# Anticamera: l'ultimo guardiano prima del boss
+			z.elite = true
+			z.enemy_types = PackedStringArray([elites[rng.randi_range(0, elites.size() - 1)]])
+			z.count = 3
 		elif gen.kinds[i] == "tesoro" or rng.randf() < 0.25:
 			z.elite = true
 			z.enemy_types = PackedStringArray([elites[rng.randi_range(0, elites.size() - 1)]])
@@ -412,12 +494,16 @@ func _build_shrines(rng: RandomNumberGenerator) -> void:
 		if i != gen.start_room and i != gen.boss_room:
 			rooms.append(i)
 	rooms.shuffle()
+	# Il primo santuario va nel sacello (stanza di riposo), al centro
+	rooms.sort_custom(func(a: int, b: int) -> bool: return gen.kinds[a] == "sacello" and gen.kinds[b] != "sacello")
 	var n_shr := WorldDB.SHRINES_PER_DUNGEON if rift_grade <= 0 else 1
 	var n := n_shr + (WorldDB.PYLONS_PER_RIFT if rift_grade > 0 else 0)
 	for k in mini(n, rooms.size()):
 		var r := gen.rooms[rooms[k]]
 		var cell := Vector2i(-1, -1)
-		for t in 30:
+		if gen.kinds[rooms[k]] == "sacello" and gen.is_open(r.position + r.size / 2):
+			cell = r.position + r.size / 2
+		for t in (0 if cell.x >= 0 else 30):
 			var c := r.position + Vector2i(rng.randi_range(1, r.size.x - 2), rng.randi_range(1, r.size.y - 2))
 			if gen.is_open(c) and c != r.position + r.size / 2:
 				cell = c
@@ -440,6 +526,9 @@ func _process(delta: float) -> void:
 
 ## Chiamato da Enemy._die: riempie la barra del labirinto; il Guardiano chiude il labirinto.
 func on_enemy_died(e: Enemy) -> void:
+	if rift_grade <= 0 and e.unique and e.type_id == String(cfg.get("boss", "")):
+		_build_boss_exit()
+		return
 	if rift_grade <= 0 or rift_done:
 		return
 	if e == guardian:
@@ -472,7 +561,7 @@ func _spawn_guardian() -> void:
 	guardian.aggro()
 	Fx.pillar(dynamic_root, pos, Color(0.7, 0.4, 1.0), 14.0, 1.5)
 	Fx.ring(dynamic_root, pos, 6.0, Color(0.7, 0.4, 1.0), 0.8)
-	Sfx.play("portal", pos)
+	Sfx.play("guardiano", pos)
 	hud.show_banner("Il Guardiano del labirinto!")
 
 
@@ -532,6 +621,44 @@ func _complete_rift(pos: Vector3) -> void:
 	add_child(exit)
 
 
+## Uscita nella stanza del boss, quando è sconfitto (anche entrando di nuovo dopo averlo già ucciso):
+## si torna all'entrata del dungeon senza rifare a piedi le stanze vuote.
+func _build_boss_exit() -> void:
+	if get_node_or_null("UscitaBoss") != null:
+		return
+	var exit := LevelExit.new()
+	exit.name = "UscitaBoss"
+	exit.title = "Uscita"
+	var cs := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = 1.2
+	cyl.height = 2.0
+	cs.shape = cyl
+	cs.position.y = 1.0
+	exit.add_child(cs)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 1.0
+	tm.outer_radius = 1.3
+	ring.mesh = tm
+	ring.material_override = Fx.mat(Color(0.7, 0.85, 1.0), 4.0, false, true)
+	ring.rotation_degrees.x = 90.0
+	ring.position.y = 1.4
+	exit.add_child(ring)
+	var light := OmniLight3D.new()
+	light.light_color = Color(0.7, 0.85, 1.0)
+	light.light_energy = 1.5
+	light.omni_range = 7.0
+	light.position.y = 2.5
+	exit.add_child(light)
+	var r := gen.rooms[gen.boss_room]
+	var cell := r.position + r.size / 2 + Vector2i(0, 2)
+	if not gen.is_open(cell):
+		cell = r.position + r.size / 2
+	exit.position = gen.cell_to_world(Vector2(cell))
+	add_child(exit)
+
+
 ## Record personali dei labirinti (i 10 migliori: grado più alto, poi tempo più basso).
 func _record_rift() -> void:
 	var recs: Array = Game.hero.flags.get("rift_records", [])
@@ -567,7 +694,7 @@ func try_gem_upgrade(entry: Dictionary, roll: float = -1.0) -> bool:
 	gem_upgrades_left -= 1
 	var ok: bool = Game.hero.upgrade_legendary_gem(entry, rift_grade, roll)
 	hud.show_message(("Potenziamento riuscito: " if ok else "Potenziamento fallito: ") + ItemDB.gem_name(String(entry["key"])), 2.5)
-	Sfx.play("anvil" if ok else "hit")
+	Sfx.play("potenziamento_ok" if ok else "potenziamento_fallito")
 	player.refresh_stats()
 	hud.hide_choice()
 	offer_gem_upgrade.call_deferred()
@@ -582,7 +709,7 @@ func on_exit_reached(exit: LevelExit) -> void:
 		Game.hero.flags.erase("dungeon")
 	else:
 		Game.hero.flags["completed_dungeon_" + dungeon_id] = true
-	Sfx.play("portal")
+	Sfx.play("portale")
 	if info.has("x"):
 		Game.travel(back, "", Vector3(float(info["x"]), 0.0, float(info["z"])))
 	else:

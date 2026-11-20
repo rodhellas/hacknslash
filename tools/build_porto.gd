@@ -1,4 +1,6 @@
 extends "res://tools/build_world.gd"
+## ATTENZIONE (20-11-2026): il .tscn del livello contiene modifiche fatte dopo la generazione (level design:
+## tools/applica_proposte_livelli.gd, docs/PROPOSTE_LIVELLI.md). Rigenerare il livello le perde: dopo, rilancia quello script.
 ## GENERATORE del livello 3: PORTO DI OSTIA NOVA (atto 2). Riusa le funzioni di build_world.gd.
 ## Crea scenes/levels/level_03_porto.tscn (+ navmesh) e, se mancano, i nuovi props e modelli.
 ##
@@ -48,6 +50,7 @@ var p_total := 0.0
 
 
 func _generate() -> void:
+	print("ATTENZIONE: se hai rigenerato un livello, RILANCIA applica_proposte_livelli.gd (level design) e poi test_livelli.gd.")
 	rng.seed = SEED + 3
 	_build_props(true)
 	_build_models(true)

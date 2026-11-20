@@ -13,6 +13,7 @@ extends RefCounted
 ##   pool      pozza animata (fuoco, ghiaccio) per i pericoli a terra
 ##   slash     falce del fendente con scia e striature; "slash_tex" = falce dipinta sopra
 ##   bolt      fulmine dipinto tra due punti ("bolt:1".."bolt:3")
+##   energy    guscio di energia che scorre e crepita (lame delle armi, lancia di energia del pilum)
 ##   fresnel   bolla luminosa sui bordi (scudi, aura)
 ##   dissolve  dissolvenza con bordo luminoso (morte dei nemici)
 ##   distort   distorsione dell'aria (onde d'urto grandi)
@@ -188,6 +189,21 @@ void fragment() {
 	ALBEDO = mix(tint.rgb, vec3(1.0), m * m) * 3.0;
 	ALPHA = m * fade * tint.a;
 }""",
+	"energy": """shader_type spatial;
+render_mode blend_add, unshaded, cull_back, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(0.35, 0.85, 1.0, 1.0);
+instance uniform float fade = 1.0;
+varying vec3 lpos;
+%s
+void vertex() { lpos = VERTEX; }
+void fragment() {
+	// Guscio di energia: bordo luminoso, corrente che scorre lungo l'arma (asse z) e scariche
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 1.5);
+	float flow = fbm(vec2((lpos.x + lpos.y) * 20.0, lpos.z * 14.0 + TIME * 9.0));
+	float crackle = smoothstep(0.58, 0.72, fbm(vec2(lpos.z * 22.0 - TIME * 14.0, (lpos.x - lpos.y) * 40.0 + TIME * 4.0)));
+	ALBEDO = tint.rgb * (1.4 + 2.2 * crackle) + vec3(crackle * 0.6);
+	ALPHA = clamp(0.18 + rim * 0.75 + flow * 0.35 + crackle * 0.7, 0.0, 1.0) * tint.a * fade;
+}""",
 	"fresnel": """shader_type spatial;
 render_mode blend_add, unshaded, cull_back, depth_draw_never, shadows_disabled;
 instance uniform vec4 tint : source_color = vec4(1.0);
@@ -237,7 +253,7 @@ static func material(kind: String) -> ShaderMaterial:
 		match base:
 			"glow", "smoke": code = code % _BILLBOARD
 			"fire": code = code % [_NOISE, _BILLBOARD]
-			"scorch", "pool", "dissolve", "slash": code = code % _NOISE
+			"scorch", "pool", "dissolve", "slash", "energy": code = code % _NOISE
 		var sh := Shader.new()
 		sh.code = code
 		_shaders[base] = sh
@@ -245,7 +261,7 @@ static func material(kind: String) -> ShaderMaterial:
 	m.shader = _shaders[base]
 	if TEXTURES.has(kind):
 		m.set_shader_parameter("mask", texture(TEXTURES[kind]))
-	if base in ["fire", "scorch", "pool", "dissolve", "slash"]:
+	if base in ["fire", "scorch", "pool", "dissolve", "slash", "energy"]:
 		m.set_shader_parameter("noise_tex", texture("rumore"))
 	_materials[kind] = m
 	return m
@@ -600,7 +616,175 @@ static func strike(parent: Node, pos: Vector3, delay: float, element: String, si
 	tw.tween_callback(root.queue_free)
 
 
+# --- Abilità di energia (direzione artistica: nel 3000 si usa l'energia, vedi docs/GAME_DESIGN.md) ---------
+
+## Pezzo di energia (guscio che scorre) come figlio di `parent`, in coordinate locali.
+static func energy_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.rotation_degrees = rot_deg
+	make_energy(mi, color)
+	parent.add_child(mi)
+	return mi
+
+
+static func _sphere(r: float) -> SphereMesh:
+	var key := "sphere_%d" % roundi(r * 100.0)
+	if not _meshes.has(key):
+		var sm := SphereMesh.new()
+		sm.radius = r
+		sm.height = r * 2.0
+		sm.radial_segments = 16
+		sm.rings = 8
+		_meshes[key] = sm
+	return _meshes[key]
+
+
+static func _box(size: Vector3) -> BoxMesh:
+	var key := "box_%s" % str(size)
+	if not _meshes.has(key):
+		var bm := BoxMesh.new()
+		bm.size = size
+		_meshes[key] = bm
+	return _meshes[key]
+
+
+## Raggio della flotta in orbita: prima un raggio sottile di puntamento, poi il colpo largo che si allarga
+## e svanisce lasciando il terreno rovente. Il colpo arriva dopo `delay` secondi.
+static func orbital_beam(parent: Node, pos: Vector3, radius: float, delay: float, color: Color) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var ground := Vector3(pos.x, 0.0, pos.z)
+	var root := Node3D.new()
+	parent.add_child(root)
+	root.global_position = ground
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 1.0
+	cyl.bottom_radius = 1.0
+	cyl.height = 40.0
+	cyl.radial_segments = 20
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	var aim := energy_part(root, cyl, Vector3(0, 20.0, 0), color)
+	aim.scale = Vector3(0.06, 1.0, 0.06)
+	var tw := root.create_tween()
+	tw.tween_property(aim, "scale", Vector3(0.18, 1.0, 0.18), maxf(delay - 0.08, 0.05))
+	tw.tween_callback(func() -> void:
+		aim.scale = Vector3(radius * 0.15, 1.0, radius * 0.15)
+		aim.set_instance_shader_parameter("tint", color.lightened(0.35))
+		glow(parent, ground + Vector3(0, 1.0, 0), color, radius * 1.6, 0.35, 1.4)
+		scorch(parent, ground, radius * 0.75, Color(0.1, 0.06, 0.04), 6.0, "bruciatura"))
+	tw.tween_property(aim, "scale", Vector3(radius * 0.55, 1.0, radius * 0.55), 0.12).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float) -> void: aim.set_instance_shader_parameter("fade", v), 1.0, 0.0, 0.4)
+	tw.tween_callback(root.queue_free)
+
+
+## Sfera di energia lanciata ad arco (granata): parte da `from` e atterra in `to` dopo `time` secondi.
+static func lob(parent: Node, from: Vector3, to: Vector3, time: float, color: Color, size: float = 0.25) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var orb := Node3D.new()
+	parent.add_child(orb)
+	orb.global_position = from
+	energy_part(orb, _sphere(size), Vector3.ZERO, color)
+	var g := glow(orb, from, color, size * 6.0, 0.0)
+	if g:
+		g.position = Vector3.ZERO
+	var target := Vector3(to.x, 0.3, to.z)
+	var height := 2.5 + from.distance_to(target) * 0.15
+	var tw := orb.create_tween()
+	tw.tween_method(func(t: float) -> void:
+		var p := from.lerp(target, t)
+		p.y += sin(t * PI) * height
+		orb.global_position = p
+		orb.scale = Vector3.ONE * (1.0 + 0.25 * sin(t * 40.0)), 0.0, 1.0, maxf(time, 0.05))
+	tw.tween_callback(orb.queue_free)
+
+
+## Trappola di energia a terra: disco che pulsa sempre più forte fino all'esplosione dopo `time` secondi.
+static func energy_trap(parent: Node, pos: Vector3, radius: float, time: float, color: Color) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var root := Node3D.new()
+	parent.add_child(root)
+	root.global_position = Vector3(pos.x, 0.0, pos.z)
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.45
+	cyl.bottom_radius = 0.55
+	cyl.height = 0.12
+	energy_part(root, cyl, Vector3(0, 0.08, 0), color)
+	for i in 3:
+		var a := TAU * i / 3.0
+		energy_part(root, _box(Vector3(0.08, 0.06, radius * 0.45)), Vector3(cos(a), 0.06, sin(a)) * radius * 0.3, color, Vector3(0, -rad_to_deg(a) + 90.0, 0))
+	var g := glow(root, root.global_position, color, 1.2, 0.0)
+	if g:
+		g.position = Vector3(0, 0.3, 0)
+	var tw := root.create_tween()
+	tw.tween_property(root, "scale", Vector3(1.25, 1.0, 1.25), maxf(time, 0.05)).set_trans(Tween.TRANS_ELASTIC)
+	tw.tween_callback(root.queue_free)
+
+
+## Corvo di energia che piomba dall'alto su `to` in `time` secondi (Sciame di corvi).
+static func raven_dive(parent: Node, to: Vector3, color: Color, time: float = 0.22) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var bird := Node3D.new()
+	parent.add_child(bird)
+	var a := randf() * TAU
+	var from := to + Vector3(cos(a) * 5.0, 6.0, sin(a) * 5.0)
+	bird.global_position = from
+	var body := CapsuleMesh.new()
+	body.radius = 0.09
+	body.height = 0.5
+	energy_part(bird, body, Vector3.ZERO, color, Vector3(90, 0, 0))
+	energy_part(bird, _sphere(0.08), Vector3(0, 0.03, -0.26), color)
+	var wl := energy_part(bird, _box(Vector3(0.55, 0.02, 0.2)), Vector3(-0.3, 0.02, 0), color, Vector3(0, 0, 25))
+	var wr := energy_part(bird, _box(Vector3(0.55, 0.02, 0.2)), Vector3(0.3, 0.02, 0), color, Vector3(0, 0, -25))
+	energy_part(bird, _box(Vector3(0.18, 0.02, 0.2)), Vector3(0, 0, 0.3), color)
+	var g := glow(bird, from, color.lightened(0.3), 0.7, 0.0)
+	if g:
+		g.position = Vector3(0, 0, -0.26)
+	if (to - from).length() > 0.1:
+		bird.look_at(to, Vector3.UP)
+	var flap := bird.create_tween().set_loops(6)
+	flap.tween_property(wl, "rotation_degrees:z", -20.0, 0.04)
+	flap.parallel().tween_property(wr, "rotation_degrees:z", 20.0, 0.04)
+	flap.tween_property(wl, "rotation_degrees:z", 30.0, 0.04)
+	flap.parallel().tween_property(wr, "rotation_degrees:z", -30.0, 0.04)
+	var tw := bird.create_tween()
+	tw.tween_property(bird, "global_position", to + Vector3(0, 0.4, 0), time).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func() -> void: glow(parent, to + Vector3(0, 0.5, 0), color, 1.2, 0.18))
+	tw.tween_callback(bird.queue_free)
+
+
+## Dardo di energia che cade dal cielo su `to` (Pioggia di frecce).
+static func falling_bolt(parent: Node, to: Vector3, color: Color, time: float = 0.18) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var dart := Node3D.new()
+	parent.add_child(dart)
+	var from := to + Vector3(-2.0, 12.0, 2.0)
+	dart.global_position = from
+	energy_part(dart, _box(Vector3(0.07, 0.07, 1.0)), Vector3.ZERO, color)
+	var g := glow(dart, from, color, 0.6, 0.0)
+	if g:
+		g.position = Vector3(0, 0, -0.5)
+	dart.look_at(to, Vector3.UP)
+	var tw := dart.create_tween()
+	tw.tween_property(dart, "global_position", to, time).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func() -> void: glow(parent, to + Vector3(0, 0.2, 0), color, 0.8, 0.12))
+	tw.tween_callback(dart.queue_free)
+
+
 # --- Personaggi -----------------------------------------------------------------------------------
+
+## Guscio di energia su una mesh (lame avvolte dall'energia, lancia del pilum).
+static func make_energy(mi: MeshInstance3D, color: Color) -> void:
+	mi.material_override = material("energy")
+	mi.set_instance_shader_parameter("tint", color)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
 
 ## Materiale "bolla" (bordo luminoso) da mettere su una sfera: scudi, protezioni.
 static func make_bubble(mi: MeshInstance3D, color: Color) -> void:

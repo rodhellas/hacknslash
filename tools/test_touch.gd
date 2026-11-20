@@ -79,7 +79,10 @@ func _run() -> void:
 	var HD: GDScript = load("res://core/hero_data.gd")
 	var Sett: GDScript = load("res://core/settings.gd")
 	var old_touch: int = Sett.touch_controls
+	_check(Sett.touch_build() or not Sett.touch_enabled(), "sul PC i controlli touch non ci sono (anche con l'opzione Sempre)")
 	Sett.touch_controls = 1
+	_check(Sett.touch_build() or not Sett.touch_enabled(), "sul PC l'opzione Sempre non li accende")
+	Sett.force_touch = true   # nel test li accendiamo come sulla versione Android
 
 	var hero: Variant = HD.create("Collaudatore", "legionario", "m")
 	hero.level = 30
@@ -117,14 +120,48 @@ func _run() -> void:
 	_check(not overlap, "nessun pulsante sovrapposto")
 	var atk: Vector2 = _button("lmb")["center"]
 	_check(atk.x > size.x * 0.8 and atk.y > size.y * 0.75, "attacco in basso a destra")
-	var hud_bar: Rect2 = Rect2(size.x * 0.5 - 430, size.y - 150, 860, 144)
+	# Sul touch la barra delle abilità dell'HUD si nasconde; i globi (con la cornice che sporge di ~15 px) restano
 	var on_bar := false
-	for b: Dictionary in shown:
-		var r: float = b["radius"]
-		if b["kind"] != "menu" and hud_bar.grow(r).has_point(b["center"]):
-			on_bar = true
-	_check(not on_bar, "nessun pulsante sopra la barra delle abilità dell'HUD")
+	for gl: Control in [lvl.hud.life_globe, lvl.hud.res_globe]:
+		var gr: Rect2 = gl.get_global_rect().grow(16)
+		for b: Dictionary in shown:
+			var r: float = b["radius"]
+			if b["kind"] != "menu" and gr.grow(r).has_point(b["center"]):
+				on_bar = true
+	_check(not on_bar and not lvl.hud.skill_row.visible, "nessun pulsante sopra i globi dell'HUD; barra delle abilità nascosta sul touch")
 	_check(lvl.hud.quest_tracker.offset_left > 60.0, "l'elenco delle missioni si sposta a destra della colonna dei menu")
+
+	print("\n== 1b. Icone (textures/icone)")
+	var IC: GDScript = load("res://core/icons.gd")
+	var HC: GDScript = load("res://data/hero_classes.gd")
+	var SKD: GDScript = load("res://data/skill_db.gd")
+	var missing: Array = []
+	for cid: String in HC.DATA:
+		for ab: Dictionary in HC.DATA[cid]["abilities"]:
+			if IC.ability(ab["id"]) == null:
+				missing.append(ab["id"])
+		for pd: Dictionary in SKD.passives(cid):
+			if IC.passive(pd["id"]) == null:
+				missing.append(pd["id"])
+	for k: String in SKD.EXTRA:
+		for ab: Dictionary in SKD.EXTRA[k]:
+			if IC.ability(ab["id"]) == null:
+				missing.append(ab["id"])
+	_check(missing.is_empty() and IC.potion() != null, "ogni abilità e passiva ha la sua icona, e la pozione %s" % str(missing))
+	var bar_ok := lvl.hud.potion_slot.icon != null
+	for sl: Variant in lvl.hud.slots.values():
+		if sl.icon == null:
+			bar_ok = false
+	_check(bar_ok, "la barra delle abilità mostra le icone (e la pozione)")
+	lvl.skills_ui.toggle()
+	await _frames(2)
+	var with_icon := 0
+	for b: Node in lvl.skills_ui.find_children("*", "Button", true, false):
+		if (b as Button).icon != null:
+			with_icon += 1
+	_check(with_icon >= 8, "la finestra Abilità mostra le icone sui pulsanti (%d)" % with_icon)
+	lvl.skills_ui.close_panel()
+	await _frames(2)
 
 	print("\n== 2. Joystick")
 	var start: Vector3 = p.global_position
@@ -238,6 +275,7 @@ func _run() -> void:
 	await _frames(2)
 	_check(not touch.visible, "opzione Mai: controlli nascosti")
 	Sett.touch_controls = old_touch
+	Sett.force_touch = false
 
 	print("\n%d controlli, %d falliti" % [checks, fails])
 	quit(1 if fails > 0 else 0)

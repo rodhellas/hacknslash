@@ -61,7 +61,7 @@ func _element() -> String:
 
 func _burst() -> void:
 	Fx.explosion(get_parent(), global_position, radius, color, _element())
-	Sfx.play("explosion", global_position, -6.0, 0.15)
+	Sfx.play("esplosione_fuoco", global_position, -2.0, 0.15)
 	var p := _player()
 	if p != null and _inside(p):
 		p.take_damage(damage, attacker_level)

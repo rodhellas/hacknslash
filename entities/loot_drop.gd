@@ -78,7 +78,7 @@ func _ready() -> void:
 			beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			_visual.add_child(beam)
 			Fx.minimap_icon(self, col, 1.2, "square")
-			Sfx.play("legendary" if item.is_special() else "rare_drop", global_position)
+			Sfx.play("drop_leggendario" if item.is_special() else "drop_raro", global_position)
 			if item.is_special() and Game.level:
 				Game.level.hud.hint("leggendario", "un leggendario! Il suo potere arancione può cambiare un'abilità: guarda il tooltip.")
 	elif gem != "":
@@ -146,7 +146,7 @@ func interact(p: Player) -> void:
 	item.is_new = true
 	if Game.hero.add_item(item):
 		Game.level.hud.log_pickup(item.item_name, item.color())
-		Sfx.play("pickup")
+		Sfx.play("raccogli")
 		p.inventory_changed.emit()
 		queue_free()
 	else:
@@ -167,13 +167,13 @@ func _take_gold() -> void:
 		Game.level.hud.hint("gemme", "le gemme si incastonano dal gioielliere (scheda del fabbro): tre uguali ne fanno una migliore.")
 		Game.hero.add_gem(gem)
 		Game.level.hud.log_pickup(ItemDB.gem_name(gem), ItemDB.gem_color(gem))
-		Sfx.play("pickup")
+		Sfx.play("gemma")
 		Game.level.player.inventory_changed.emit()
 		queue_free()
 		return
 	Game.hero.gold += gold
 	Game.level.hud.log_pickup("+%d sesterzi" % gold, Color(1.0, 0.85, 0.3))
-	Sfx.play("gold")
+	Sfx.play("monete")
 	var p := Game.level.player
 	if p and p.has_power("cesare"):
 		p.heal(float(p.stats["max_life"]) * 0.02, false)

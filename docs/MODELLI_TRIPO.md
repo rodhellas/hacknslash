@@ -13,6 +13,9 @@ Segna `[x]` quando un pezzo è fatto.
 - **Colori neutri** (grigio, bronzo, cuoio, tela chiara): il colore finale si dà in Godot con una **tinta**.
   Così lo stesso pezzo serve per più personaggi, rarità, set e per la scheda Aspetto. Le parti che devono
   brillare (plasma, cristalli) vanno in un **materiale separato** (si colorano da sole).
+- **Armi = metallo + energia**: Tripo fa solo il **corpo in metallo** (elsa, lama, testa della scure), senza
+  bagliori; il **guscio di energia** attorno alla lama lo aggiunge Godot (materiale `"energia"` in `data/visual_db.gd`,
+  un pezzo un po' più grande della lama). Così l'energia scorre, si anima e prende il colore della rarità.
 - **Scala** 1 unità = 1 m (eroe circa 1,85 m), **origine a terra al centro**, davanti verso **−Z**.
 - **Un oggetto per generazione.** Personaggi in posa **T**, senza armi in mano.
 - **Animazioni**: un'unica libreria Mixamo per **tutti** gli umanoidi (eroi, nemici umani, NPC):
@@ -93,10 +96,10 @@ Pezzi **solo per nemici/NPC**, che diventano anche aspetti sbloccabili per l'ero
 
 | ✓ | Pr. | Id | Prompt | Lo usano anche |
 |---|---|---|---|---|
-| [ ] | P1 | gladio_plasma | `roman gladius, glowing plasma blade (separate material)` | guardie, rinnegati |
+| [ ] | P1 | gladio_plasma | `roman gladius, metal blade with engraved energy channels, no glow` (energia da Godot) | guardie, rinnegati |
 | [ ] | P1 | scutum | `roman scutum curved shield, eagle emblem, force field edge` | guardie, rinnegati |
-| [ ] | P2 | spatha | `long roman spatha sword` | Brenno (×1,4), pirati |
-| [ ] | P2 | scure | `heavy one-handed battle axe` | barbari, Tharvo (×1,5), gladiatore doppia arma |
+| [ ] | P2 | spatha | `long roman spatha sword, engraved energy channels, no glow` (energia da Godot) | Brenno (×1,4), pirati |
+| [ ] | P2 | scure | `heavy one-handed battle axe, engraved energy channels, no glow` (energia da Godot) | barbari, Tharvo (×1,5), gladiatore doppia arma |
 | [ ] | P2 | arco_plasma | `recurve bow, glowing string (separate material)` | arcieri nemici |
 | [ ] | P2 | manuballista | `hand crossbow with rail` | arpionatore (con rampino) |
 | [ ] | P2 | lituo | `curved augur staff` | NPC sacerdoti |
@@ -171,8 +174,8 @@ stesso modulo con un materiale rovinato o un pezzo spezzato.
 
 [ ] sacchetto del loot (uno, colore per rarità) · [ ] monete · [ ] globo di vita · [ ] 1 gemma tagliata (5 tinte) +
 montatura d'oro (gemma leggendaria) · [ ] anello del portale (portale cittadino e uscita del labirinto, tinta) ·
-proiettili: [ ] pilum (= lancia del kit 4), [ ] freccia/dardo, [ ] rete, [ ] bolas. Fuoco, fulmini, sfere e
-meteore meglio come **effetti** (particelle/shader) che come modelli. **Circa 9 pezzi.**
+proiettili: **nessuno** (pilum, dardi, rete, bolas, granata, trappola e corvi sono energia fatta da Godot; la
+Scure rotante usa il modello della scure del kit 4). Fuoco, fulmini, sfere e meteore sono **effetti** (shader). **Circa 5 pezzi.**
 
 ---
 

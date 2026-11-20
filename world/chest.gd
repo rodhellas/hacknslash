@@ -37,7 +37,7 @@ func interact(_p: Player) -> void:
 		Game.hero.flags[flag_id] = true
 	Quests.notify("chest", flag_id)
 	_open_visual(true)
-	Sfx.play("chest", global_position)
+	Sfx.play("forziere", global_position)
 	Fx.burst(Game.world_root(), global_position + Vector3(0, 1.0, 0), Color(1.0, 0.85, 0.35), 20 if rich else 10, 5.0, 0.1, 0.6, -4.0, 40.0)
 	Loot.drop("chest_rich" if rich else "chest", global_position + global_basis.z * -1.2, item_level)
 

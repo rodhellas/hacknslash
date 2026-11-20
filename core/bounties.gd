@@ -104,7 +104,7 @@ static func _reward(b: Dictionary, act: int) -> void:
 		if act_done(act):
 			msg += "\nTutte le taglie dell'atto completate: ritira la Cassa del Prefetto alla Tabula!"
 		Game.level.hud.show_message(msg, 4.0)
-		Sfx.play("checkpoint")
+		Sfx.play("ricompensa")
 
 
 ## Un boss già sconfitto ricompare se una taglia attiva lo chiede.

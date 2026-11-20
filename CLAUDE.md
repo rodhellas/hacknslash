@@ -19,15 +19,19 @@ Design e stato del gioco: `docs/GAME_DESIGN.md`. Panoramica: `README.md`.
 
 ## Struttura
 ```
-core/       vfx.gd (effetti visivi: shader procedurali per elemento), game.gd (autoload "Game": partita, salvataggi, cambio scena, viaggi), hero_data.gd, item.gd,
+core/       sfx.gd (effetti sonori: file con versioni a caso, riserva sintetizzata), music.gd (musica + ambienti + brano del boss), vfx.gd (effetti visivi: shader procedurali per elemento), game.gd (autoload "Game": partita, salvataggi, cambio scena, viaggi), hero_data.gd, item.gd,
             abilities.gd (esecuzione abilità), loot.gd, fx.gd (materiali/effetti/particelle), sfx.gd (suoni),
             music.gd (musica dei livelli), settings.gd (opzioni video/audio/tasti), quests.gd (logica missioni), layers.gd,
-            appearance.gd (pezzi dell'equipaggiamento nelle prese del modello), bounties.gd (taglie)
+            appearance.gd (pezzi dell'equipaggiamento nelle prese del modello), bounties.gd (taglie),
+            icons.gd (icone di abilità/passive/pozione/oggetti/gemme/materiali da textures/icone, null se mancano → sigla),
+            terrain.gd (texture del terreno/strade/dungeon: shader triplanare in coordinate del mondo),
+            dressing.gd (arredo stile D3 dei livelli all'aperto: copertura del suolo + massa oltre i confini)
 data/       hero_classes.gd (classi+abilità), enemy_db.gd, item_db.gd (basi, affissi, leggendari+poteri, drop,
             prezzi, materiali, ricette del fabbro, gemme, set), npc_db.gd (NPC e i loro dialoghi), quest_db.gd (missioni e loro testi),
             map_zones.gd (zone del terreno: colore, bordo, vegetazione sparsa), dungeon_db.gd (dungeon generati),
             world_db.gd (santuari, piloni, eventi, taglie), visual_db.gd (aspetto dell'equipaggiamento indossato), skill_db.gd (abilità alternative, varianti,
-            passive, leggendari che cambiano le abilità), difficulty_db.gd (difficoltà e Labirinti di Dedalo)
+            passive, leggendari che cambiano le abilità), difficulty_db.gd (difficoltà e Labirinti di Dedalo),
+            sound_db.gd (catalogo dei suoni: nome -> riserva sintetizzata e volume; suoni per abilità, elemento, famiglia di nemici)
 entities/   player.gd, enemy.gd (+ affissi delle elite), npc.gd, projectile.gd, loot_drop.gd, health_globe.gd,
             hazard.gd (pozze di fuoco / sfere di ghiaccio / esplosioni delle elite)
 world/      level.gd (script radice dei livelli), iso_camera.gd, occlusion_fader.gd, encounter_zone.gd (@tool),
@@ -49,8 +53,13 @@ tools/      build_world.gd (GENERATORE grayboxing: props, modelli, livello 1 + n
             test_equipaggiamento.gd / test_endgame.gd / test_interfaccia.gd / test_avventura.gd / test_effetti.gd / test_touch.gd (test automatici)
 addons/     legio_map/ (plugin dell'editor: pannello "Mappa")
 textures/   vfx/*.png (texture in scala di grigi degli effetti: glow, stella, fiamma, fumo, anello, rune, crepa, bruciatura, brina, fendente, fulmine_1-3, rumore)
-docs/       GAME_DESIGN.md, PIANO_EQUIPAGGIAMENTO.md (pezzi agganciati alle ossa), MODELLI_TRIPO.md (lista dei modelli a kit riutilizzabili), EFFETTI_VISIVI.md (kit degli effetti), mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
-audio/      music/ e sfx/ (vuote: vedi LEGGIMI.txt; i suoni sono sintetizzati, la musica manca)
+            icone/abilita/<id>.png (40), icone/passive/<id>.png (24), icone/pozione.png: set "Grafite e braci", 256×256;
+            icone/varianti/ = prove di stile (escluse dall'esportazione); icone/oggetti/<base>.png, gemme/, gemme_leggendarie/, materiali/ (+ sesterzi)
+            terreno/*.png (15 texture ripetibili 1024: zone in MapZones "texture", dungeon "floor_tex"/"wall_tex")
+            ui/ (icona_app + versione adattiva Android, sfondo_menu, caricamento_<livello>, cornice_pannello, globo_cornice, barra_abilita)
+docs/       TEXTURE_AI.md / ICONE_AI.md / GRAFICA_2D_AI.md / AUDIO_AI.md (testi per generare con l'AI: effetti, icone abilità, icone oggetti + terreno + interfaccia, suoni + ambienti + musica),
+            GAME_DESIGN.md, PIANO_EQUIPAGGIAMENTO.md (pezzi agganciati alle ossa), MODELLI_TRIPO.md (lista dei modelli a kit riutilizzabili), EFFETTI_VISIVI.md (kit degli effetti), mappe/*.png (piante dall'alto dei livelli, 2 px = 1 m)
+audio/      sfx/ (effetti, nomi di data/sound_db.gd, versioni nome_1..9), ambience/ (loop per luogo), music/ (brani per luogo + menu + boss): vedi LEGGIMI.txt e docs/AUDIO_AI.md
 scenes/     main_menu.tscn, levels/level_01.tscn, level_02_ostia.tscn, level_03_porto.tscn (navmesh incorporata),
             levels/dungeon.tscn (vuota: il dungeon si costruisce da codice al caricamento),
             props/*.tscn, characters/*.tscn, enemies/*.tscn, npcs/*.tscn
@@ -74,6 +83,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 ... --script res://tools/build_ostia.gd             # città di Ostia Nova (+ props/modelli NPC mancanti)
 ... --script res://tools/build_porto.gd             # livello 3, porto (+ props/modelli mancanti)
 ```
+- **Dopo aver rigenerato un livello** (opzione `level`, `build_ostia.gd`, `build_porto.gd`) rilancia SEMPRE `--script res://tools/applica_proposte_livelli.gd` (le modifiche di level design non sono nei generatori) e poi `test_livelli.gd`, che fallisce se mancano segreti, barricate o punti fissi.
 - `build_ostia.gd` e `build_porto.gd` estendono `build_world.gd` (riusano `_place`, `_strip`, `_part`...) e sovrascrivono `_generate()` e `_allowed()`. Rigenerarli **sovrascrive il loro .tscn**. Nuovi props/modelli si aggiungono in `build_world.gd` (`_prop_defs`, `_model_defs`): i generatori creano solo quelli mancanti.
 - Nel porto il mare è a est (`_shore_x`), i bordi sull'acqua sono ostacoli invisibili, quelli sulla terra sono `isolato`/`scogliera`.
 - Il livello 1 ha anche il marker `DaOstia` e l'uscita con `target_level = "ostia_nova"`: sono già nel .tscn e nel generatore.
@@ -89,6 +99,14 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - La strada principale è quella con `zone_breaks` (zone lungo il percorso, es. `"0.17=bosco"`).
 - Piante di tutti i livelli: `--headless --path . --script res://tools/export_maps.gd` → `docs/mappe/*.png`.
 - Foglio Excel con tutti i dati (classi, abilità, varianti, oggetti, nemici, boss, difficoltà, labirinti...): `docs/Legio3000_dati.xlsx`. Si rigenera con `--script res://tools/export_dati.gd` (→ `user://dati.json`) e poi `python3 tools/export_excel.py <dati.json> docs/Legio3000_dati.xlsx`.
+
+## Level design dei livelli fatti a mano (docs/PROPOSTE_LIVELLI.md)
+- Applicato con `tools/applica_proposte_livelli.gd` (modifica i .tscn, ricostruisce terreno e navmesh, verifica i percorsi a piedi, poi salva; rilanciabile; `-- prova` non salva). Per nuove modifiche dello stesso tipo aggiungile lì.
+- Segreti: radura `MapArea` (`scatter = false`) + sentiero senza lastricato (`paved_width = 0`) largo almeno 9 m (celle del terreno da 8 m), contenuti in `World/Luoghi/Segreti/<nome>`, forzieri `chest_segreto_*` (`rich` per i veri premi).
+- Arene: Brenno (`Forma/ArenaBrenno` + `World/Luoghi/OstiaNova/Barricate`, varco x 62-74 a z −826), Vulso (soglia `World/Luoghi/Faro/SogliaMuro*`, varco x 10-22 a z −515, Altare di Mercurio a (−2, −500) con lo stesso id).
+- **Scene sul percorso** (stile D3, `_vignettes` nello stesso script): gruppi di oggetti di scena che bloccano (`VIGNETTES`: carro rotto, recinto, pozzo, rovina, tempietto, bivacco, tombe, frana, tronchi, carico, barili), scelti per zona (`ZONE_VIGNETTES`), in `World/Luoghi/Scene`. Stanno ai lati del cammino: fuori dal lastricato e dai sentieri senza lastricato, fuori da arene/radure (`scatter = false`), lontano da incontri e Marker3D, almeno 30 m tra loro. Dopo la navmesh lo script verifica che altari, uscite, forzieri, entrate dei dungeon e cartelli siano raggiungibili dalla partenza. Rilanciandolo non le duplica (per rifarle cancella `World/Luoghi/Scene`).
+- Santuari ed eventi su punti fissi: `World/Luoghi/PuntiExtra` (Marker3D con metadato `tipo` = "santuario"/"evento"), usati da `Level._place_world_extras` (senza punti: vicino a zone a caso).
+- I generatori non sono allineati: rigenerare un livello perde queste modifiche.
 
 ## Collegare i livelli
 - `Game.LEVELS` (id → scena) e `Game.LEVEL_TITLES` (id → nome, anche ordine nell'elenco altari). `Game.HUB` = città del portale.
@@ -110,6 +128,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Entrata: prop `ingresso_catacombe` (`DungeonEntrance`, `dungeon_id`); è anche nei generatori dei livelli. Scrive `hero.flags["dungeon"] = {id, return_level, x, z}`; l'uscita del dungeon riporta davanti all'entrata. Salvare dentro il dungeon funziona (stessa mappa al ricaricamento).
 - Nuovo dungeon: aggiungi una voce in `DungeonDB.DUNGEONS` (con `"entrance"` per il test) e piazza un `ingresso_catacombe` con quel `dungeon_id` (nell'editor, poi ricalcola la navmesh). Gli oggetti nelle stanze vanno solo su celle con tutte le vicine di pavimento (`is_open`). Per scegliere il seme: `--script res://tools/export_dungeons.gd -- <seme>` → `docs/mappe/dungeon_<id>_seme<seme>.png`.
 - Nemici, forzieri e props ricompaiono a ogni ingresso; il boss (`custode`) è unico per partita come gli altri boss.
+- Level design dei dungeon (docs/PROPOSTE_LIVELLI.md): tipo di stanza `sacello` (nessun nemico, primo santuario al centro, due fuochi; garantito da `DungeonGen` se è nei pesi: la stanza normale a metà strada), boss nella stanza lontana più grande (≥ 7×7, ≥ 80% della distanza), 2 servitori accanto al boss, **anticamera** (`DungeonLevel.antechamber()`: stanza collegata al boss più vicina alla partenza) con un gruppo elite, forzieri normali nei vicoli ciechi (`room_exits(i) == 1`, massimo 3), **uscita nella stanza del boss** quando muore (`_build_boss_exit`, "UscitaBoss"; c'è già se il boss era stato sconfitto). Niente di questo cambia la pianta (`room_kinds` e la scelta del boss non toccano le celle).
 
 ## Equipaggiamento visibile (data/visual_db.gd, core/appearance.gd)
 - Piano completo: `docs/PIANO_EQUIPAGGIAMENTO.md`. Decisioni: **2 corpi per classe** (M/F, `HeroClasses` `"model"` / `"model_f"`), sesso scelto alla creazione (`HeroData.sex`, `model_path()`), stile D3 realistico ma non esagerato.
@@ -138,12 +157,14 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - `Settings.loot_filter`, `always_show_items`, `damage_numbers`, `colorblind` (lettera della rarità), `ui_scale` (`content_scale_factor`) in Opzioni > Gioco (sezione `gameplay` di settings.cfg); azione `show_items` (Alt).
 - Mappa grande (TAB): pannello laterale con legenda, altari (viaggio rapido) e dungeon della zona (`Minimap._build_side`). Oggetti nuovi (`Item.is_new`, stellina, si toglie passandoci sopra); Shift sul tooltip = confronto completo. Riepilogo alla morte. Record dei labirinti (`flags["rift_records"]`) nell'obelisco. Slot del menu con difficoltà, grado, hardcore. Suggerimenti dei primi minuti: `Hud.hint(id, testo)` (una volta per eroe, `flags["hint_<id>"]`).
 - Col controller la barra mostra i pulsanti (`Hud.PAD_KEYS`); nei pannelli di mercante/fabbro/forziere A = clic (`TradeUI._pad_click`).
+- Prove: **F2** (azione `turbo`, rimappabile) accende/spegne il movimento ×5 (`Player.turbo`, `TURBO_MULT`; vale anche per il controller e il touch, non per gli scatti).
+- Zaino: l'anteprima 3D (`CharacterPreview.prewarm`) e le icone si preparano al caricamento del livello; `show_hero` non rifà nulla se l'equipaggiamento non è cambiato (aprire lo zaino deve essere istantaneo).
 - Schermata di caricamento: `Game.go_to_level` la mostra e carica dopo 2 frame (tree in pausa); `Level._ready` chiama `Game.hide_loading`. Game ha `process_mode = ALWAYS`.
 - Controller: eventi joypad aggiunti alle azioni in project.godot + azione `pad_primary` (A). `Player.using_pad`, `pad_aim()` (mira automatica), `_pad_primary()`. Con un pannello a fuoco il controller naviga i pulsanti e non muove l'eroe. `Settings.rebind` cambia tasto/mouse tenendo i pulsanti del controller.
 
 ## Touch e Android
 - `TouchControls` (ui/touch_controls.gd, creato da `Level._ready`, `level.touch`): joystick mobile in basso a sinistra (`Player.touch_move`, letto da `_input_direction` come lo stick), pulsante d'attacco (`_pad_primary` + `Player.touch_attack` tenuto premuto), pozione e 5 abilità ad arco (tocca = `pad_aim`, trascina = mira a mano con anello a terra: `Player.touch_aim_point` / `touch_cast`), colonna dei menu a sinistra (manda `InputEventAction`). Multi-touch per indice del dito; ogni pulsante ha un Control "blocker" (STOP) così il clic emulato dal tocco non fa camminare l'eroe. Toccare il mondo altrove = clic del mouse.
-- Visibili se `Settings.touch_enabled()` (`touch_controls` 0 automatici = `DisplayServer.is_touchscreen_available()`, 1 sempre, 2 mai; Opzioni > Gioco). Nascosti con pannelli aperti (`Level.any_panel_open()`); i menu restano con zaino/mappa/diario.
+- **Solo nella versione Android** (`Settings.touch_build()` = feature `mobile`): sul PC non compaiono mai, neanche con uno schermo touch (l'opzione è nascosta). Su Android: `touch_controls` 0 automatici = `DisplayServer.is_touchscreen_available()`, 1 sempre, 2 mai (Opzioni > Gioco). I test li accendono con `Settings.force_touch = true`. Nascosti con pannelli aperti (`Level.any_panel_open()`); i menu restano con zaino/mappa/diario.
 - Tasto indietro di Android = azione `pause` (`Game._notification`, `quit_on_go_back=false`).
 - project.godot: override `.mobile` (renderer Mobile, stretch `canvas_items`/`expand`, ombre 2048), orientamento orizzontale, ETC2/ASTC. `Settings._video_defaults()` su mobile: schermo intero, niente SSAO né MSAA, risoluzione 3D 80%.
 - Esportazione: preset "Android" in `export_presets.cfg` (arm64, `it.legio3000.gioco`, uscita `build/android/Legio3000.apk`, cartella ignorata da git). Riga di comando: `--headless --path . --export-debug "Android" build/android/Legio3000.apk`. Servono i modelli di esportazione 4.7.2, Android SDK (platform-tools, build-tools), JDK 17 e il keystore di debug nelle Impostazioni dell'editor (su Linux sono già configurati: `~/Android/Sdk`, `~/.local/share/godot/keystores/debug.keystore`).
@@ -160,7 +181,8 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - Hardcore: `HeroData.hardcore`, morte → `flags["dead"]` + salvataggio + pannello senza rinascita; slot non caricabile; forziere `user://stash_hardcore.json` (`Game._stash_path`, `_reset_stash` cambiando eroe).
 
 ## Effetti visivi (core/vfx.gd, docs/EFFETTI_VISIVI.md)
-- 13 shader (codice in `Vfx.SHADER_CODE`, materiali in cache per "tipo" o "tipo:variante", colore per oggetto con *instance uniform* `tint`/`fade`...) e 14 texture in scala di grigi in `textures/vfx/` (`Vfx.TEXTURES`: materiale → file; uniform `mask`, rumore `noise_tex` = `rumore.png` usato da `fbm`). Segni a terra per tipo: `Vfx.scorch(..., pattern)` = crepa/bruciatura/brina; `Vfx.smoke`; fulmini = quad con `fulmine_N.png` girato verso la telecamera. Effetti per elemento: `Vfx.hit` (chiamato da `Enemy.take_damage` con l'elemento), `Vfx.explosion` (da `Fx.explosion(..., element)`), proiettili per elemento (`Projectile._build_visual`), stati sui nemici (`Enemy._update_status_fx`), dissolvenza alla morte, immagini fantasma negli scatti, micro-pausa sui critici forti (`Vfx.hitstop`, spenta in headless).
+- 14 shader (codice in `Vfx.SHADER_CODE`, materiali in cache per "tipo" o "tipo:variante", colore per oggetto con *instance uniform* `tint`/`fade`...) e 14 texture in scala di grigi in `textures/vfx/` (`Vfx.TEXTURES`: materiale → file; uniform `mask`, rumore `noise_tex` = `rumore.png` usato da `fbm`). Segni a terra per tipo: `Vfx.scorch(..., pattern)` = crepa/bruciatura/brina; `Vfx.smoke`; fulmini = quad con `fulmine_N.png` girato verso la telecamera. Effetti per elemento: `Vfx.hit` (chiamato da `Enemy.take_damage` con l'elemento), `Vfx.explosion` (da `Fx.explosion(..., element)`), proiettili per elemento (`Projectile._build_visual`), stati sui nemici (`Enemy._update_status_fx`), dissolvenza alla morte, immagini fantasma negli scatti, micro-pausa sui critici forti (`Vfx.hitstop`, spenta in headless).
+- **Armi = metallo + energia** (direzione artistica, `docs/GAME_DESIGN.md`): shader `energy` (`Vfx.make_energy`), materiale `"energia"` nei pezzi di `VisualDB.VISUALS` (guscio un po' più grande della lama; `Appearance._add_part`, colore della rarità per leggendari/set). Campo `"visual"` delle abilità: proiettili `lancia_energia` (pilum), `dardo_energia` (frecce), `rete_energia`, `bolas_energia`, `scure_energia` (in `Projectile._build_visual`); aree `raggio_orbitale`, `granata_energia`, `trappola_energia`, `corvi_energia`, `dardi_energia` (in `Abilities._aoe_point`, effetti `Vfx.orbital_beam/lob/energy_trap/raven_dive/falling_bolt`).
 - `Fx.ring/telegraph/swing/strike` ora passano da Vfx. `Settings.reduced_vfx` (Opzioni > Video).
 - **In headless gli shader non vengono compilati**: un errore di sintassi si vede solo a schermo (console di Godot).
 
@@ -170,6 +192,25 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - `Game.quests_changed` aggiorna HUD (elenco a sinistra, diario J), segni degli NPC e `QuestGate`.
 - Missioni senza `giver` partono da sole (`Quests.start_automatic`, a ogni ingresso in un livello). Obiettivi già fatti in passato vengono saltati (`_check_already`).
 - Il cancello nord di Ostia Nova (`QuestGate`, fuori dal nodo World) si apre col flag `porto_aperto` (missione "Il porto sbarrato").
+
+## Grafica 2D (docs/GRAFICA_2D_AI.md)
+- Terreno: i livelli .tscn hanno ancora i blocchi a tinta unita per zona; `Terrain.texture_world(World)` (da `Level._ready` e da "Ricostruisci terreno") riconosce il colore della zona (`MapZones`, anche la versione scurita delle righe alterne) e mette lo shader con la texture `"texture"` della zona; strade: color legno → `assi_molo`, altrimenti `lastricato`. Se cambi il colore di una zona, ricostruisci il terreno (altrimenti il pezzo resta a tinta unita). Terreno e strade usano lo shader con `cull_back` (le curve strette dei nastri delle strade hanno triangoli ripiegati al contrario che devono restare nascosti); i muri dei dungeon `double_sided`.
+- HUD: barra decorata `BarraAbilita` (6 `SkillSlot` sui fori `Hud.BAR_HOLES` × `BAR_SCALE`), globi 160 px con l'anello di `globo_cornice` (le ali non si disegnano); col touch la barra delle abilità si nasconde (`Hud._set_touch_layout`). `Hud._panel_style(alpha, framed)`: alpha >= 0.9 → `StyleBoxTexture` con la cornice ridotta a 128 px e fondo scuro; tooltip con `framed = false`.
+- Zaino/negozi: `InventoryUI.paint_slot` mette `Icons.item(it)` (caselle piccole: solo icona), sacchetto gemme e orbite con `Icons.gem`, materiali con `[img]` nel testo. Menu: `sfondo_menu` con la pagina principale nel 42% sinistro; caricamento: `caricamento_<livello>.png` dietro al titolo (in basso).
+- Se Godot interrompe l'importazione di un PNG resta un file `*.png.import-XXXX` e la texture non si carica: cancellalo e rilancia `--headless --editor --quit --path .`.
+
+## Arredo dei livelli (core/dressing.gd)
+- Concetto delle mappe di Diablo 3 / Immortal in grayboxing: il percorso è scavato in una massa fitta. `Dressing.build(level)` (da `Level._ready`, finché la Forma esiste ancora) rasterizza la Forma con `MapBuilder` e mette, con seme fisso:
+  - **dentro** (celle calpestabili): copertura del suolo per famiglia di zona (`FAMILY` → `COVER`: erba che ondeggia, fiori, felci, sassi, foglie, funghi, rami, ossa/lastre nella necropoli, detriti/assi/corde al porto), più fitta sui bordi (`EDGE`) e ai lati delle strade, mai sul lastricato né sugli oggetti piazzati;
+  - **fuori** (fino a `OOB_RINGS` = 7 celle oltre il bordo, secondo il `border` della zona): bosco a strati (felci/cespugli, poi alberi per zona `TREES`), rocce e pareti di scogliera, isolati di case a griglia per "isolato"; ogni tanto rovine/torri/statue (`LANDMARKS`). A sud del percorso (verso la telecamera) solo roba bassa fino alla 3ª cella. Lo `Sfondo` prende la texture del suolo.
+- Tutto decorativo: MultiMesh a blocchi da 64 m (`Arredo/<forma>_<x>_<z>`), niente collisioni, niente navmesh, non salvato nel .tscn (rigenerare o ricostruire il terreno non serve). Forme generate in codice (`Dressing.mesh(id)`, facce piatte, colore nei vertici, alfa = vento; shader `SHADER`). Su mobile la copertura è dimezzata.
+- Per arredare di più/di meno cambia i numeri delle tabelle; nuove forme in `mesh()` (e nell'elenco di test_grafica).
+
+## Audio (data/sound_db.gd, core/sfx.gd, core/music.gd, docs/AUDIO_AI.md)
+- `Sfx.play(nome, pos)`: nome del catalogo `SoundDB.SOUNDS` ([riserva sintetizzata, dB]). File in `audio/sfx/<nome>.ogg` o versioni `<nome>_1..9` (`Sfx.variants`, mai la stessa due volte di fila); senza file la riserva di `_synth`, "" = muto (passi).
+- Scelta del suono: `SoundDB.cast_sound(ab)` (tabella `ABILITY` per id, poi per tipo), `hit_sound(elemento, critico)`, `explosion_sound(elemento)`, `IMPACT` (saetta, terremoto, testuggine), `enemy_family(id)` → `<famiglia>_attacco/_morte` (umano, lupo, macchina, spettro, granchio). Nuovo nemico → aggiungilo in `ENEMY_FAMILY` (il test lo controlla). Nuovo suono → catalogo + riga in docs/AUDIO_AI.md (il test controlla che coincidano).
+- Passi in `Player._footsteps` (pietra in città, porto, dungeon). Errori (`_warn`) = "errore".
+- Musica: `Music.play_level(Level.music_names(), music)`: prova i nomi in ordine (`DungeonLevel`: `dungeon_<id>`, `dungeon`; labirinti `labirinto`); stessa lista per gli ambienti (`audio/ambience`, secondo player, −4 dB). `Music.set_boss` (da `Hud._process`): brano `boss` finché c'è un boss + 4 s. Menu: `["menu"]`.
 
 ## Insidie note (importante)
 - **GDScript tipizzato**: `var x := dict["k"]` è un errore di compilazione ("Cannot infer the type"). Usa `var x: float = ...` oppure `float(...)`.
@@ -197,13 +238,16 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/b
 - **`tools/test_ostia.gd`** (42 controlli): `--headless --path . --fixed-fps 60 --script res://tools/test_ostia.gd`. Uscita del livello 1 → città, NPC, altare, mercante (compra/vendi/riacquista), fabbro (smonta/forgia), poteri leggendari, viaggio rapido, portale, salvataggio. Usa e cancella lo slot 3.
 - **`tools/test_atto2.gd`** (53 controlli): missioni dell'atto 1 e 2, segni degli NPC, cancello, forziere personale, porto percorso a piedi fino al faro, Vulso e rinforzi, portale, diario, rimappatura tasti, salvataggio. Ripristina il forziere personale vero.
 - **`tools/test_gemme_set.gd`** (26 controlli): pezzi di set e bonus 2/4 pezzi, set dai leggendari, orbite, gioielliere (combina, incastona, togli), gemme raccolte da terra, salvataggio.
-- **`tools/test_dungeon.gd`** (39 controlli): per ogni dungeon stesso seme = stessa mappa e 30 semi sempre collegati; catacombe percorse dall'entrata all'uscita (boss, forzieri, ricarica dentro il dungeon); per gli altri: entrata nel loro livello, percorso fino al boss e alla scala, boss che compare, stanze arredate.
+- **`tools/test_dungeon.gd`** (44 controlli, anche sacello, anticamera, forzieri nei vicoli ciechi, uscita dopo il boss): per ogni dungeon stesso seme = stessa mappa e 30 semi sempre collegati; catacombe percorse dall'entrata all'uscita (boss, forzieri, ricarica dentro il dungeon); per gli altri: entrata nel loro livello, percorso fino al boss e alla scala, boss che compare, stanze arredate.
 - **`tools/test_equipaggiamento.gd`** (20 controlli): 8 corpi con tutte le prese, aspetto per ogni base, pezzi nelle prese giuste, niente doppioni, elmo che nasconde i capelli, tinta dei leggendari, sesso salvato, eroina in gioco che indossa e toglie.
 - **`tools/test_endgame.gd`** (53 controlli): dati delle 40 abilità/varianti/passive, leggendari e set nuovi, scelte dell'eroe e salvataggio, varianti in gioco (stordimento, fiamme, cura, seconda salva), leggendario che cambia Pilum, passiva Ultimo baluardo, affissi delle elite, Campioni e Rari, difficoltà (affissi, livello, vita, leggendari), Labirinto completo (obelisco, barra, Guardiano, ricompensa, gemma leggendaria e suo potenziamento, record, grado, uscita).
 - **`tools/test_interfaccia.gd`** (37 controlli): schermata di caricamento, finestra Abilità, zaino (ordina, dettagli, anteprima 3D), Aspetto e tinte, vendita in blocco, schede del forziere (ripristina il forziere vero), filtro del loot, Alt, nebbia di guerra, segnalini, controller (mira, A, stick, rimappatura), numeri di danno.
 - **`tools/test_avventura.gd`** (53 controlli): slot nuovi, secondo anello, doppia arma (e mano sinistra addosso), tipi di danno, gemme leggendarie (incastonare, effetti, potenziamento, salvataggio), boss a fasi (scudo + rinforzi, furia, attacchi), taglie (tabula, boss che ricompare, ricompense, cassa), santuari ed eventi nel livello 1, pilone del flusso, mappa grande, oggetti nuovi, daltonici, pulsanti del controller, riepilogo alla morte, hardcore (forziere separato, eroe perso, slot).
-- **`tools/test_effetti.gd`** (9 controlli): shader del kit, texture collegate, effetti per elemento che si creano e si tolgono, proiettili diversi per elemento, stati sui nemici, dissolvenza, immagini fantasma.
-- **`tools/test_touch.gd`** (32 controlli): pulsanti touch dentro lo schermo e non sovrapposti, joystick che muove l'eroe, attacco tenuto premuto, abilità a mira automatica e trascinata (anello), menu, tocco sul joystick che non diventa clic, scala dell'interfaccia, tasto indietro, opzione Mai.
+- **`tools/test_effetti.gd`** (13 controlli): shader del kit, texture collegate, pilum di energia, gladio avvolto dall'energia, tutte le abilità "visual" di energia, effetti per elemento che si creano e si tolgono, proiettili diversi per elemento, stati sui nemici, dissolvenza, immagini fantasma.
+- **`tools/test_touch.gd`** (37 controlli): niente touch sul PC, icone (file per ogni abilità/passiva, barra, finestra Abilità), pulsanti touch dentro lo schermo e non sovrapposti, joystick che muove l'eroe, attacco tenuto premuto, abilità a mira automatica e trascinata (anello), menu, tocco sul joystick che non diventa clic, scala dell'interfaccia, tasto indietro, opzione Mai.
+- **`tools/test_grafica.gd`** (29 controlli): forme e arredo dei livelli, texture del terreno e delle strade nei 3 livelli, pavimenti/muri dei 3 dungeon, dipinti di caricamento, icone di oggetti/gemme/materiali nello zaino, cornici dei pannelli, barra delle abilità decorata e globi, sfondo del menu, icona dell'app e icone Android.
+- **`tools/test_audio.gd`** (9 controlli, senza `--fixed-fps`): suoni usati nel codice tutti nel catalogo, abilità/elementi/nemici con un suono, riserve sintetizzate, documento = catalogo, nomi dei file in audio/, ordine di ricerca della musica.
+- **`tools/test_livelli.gd`** (22 controlli, anche scene sul percorso e molo 1 collegato): level design dei livelli (elite sul percorso, riposi, arene, segreti con forzieri unici, punti fissi e santuari/eventi che ci finiscono davvero, missioni di uccisione ancora fattibili).
 - **`tools/test_mappa.gd`** (16 controlli): ogni livello ha la Forma; Forma e "Ricostruisci terreno" su una copia in memoria del porto (non salva nulla): ricostruzione ripetibile, luoghi/nemici intatti, nuova area raggiungibile a piedi, strada spostata, pianta PNG.
 - Lo stesso schema (imposta `Game.hero`, `Game.travel(...)`, guida il `Player` con move_target/interact_target/_try_cast) serve per altri test. `--fixed-fps 60` fa girare il tempo di gioco più veloce del tempo reale.
 

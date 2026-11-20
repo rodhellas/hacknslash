@@ -44,7 +44,7 @@ func _open(animated: bool) -> void:
 	remove_from_group("interactable")
 	collision_layer = 0
 	if animated:
-		Sfx.play("portal", global_position)
+		Sfx.play("cancello", global_position)
 		create_tween().tween_property(self, "position:y", -7.5, 2.0).set_trans(Tween.TRANS_SINE)
 	else:
 		position.y = -7.5

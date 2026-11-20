@@ -25,6 +25,16 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+## Quante mesh con lo shader "energy" ci sono sotto `n`.
+func _energy_count(n: Node) -> int:
+	var V: GDScript = load("res://core/vfx.gd")
+	var count := 0
+	for mi: Node in n.find_children("*", "MeshInstance3D", true, false):
+		if (mi as MeshInstance3D).material_override == V.material("energy"):
+			count += 1
+	return count
+
+
 func _run() -> void:
 	game = root.get_node("Game")
 	var V: GDScript = load("res://core/vfx.gd")
@@ -88,6 +98,76 @@ func _run() -> void:
 		pr.queue_free()
 	_check(kinds.values().size() == 4 and kinds["fuoco"] != kinds["freddo"] and kinds["freddo"] != kinds["fisico"] and kinds["fulmine"] != kinds["fisico"],
 		"i proiettili hanno un aspetto diverso per elemento")
+
+	# Direzione artistica "energia": pilum di pura energia, lame di metallo avvolte dall'energia
+	var HC: GDScript = load("res://data/hero_classes.gd")
+	var pil: Dictionary = {}
+	for ab: Dictionary in HC.DATA["legionario"]["abilities"]:
+		if ab["id"] == "pilum":
+			pil = ab.duplicate()
+	pil["speed"] = 0.01
+	pil["element"] = "fulmine"
+	var ppr: Variant = load("res://entities/projectile.gd").spawn_from_player(p, pil, pos, Vector3.FORWARD)
+	var spear: Node = ppr.get_node_or_null("Lancia")
+	var has_energy := false
+	if spear != null:
+		for c: Node in spear.get_children():
+			if c is MeshInstance3D and (c as MeshInstance3D).material_override == V.material("energy"):
+				has_energy = true
+	_check(spear != null and has_energy, "il pilum è una lancia di energia (nucleo, guscio che scorre, punta)")
+	ppr.queue_free()
+	var IDB: GDScript = load("res://data/item_db.gd")
+	var App: GDScript = load("res://core/appearance.gd")
+	var model: Node3D = load(HC.DATA["legionario"]["model"]).instantiate()
+	dyn.add_child(model)
+	App.apply(model, {"arma": IDB.make_basic("gladio_plasma", 10)})
+	var metal := false
+	var shell := false
+	for mi: MeshInstance3D in model.find_children("Equip_*", "MeshInstance3D", true, false):
+		if mi.material_override == V.material("energy"):
+			shell = true
+		elif mi.material_override is StandardMaterial3D:
+			metal = true
+	_check(metal and shell, "il gladio indossato ha la lama di metallo avvolta dal guscio di energia")
+	model.queue_free()
+
+	# Tutte le abilità con un aspetto "energia" (campo "visual"): creano pezzi di energia e poi li tolgono
+	var SKD: GDScript = load("res://data/skill_db.gd")
+	var AB: GDScript = load("res://core/abilities.gd")
+	var with_visual: Array = []
+	for c: String in HC.DATA:
+		for ab: Dictionary in HC.DATA[c]["abilities"]:
+			if ab.has("visual"):
+				with_visual.append(ab)
+	for k: String in SKD.EXTRA:
+		for ab: Dictionary in SKD.EXTRA[k]:
+			if ab.has("visual"):
+				with_visual.append(ab)
+	var bad: Array = []
+	var nb: int = dyn.get_child_count()
+	for ab0: Dictionary in with_visual:
+		var ab: Dictionary = ab0.duplicate()
+		ab["element"] = SKD.ELEMENTS.get(ab["id"], "fisico")
+		var before := _energy_count(dyn)
+		var made: Node = null
+		if ab["kind"] == "projectile":
+			ab["speed"] = 0.01
+			made = load("res://entities/projectile.gd").spawn_from_player(p, ab, pos + Vector3(0, 30, 0), Vector3.FORWARD)
+			if _energy_count(made) == 0:
+				bad.append(ab["id"])
+			made.queue_free()
+			await _frames(1)
+		else:
+			AB._aoe_point(p, ab, pos)
+			var seen := 0
+			for i in 90:
+				await process_frame
+				seen = maxi(seen, _energy_count(dyn) - before)
+			if seen == 0:
+				bad.append(ab["id"])
+	_check(with_visual.size() >= 13 and bad.is_empty(), "%d abilità di energia mostrano i loro pezzi di energia %s" % [with_visual.size(), str(bad)])
+	await _frames(400)
+	_check(dyn.get_child_count() <= nb + 2, "e poi li tolgono (restano %d nodi)" % (dyn.get_child_count() - nb))
 
 	var E: GDScript = load("res://entities/enemy.gd")
 	var e: Variant = E.create("bruto", 30)

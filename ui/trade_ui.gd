@@ -182,7 +182,7 @@ func _build_stash() -> void:
 		buy.pressed.connect(func() -> void:
 			if Game.buy_stash_tab():
 				_stash_tab = Game.stash_tabs - 1
-				Sfx.play("coins")
+				Sfx.play("monete_borsa")
 				_after_change())
 		tabs.add_child(buy)
 	var grid := GridContainer.new()
@@ -226,7 +226,7 @@ func _on_stash_input(event: InputEvent, index: int) -> void:
 		Game.level.hud.show_warning("Inventario pieno")
 		return
 	items[index] = null
-	Sfx.play("pickup")
+	Sfx.play("raccogli")
 	inv.hide_tooltip()
 	_after_change()
 
@@ -245,7 +245,7 @@ func _deposit(index: int) -> void:
 		return
 	items[free] = it
 	player.hero.inventory[index] = null
-	Sfx.play("chest", null, -6.0)
+	Sfx.play("forziere", null, -6.0)
 	_after_change()
 
 
@@ -271,7 +271,7 @@ func _build_tabs(list: Array) -> void:
 		var id: String = pair[0]
 		b.pressed.connect(func() -> void:
 			_tab = id
-			Sfx.play("ui_click")
+			Sfx.play("clic")
 			refresh.call_deferred())
 		tabs.add_child(b)
 
@@ -365,7 +365,7 @@ func _on_item_input(event: InputEvent, index: int, buyback: bool) -> void:
 		return
 	player.hero.gold -= price
 	list.remove_at(index)
-	Sfx.play("coins")
+	Sfx.play("monete_borsa")
 	Game.level.hud.log_pickup("%s (-%d sesterzi)" % [it.item_name, price], it.color())
 	inv.hide_tooltip()
 	_after_change()
@@ -383,7 +383,7 @@ func _sell(index: int, notify: bool = true) -> void:
 		Game.buyback.resize(BUYBACK_MAX)
 	Game.level.hud.log_pickup("Venduto: %s (+%d)" % [it.item_name, value], Hud.GOLD)
 	if notify:
-		Sfx.play("coins")
+		Sfx.play("monete_borsa")
 		_after_change()
 
 
@@ -471,7 +471,7 @@ func _salvage(index: int, notify: bool = true) -> Dictionary:
 	Quests.notify("salvage")
 	if notify:
 		_log_materials(got)
-		Sfx.play("anvil", null, -4.0)
+		Sfx.play("smonta", null, -4.0)
 		_after_change()
 	return got
 
@@ -488,7 +488,7 @@ func _salvage_all(rarity: int) -> void:
 		Game.level.hud.show_warning("Nessun oggetto di quella rarità nello zaino")
 		return
 	_log_materials(total)
-	Sfx.play("anvil")
+	Sfx.play("smonta")
 	_after_change()
 
 
@@ -521,9 +521,9 @@ func _craft(rid: String) -> void:
 	for m: String in mats_req:
 		h.add_material(m, -int(mats_req[m]))
 	h.add_item(it)
-	Sfx.play("anvil")
+	Sfx.play("fabbro")
 	if it.is_special():
-		Sfx.play("legendary")
+		Sfx.play("drop_leggendario")
 	if source:
 		Fx.burst(Game.world_root(), source.global_position + Vector3(0, 1.2, 0), Color(1.0, 0.6, 0.2), 24, 5.0, 0.08, 0.6, -6.0, 60.0)
 	Game.level.hud.log_pickup("Forgiato: %s" % it.item_name, it.color())
@@ -549,7 +549,10 @@ func _build_jeweler() -> void:
 		b.toggle_mode = true
 		b.button_pressed = k == _gem_choice
 		b.focus_mode = Control.FOCUS_ALL
-		b.custom_minimum_size = Vector2(250, 32)
+		b.custom_minimum_size = Vector2(250, 36)
+		b.icon = Icons.gem(k)
+		b.add_theme_constant_override("icon_max_width", 30)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.add_theme_color_override("font_color", ItemDB.gem_color(k))
 		b.add_theme_color_override("font_pressed_color", ItemDB.gem_color(k).lightened(0.4))
 		if ItemDB.is_legendary_gem(k):
@@ -559,7 +562,7 @@ func _build_jeweler() -> void:
 				ItemDB.affix_text(ItemDB.gem_affix(k, "elmo")), ItemDB.affix_text(ItemDB.gem_affix(k, "armatura"))]
 		b.pressed.connect(func() -> void:
 			_gem_choice = k
-			Sfx.play("ui_click")
+			Sfx.play("clic")
 			refresh.call_deferred())
 		row.add_child(b)
 		var tier := ItemDB.gem_tier(k)
@@ -611,6 +614,10 @@ func _socket_row(it: Item, worn: bool) -> void:
 			b.disabled = _gem_choice == ""
 		else:
 			b.text = "◆ " + ItemDB.GEMS[ItemDB.gem_type(g)]["name"]
+			b.icon = Icons.gem(g)
+			if b.icon != null:
+				b.text = ItemDB.GEMS[ItemDB.gem_type(g)]["name"]
+				b.add_theme_constant_override("icon_max_width", 22)
 			b.add_theme_color_override("font_color", ItemDB.gem_color(g))
 			b.tooltip_text = "%s: %s\nClic: togli (%d sesterzi)" % [ItemDB.gem_name(g),
 				ItemDB.affix_text(ItemDB.gem_affix(g, it.slot)), ItemDB.GEM_REMOVE_GOLD * ItemDB.gem_tier(g)]
@@ -640,7 +647,7 @@ func socket_gem(it: Item, i: int, key: String) -> bool:
 			return false
 	h.add_gem(key, -1)
 	it.gems[i] = key
-	Sfx.play("anvil", null, -8.0)
+	Sfx.play("incastona", null, -8.0)
 	Game.level.hud.log_pickup("Incastonato: %s" % ItemDB.gem_name(key), ItemDB.gem_color(key))
 	player.refresh_stats()
 	_after_change()
@@ -659,7 +666,7 @@ func unsocket_gem(it: Item, i: int) -> bool:
 	h.gold -= cost
 	it.gems[i] = ""
 	h.add_gem(key)
-	Sfx.play("coins")
+	Sfx.play("monete_borsa")
 	player.refresh_stats()
 	_after_change()
 	return true
@@ -677,7 +684,7 @@ func combine_gem(key: String) -> bool:
 	var up := ItemDB.gem_key(ItemDB.gem_type(key), tier + 1)
 	h.add_gem(up)
 	_gem_choice = up
-	Sfx.play("anvil")
+	Sfx.play("incastona")
 	Game.level.hud.log_pickup("Combinato: %s" % ItemDB.gem_name(up), ItemDB.gem_color(up))
 	_after_change()
 	return true
@@ -760,7 +767,7 @@ func set_look(slot: String, base: String) -> bool:
 		h.transmog[slot] = base
 	else:
 		h.transmog.erase(slot)
-	Sfx.play("anvil", null, -8.0)
+	Sfx.play("fabbro", null, -8.0)
 	player.refresh_stats()
 	_after_change()
 	return true

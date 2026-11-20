@@ -307,6 +307,7 @@ func _draw_controls() -> void:
 				pressed = true
 		var col := Color(0.6, 0.5, 0.3)
 		var text := String(b["label"])
+		var icon: Texture2D = null
 		var cd := 0.0
 		var dim := false
 		match String(b["kind"]):
@@ -314,15 +315,21 @@ func _draw_controls() -> void:
 				var ab: Dictionary = player.abilities.get(b["id"], {})
 				col = ab.get("color", col)
 				text = abbrev(ab)
+				icon = Icons.ability(String(ab.get("id", "")))
 				if b["kind"] == "skill":
 					dim = not player.is_unlocked(ab) or player.resource < float(ab.get("cost", 0.0))
 					var total := maxf(float(ab.get("cooldown", 0.0)), 0.01)
 					cd = clampf(player.cooldown_left(ab) / total, 0.0, 1.0)
 			"potion":
 				col = Color(0.9, 0.15, 0.2)
+				icon = Icons.potion()
 				cd = clampf(player.potion_cd / maxf(player.potion_cooldown(), 0.01), 0.0, 1.0)
 		root.draw_circle(c, r, Color(0.05, 0.04, 0.03, 0.55))
-		root.draw_circle(c, r - 4.0, col.darkened(0.25 if pressed else 0.55) * Color(1, 1, 1, 0.8))
+		if icon != null:
+			_draw_icon_circle(c, r - 3.0, icon, Color(1.25, 1.25, 1.25) if pressed else Color.WHITE)
+			text = ""
+		else:
+			root.draw_circle(c, r - 4.0, col.darkened(0.25 if pressed else 0.55) * Color(1, 1, 1, 0.8))
 		if dim:
 			root.draw_circle(c, r - 4.0, Color(0.1, 0.15, 0.5, 0.5))
 		if cd > 0.0:
@@ -333,6 +340,18 @@ func _draw_controls() -> void:
 		var tp := c + Vector2(-tw * 0.5, fs * 0.35)
 		root.draw_string_outline(font, tp, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color.BLACK)
 		root.draw_string(font, tp, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col.lightened(0.5) if b["kind"] != "menu" else Color(1, 0.92, 0.7))
+
+
+## Icona quadrata ritagliata in un cerchio (poligono con coordinate di texture).
+func _draw_icon_circle(c: Vector2, r: float, tex: Texture2D, modulate: Color) -> void:
+	var pts := PackedVector2Array()
+	var uvs := PackedVector2Array()
+	for i in 40:
+		var a := TAU * i / 40.0
+		var d := Vector2(cos(a), sin(a))
+		pts.append(c + d * r)
+		uvs.append(Vector2(0.5, 0.5) + d * 0.5)
+	root.draw_colored_polygon(pts, modulate, uvs, tex)
 
 
 func _draw_pie(c: Vector2, r: float, frac: float, col: Color) -> void:

@@ -162,6 +162,7 @@ func _build_gameplay() -> VBoxContainer:
 	cb.toggled.connect(func(on: bool) -> void: Settings.colorblind = on)
 	v.add_child(cb)
 	var trow := HBoxContainer.new()
+	trow.visible = Settings.touch_build()   # solo nella versione Android
 	trow.add_child(_label("Controlli touch a video  "))
 	var topt := OptionButton.new()
 	for pair: Array in [[0, "Automatici"], [1, "Sempre"], [2, "Mai"]]:
@@ -170,7 +171,8 @@ func _build_gameplay() -> VBoxContainer:
 	topt.item_selected.connect(func(i: int) -> void: Settings.touch_controls = topt.get_item_id(i))
 	trow.add_child(topt)
 	v.add_child(trow)
-	v.add_child(_label("Automatici: compaiono solo se lo schermo è touch (telefoni, tablet).", 13, Color(0.6, 0.6, 0.6)))
+	if Settings.touch_build():
+		v.add_child(_label("Automatici: compaiono solo se lo schermo è touch.", 13, Color(0.6, 0.6, 0.6)))
 	v.add_child(_slider_row("Scala dell'interfaccia (%)", 75.0, 150.0, 5.0, Settings.ui_scale * 100.0, func(x: float) -> void:
 		Settings.ui_scale = x / 100.0
 		Settings.apply_video()))
@@ -185,7 +187,7 @@ func _build_audio() -> VBoxContainer:
 	Sfx._load_settings()
 	v.add_child(_slider_row("Effetti (dB)", -40.0, 6.0, 1.0, Sfx.volume_db, func(x: float) -> void:
 		Sfx.volume_db = x
-		Sfx.play("ui_click")))
+		Sfx.play("clic")))
 	v.add_child(_slider_row("Musica (dB)", -40.0, 6.0, 1.0, Music.volume_db, func(x: float) -> void: Music.set_volume(x)))
 	v.add_child(_label("La musica si attiva mettendo i brani in audio/music/ (vedi il file LEGGIMI.txt).", 13, Color(0.6, 0.6, 0.6)))
 	return v
@@ -210,7 +212,7 @@ func _build_controls() -> VBoxContainer:
 		b.pressed.connect(func() -> void:
 			_waiting_action = action
 			b.text = "Premi un tasto..."
-			Sfx.play("ui_click"))
+			Sfx.play("clic"))
 		grid.add_child(b)
 		_bind_buttons[action] = b
 	var reset := Button.new()

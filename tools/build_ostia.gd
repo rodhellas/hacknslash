@@ -1,4 +1,6 @@
 extends "res://tools/build_world.gd"
+## ATTENZIONE (20-11-2026): il .tscn del livello contiene modifiche fatte dopo la generazione (level design:
+## tools/applica_proposte_livelli.gd, docs/PROPOSTE_LIVELLI.md). Rigenerare il livello le perde: dopo, rilancia quello script.
 ## GENERATORE della città di OSTIA NOVA (hub del primo atto). Riusa le funzioni di build_world.gd.
 ## Crea scenes/levels/level_02_ostia.tscn (con la sua Forma) e, se mancano, i nuovi oggetti di scena e i
 ## modelli degli NPC (quelli che esistono già NON vengono toccati: le sostituzioni Tripo sono salve).
@@ -21,6 +23,7 @@ const FORUM := Color(0.78, 0.76, 0.71)
 
 
 func _generate() -> void:
+	print("ATTENZIONE: se hai rigenerato un livello, RILANCIA applica_proposte_livelli.gd (level design) e poi test_livelli.gd.")
 	rng.seed = SEED + 2
 	_build_props(true)
 	_build_models(true)

@@ -62,7 +62,7 @@ static func start(id: String, announce: bool = true) -> void:
 		Game.hero.flags[q["on_start"]] = true
 	if announce:
 		_message("Nuova missione: %s" % q["title"])
-		Sfx.play("checkpoint", null, -6.0)
+		Sfx.play("missione_nuova")
 	_check_already(id)
 	Game.quests_changed.emit()
 
@@ -185,7 +185,7 @@ static func _complete(id: String) -> void:
 		lvl.player.add_xp(int(r["xp"]))
 		lines.append("+%d PE" % int(r["xp"]))
 	_message("Missione completata: %s\n%s" % [q["title"], "   ".join(lines)], 4.0)
-	Sfx.play("legendary", null, -4.0)
+	Sfx.play("missione_compiuta")
 	if lvl != null and lvl.player != null:
 		Fx.pillar(lvl.dynamic_root, lvl.player.global_position, Color(1.0, 0.8, 0.3), 10.0, 1.2)
 		lvl.player.inventory_changed.emit()

@@ -80,7 +80,7 @@ func interact(_p: Player) -> void:
 
 func start() -> void:
 	state = "running"
-	Sfx.play("portal", global_position)
+	Sfx.play("evento_inizio", global_position)
 	if Game.level:
 		Game.level.hud.show_banner(title())
 	match event_id:
@@ -97,7 +97,7 @@ func on_captive_freed() -> void:
 	freed += 1
 	if state == "idle":
 		start()
-	Sfx.play("pickup", global_position)
+	Sfx.play("raccogli", global_position)
 
 
 func _physics_process(delta: float) -> void:
@@ -175,7 +175,7 @@ func _complete() -> void:
 	Game.level.hud.clear_event()
 	Game.level.hud.show_banner("Evento completato!")
 	Fx.pillar(Game.world_root(), global_position, Color(1.0, 0.85, 0.3), 10.0, 1.2)
-	Sfx.play("levelup", global_position)
+	Sfx.play("evento_fine", global_position)
 	Loot.drop("chest_rich", global_position + Vector3(0, 0, 1.5), enemy_level)
 	var p: Player = Game.level.player
 	if p:

@@ -1,5 +1,9 @@
 # Testi per generare le icone delle abilità con un'AI
 
+**Fatte (20-11-2026)**: set "Grafite e braci" in `textures/icone/` (40 abilità, 24 passive, pozione), collegate da
+`core/icons.gd` alla barra delle abilità, ai pulsanti touch (ritagliate a cerchio) e alla finestra Abilità (K).
+Per una nuova abilità o passiva basta aggiungere `<id>.png` nella cartella giusta; senza file resta la sigla.
+
 Icone per le **40 abilità** (base e alternative), le **24 passive** e la **pozione**: 65 immagini.
 Le varianti (rune) non hanno un'icona propria: usano quella dell'abilità.
 Come in `docs/TEXTURE_AI.md`, i testi sono **in inglese** (i generatori lo capiscono meglio).
@@ -11,6 +15,8 @@ Come in `docs/TEXTURE_AI.md`, i testi sono **in inglese** (i generatori lo capis
 - **Niente scritte, lettere o numeri** nell'immagine.
 - Soggetto **unico, grande e centrato**, leggibile anche piccolo (sul telefono un pulsante è ~1 cm):
   sagome nette, forte contrasto, poco dettaglio fine.
+- **Armi = metallo avvolto dall'energia**, proiettili delle abilità = energia pura (direzione artistica, vedi
+  `docs/GAME_DESIGN.md`): nei soggetti con lame o lance tienilo presente.
 - Stesso stile per tutte: genera prima 3-4 icone, scegli la migliore e usala come riferimento di stile per le
   altre (Midjourney: `--sref <link dell'immagine>`; altri generatori: "in the same style as the reference image").
 - File: `textures/icone/abilita/<id>.png`, `textures/icone/passive/<id>.png`, `textures/icone/pozione.png`
@@ -43,16 +49,16 @@ Con Midjourney aggiungi in fondo `--ar 1:1`; con Stable Diffusion, nel negativo:
 ### Abilità
 | File (`id`) | Tasto | Soggetto |
 |---|---|---|
-| `colpo_gladio` | primaria | A Roman gladius sword mid-swing leaving a bright circular slash trail, three overlapping arcs of light |
-| `affondo` | primaria | A gladius thrusting straight forward toward the viewer, sharp point with a streak of light behind it |
-| `pilum` | secondaria | A glowing electromagnetic javelin (pilum) flying diagonally, crackling blue energy coils along the shaft |
+| `colpo_gladio` | primaria | A Roman gladius with a metal blade sheathed in a crackling aura of energy, mid-swing, three overlapping arcs of light |
+| `affondo` | primaria | A gladius with a metal blade wrapped in flowing energy, thrusting straight toward the viewer, streak of light behind it |
+| `pilum` | secondaria | A javelin (pilum) made entirely of pure crackling golden energy, forming in a gauntleted hand and about to be thrown |
 | `colpo_scudo` | secondaria | A large rectangular Roman scutum shield bashing forward, shockwave and stars of impact in front of it |
 | `testuggine` | tattica | Several interlocked Roman shields forming a tortoise formation dome, a glowing energy barrier over them |
 | `carica` | tattica | A Roman legionary charging forward with shield raised, motion streaks and dust behind him |
-| `granata` | tattica | A bronze Roman-styled grenade with glowing red seams, about to explode, sparks flying |
+| `granata` | tattica | An unstable sphere of crackling orange energy flying in an arc, about to explode, sparks flying |
 | `grido_marte` | tattica | A shouting Roman legionary helmet with red crest, fiery red aura and sound waves bursting outward |
 | `terremoto_legione` | tattica | A Roman military boot stomping the ground, cracks and a circular shockwave spreading from it |
-| `bombardamento` | tattica | Beams of fire raining down from a starship fleet in a dark sky onto a targeted circle on the ground |
+| `bombardamento` | tattica | A single massive energy beam fired down from a starship in orbit onto a glowing targeted circle on the ground |
 
 ### Passive
 | File (`id`) | Soggetto |
@@ -74,10 +80,10 @@ Con Midjourney aggiungi in fondo `--ar 1:1`; con Stable Diffusion, nel negativo:
 | `doppio_fendente` | primaria | Two crossed curved swords striking at once, two crossing orange slash trails |
 | `tridente` | primaria | A gladiator trident thrusting forward, cold blue light on the three prongs |
 | `colpo_arena` | secondaria | A heavy wide horizontal sword swing sending sand and debris flying in an arc |
-| `scure_rotante` | secondaria | A spinning throwing axe with circular motion blur, bronze blade |
+| `scure_rotante` | secondaria | A spinning throwing axe, metal head wrapped in crackling energy, circular motion blur |
 | `balzo` | tattica | A gladiator leaping high in the air with weapon raised, about to smash down, shadow on the ground below |
 | `turbine` | tattica | A gladiator spinning like a whirlwind with two blades, swirling vortex of sand and orange light |
-| `rete` | tattica | A thrown net of glowing electric cables spreading open, crackling sparks |
+| `rete` | tattica | A thrown net made of glowing energy filaments spreading open, crackling sparks |
 | `grido_arena` | tattica | A roaring gladiator face with open mouth, shockwave of sound rings and arena sand blowing |
 | `terremoto` | tattica | The arena floor shattering with deep glowing cracks radiating from a central impact |
 | `favore_folla` | tattica | A cheering arena crowd silhouette and a raised thumbs-up hand, golden spotlight |
@@ -99,16 +105,16 @@ Con Midjourney aggiungi in fondo `--ar 1:1`; con Stable Diffusion, nel negativo:
 ### Abilità
 | File (`id`) | Tasto | Soggetto |
 |---|---|---|
-| `dardo` | primaria | A single plasma arrow bolt flying fast, bright green glowing tip and thin trail |
-| `colpo_rapido` | primaria | Two plasma arrows flying side by side very fast, double green trails |
-| `freccia_esplosiva` | secondaria | An arrow hitting the ground and exploding in a burst of fire and debris |
-| `freccia_catena` | secondaria | An arrow trail bouncing between several points, a zigzag chain of light |
+| `dardo` | primaria | A single bolt of pure green energy shaped like an arrow, flying fast with a thin trail |
+| `colpo_rapido` | primaria | Two bolts of pure energy flying side by side very fast, double green trails |
+| `freccia_esplosiva` | secondaria | An unstable orange energy bolt hitting the ground and exploding in a burst of fire and debris |
+| `freccia_catena` | secondaria | An energy bolt trail bouncing between several points, a zigzag chain of light |
 | `capriola` | tattica | An archer in mid-roll somersault dodging, curved motion arc, light green afterimage |
-| `ventaglio` | tattica | Five arrows fanning outward from a single point in a spread |
-| `trappola` | tattica | A circular mechanical trap on the ground with glowing net and spikes, armed |
-| `bolas` | tattica | Bolas: two glowing weighted balls joined by a cord, spinning through the air |
+| `ventaglio` | tattica | Five energy bolts fanning outward from a single point in a spread |
+| `trappola` | tattica | A glowing disc of energy on the ground with three pulsing light spokes, armed |
+| `bolas` | tattica | Bolas: two spheres of energy joined by a beam of light, spinning through the air |
 | `mira_falco` | tattica | A hawk's eye close-up merged with a targeting reticle, sharp green glow |
-| `pioggia_frecce` | tattica | Dozens of arrows raining down from the sky onto an area, seen at an angle |
+| `pioggia_frecce` | tattica | Dozens of energy bolts raining down from the sky onto an area, seen at an angle |
 
 ### Passive
 | File (`id`) | Soggetto |
@@ -136,7 +142,7 @@ Con Midjourney aggiungi in fondo `--ar 1:1`; con Stable Diffusion, nel negativo:
 | `ira_nettuno` | tattica | A circular tidal wave of water erupting outward, a trident silhouette in the center |
 | `anello_fuoco` | tattica | A ring of flames encircling a robed figure seen from above |
 | `meteora` | tattica | A flaming meteor falling from the sky with a long fiery tail |
-| `sciame_corvi` | tattica | A swarm of mechanical bronze ravens with glowing eyes diving down |
+| `sciame_corvi` | tattica | A swarm of spectral ravens made of violet energy diving down |
 
 ### Passive
 | File (`id`) | Soggetto |

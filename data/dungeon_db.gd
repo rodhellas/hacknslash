@@ -11,6 +11,10 @@ extends RefCounted
 ##   loops         collegamenti in più tra stanze vicine (percorsi ad anello, come in D3)
 ##   enemy_level   livello dei nemici;  enemies / elites = tipi di nemici;  boss = id in EnemyDB (unico)
 ##   floor, wall   colori del pavimento e dei muri;  light = colore delle torce
+##   room_kinds    pesi dei tipi di stanza: colonne, cripta, tesoro, sacello (riposo: niente nemici, santuario al
+##                 centro); cambiarli NON cambia la pianta (solo il tipo delle stanze)
+##   column        oggetto di scena delle sale a colonne (predefinito "colonna"; caverne: "roccia_grande")
+##   floor_tex, wall_tex  texture di textures/terreno (core/terrain.gd); il colore le tinge un poco
 ##   props         oggetti di scena sparsi nelle stanze: [nome prop, probabilità per stanza]
 ##   style         "stanze" (rettangoli e corridoi dritti) o "caverna" (grotte irregolari e gallerie tortuose)
 ##   room_kinds    tipi di stanza con probabilità: "colonne" (sala a colonne), "cripta" (file di sarcofagi),
@@ -24,8 +28,9 @@ const DUNGEONS := {
 		"rooms": 11, "grid": 56, "tile": 3.0, "room_min": 5, "room_max": 9, "corridor": 2, "loops": 2,
 		"enemy_level": 5, "enemies": ["lemure", "predone"], "elites": ["lemure", "rinnegato"], "boss": "custode",
 		"floor": Color(0.27, 0.25, 0.23), "wall": Color(0.36, 0.33, 0.3), "light": Color(1.0, 0.55, 0.25),
+		"floor_tex": "pavimento_catacombe", "wall_tex": "muro_catacombe",
 		"props": [["sarcofago", 0.6], ["anfora", 0.8], ["colonna_rotta", 0.4], ["cassa", 0.3]],
-		"style": "stanze", "room_kinds": [["cripta", 0.35], ["colonne", 0.2], ["tesoro", 0.1]],
+		"style": "stanze", "room_kinds": [["cripta", 0.3], ["colonne", 0.2], ["tesoro", 0.1], ["sacello", 0.12]],
 		"entrance": ["level_01", "World/Luoghi/Mausoleo/IngressoCatacombe"],
 		"intro": "Sotto il mausoleo si apre una rete di gallerie scavate nel tufo. L'aria sa di ozono e di cera.\n\n[TRAMA]",
 	},
@@ -34,8 +39,9 @@ const DUNGEONS := {
 		"rooms": 9, "grid": 52, "tile": 3.0, "room_min": 6, "room_max": 10, "corridor": 3, "loops": 1,
 		"enemy_level": 4, "enemies": ["barbaro", "frombolier", "lupo"], "elites": ["bruto", "barbaro"], "boss": "tharvo",
 		"floor": Color(0.3, 0.26, 0.2), "wall": Color(0.38, 0.32, 0.26), "light": Color(1.0, 0.5, 0.2),
+		"floor_tex": "roccia_caverna", "wall_tex": "roccia_caverna",
 		"props": [["falo", 0.5], ["roccia_grande", 0.6], ["roccia_piccola", 0.8], ["cassa", 0.4], ["tenda", 0.3]],
-		"style": "caverna", "room_kinds": [["tesoro", 0.15]],
+		"style": "caverna", "room_kinds": [["tesoro", 0.15], ["sacello", 0.12], ["colonne", 0.2]], "column": "roccia_grande",
 		"entrance": ["level_01", "World/Luoghi/AccampamentoBarbaro/IngressoCaverne"],
 		"intro": "Dietro l'accampamento la roccia si apre in una grotta. Dentro, tamburi e odore di carne bruciata.\n\n[TRAMA]",
 	},
@@ -44,8 +50,9 @@ const DUNGEONS := {
 		"rooms": 12, "grid": 60, "tile": 3.0, "room_min": 6, "room_max": 11, "corridor": 2, "loops": 3,
 		"enemy_level": 8, "enemies": ["granchio", "pirata", "arpionatore"], "elites": ["automa", "pirata"], "boss": "madre_granchi",
 		"floor": Color(0.22, 0.27, 0.28), "wall": Color(0.3, 0.36, 0.37), "light": Color(0.45, 0.85, 1.0),
+		"floor_tex": "pavimento_cisterne", "wall_tex": "muro_cisterne",
 		"props": [["barile", 0.6], ["pila_casse", 0.4], ["cassa", 0.5], ["anfora", 0.4]],
-		"style": "stanze", "room_kinds": [["colonne", 0.5], ["tesoro", 0.12]],
+		"style": "stanze", "room_kinds": [["colonne", 0.45], ["tesoro", 0.12], ["sacello", 0.12]],
 		"entrance": ["level_03_porto", "World/Luoghi/Magazzini/IngressoCisterne"],
 		"intro": "Sotto i magazzini del sale corrono le vecchie cisterne della città. L'acqua è sparita; i granchi no.\n\n[TRAMA]",
 	},

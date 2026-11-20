@@ -1,8 +1,8 @@
 EFFETTI SONORI
 ==============
-Gli effetti sono sintetizzati da codice (core/sfx.gd). Per usare un suono vero metti qui
-un file con lo stesso nome (.wav o .ogg): ha la precedenza su quello sintetizzato.
+Metti qui i file .ogg (o .wav) con i nomi del catalogo data/sound_db.gd.
+Elenco completo, durate e testi per generarli con un'AI: docs/AUDIO_AI.md (parte A).
 
-Nomi: swing, hit, crit, enemy_die, player_hurt, enemy_attack, cast, projectile, dash, explosion,
-gold, pickup, rare_drop, legendary, levelup, potion, chest, break, checkpoint, portal,
-ui_click, coins, anvil, talk
+Versioni: nome.ogg oppure nome_1.ogg, nome_2.ogg, nome_3.ogg... il gioco ne sceglie una a caso ogni volta.
+Finché un file manca si sente il suono segnaposto sintetizzato (i passi invece restano muti).
+Volume di ogni suono: secondo numero in data/sound_db.gd (dB). Controllo dei nomi: tools/test_audio.gd.

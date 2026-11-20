@@ -62,7 +62,7 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 		p.heal(float(r[0]) * float(ab["heal_hit"]), false)
 	if float(ab.get("gain_hit", 0.0)) > 0.0:
 		p.resource = minf(p.resource + float(ab["gain_hit"]), float(p.stats["resource_max"]))
-	Sfx.play("crit" if r[1] else "hit", pos, 0.0 if r[1] else -3.0)
+	Sfx.play(SoundDB.hit_sound(element, r[1]), pos)
 	# Poteri leggendari che si attivano colpendo
 	if _proc_depth > 0:
 		return
@@ -70,7 +70,7 @@ static func hit_enemy(p: Player, e: Enemy, mult: float, knock: Vector3, ab: Dict
 	if r[1] and p.has_power("commodo"):
 		damage_area(p, pos, 3.0, 0.6, 3.0, {})
 		Fx.explosion(Game.world_root(), pos, 3.0, Color(1.0, 0.5, 0.15), "fuoco")
-		Sfx.play("explosion", pos, -8.0, 0.2)
+		Sfx.play("esplosione_fuoco", pos, -6.0, 0.2)
 	if String(ab.get("slot", "")) == "lmb" and p.has_power("ercole") and randf() < 0.15:
 		damage_area(p, pos, 4.0, 1.5, 8.0, {})
 		Fx.ring(Game.world_root(), pos, 4.0, Color(1.0, 0.85, 0.4), 0.35)
@@ -132,7 +132,7 @@ static func _melee(p: Player, ab: Dictionary) -> void:
 	if String(ab.get("element", "fisico")) != "fisico":
 		col = col.lerp(Vfx.element_color(String(ab["element"])), 0.5)
 	Fx.swing(p, yaw, 360.0 if spin else arc, reach, col, 0.25 if spin else 0.14)
-	Sfx.play("swing", null, -6.0 if not spin else -2.0, 0.15)
+	Sfx.play(SoundDB.cast_sound(ab), null, 0.0, 0.15)
 	if spin:
 		Fx.ring(Game.world_root(), p.global_position, reach, col, 0.3)
 	if count > 0:
@@ -151,7 +151,7 @@ static func _projectile(p: Player, ab: Dictionary, point: Vector3) -> void:
 			ang = lerpf(-spread * 0.5, spread * 0.5, float(i) / (count - 1))
 		var d := base_dir.rotated(Vector3.UP, ang)
 		Projectile.spawn_from_player(p, ab, p.global_position + Vector3(0, 1.2, 0) + d * 0.7, d)
-	Sfx.play("projectile", null, -6.0, 0.12)
+	Sfx.play(SoundDB.cast_sound(ab), null, 0.0, 0.12)
 
 
 static func _aoe_point(p: Player, ab: Dictionary, point: Vector3) -> void:
@@ -169,8 +169,19 @@ static func _aoe_point(p: Player, ab: Dictionary, point: Vector3) -> void:
 	var root := Game.world_root()
 	Fx.telegraph(root, point, radius, col, delay + interval * (ticks - 1) + 0.1)
 	var element := String(ab.get("element", "fisico"))
-	if ab.get("strike", false):
-		Fx.strike(root, point, delay, col, 0.9, element if element != "fisico" else "fuoco")
+	var visual := String(ab.get("visual", ""))
+	# Aspetto "energia" (vedi docs/GAME_DESIGN.md): il colore va verso quello dell'elemento delle varianti
+	var ecol := col.lerp(Vfx.element_color(element), 0.4) if element != "fisico" else col
+	match visual:
+		"raggio_orbitale":
+			Vfx.orbital_beam(root, point, radius, delay, ecol)
+		"granata_energia":
+			Vfx.lob(root, p.global_position + Vector3(0, 1.4, 0) + p.forward() * 0.5, point, delay, ecol)
+		"trappola_energia":
+			Vfx.energy_trap(root, point, radius, delay, ecol)
+		_:
+			if ab.get("strike", false):
+				Fx.strike(root, point, delay, col, 0.9, element if element != "fisico" else "fuoco")
 	for i in ticks:
 		var t := delay + interval * i
 		p.create_tween().tween_callback(func() -> void:
@@ -178,16 +189,23 @@ static func _aoe_point(p: Player, ab: Dictionary, point: Vector3) -> void:
 			Fx.ring(root, point, radius, col, 0.3)
 			if ticks == 1:
 				Fx.explosion(root, point, radius, col, element)
-				Sfx.play("explosion", point)
+				Sfx.play(SoundDB.IMPACT.get(String(ab.get("id", "")), SoundDB.explosion_sound(element)), point)
 				p.shake(0.15)
 			else:
 				Fx.burst(root, point + Vector3(0, 0.2, 0), col, 10, 4.0, 0.1, 0.35, -8.0, 60.0)
 				for k in 3:
 					var o := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * radius * 0.7
+					match visual:
+						"corvi_energia":
+							Vfx.raven_dive(root, point + o, ecol)
+						"dardi_energia":
+							for j in 2:
+								Vfx.falling_bolt(root, point + o + Vector3(randf_range(-0.8, 0.8), 0, randf_range(-0.8, 0.8)), ecol)
+						_:
+							pass
 					Vfx.hit(root, point + o + Vector3(0, 0.4, 0), element)
-				Sfx.play("hit", point, -6.0)).set_delay(maxf(t, 0.01))
-	if delay > 0.2:
-		Sfx.play("cast", null, -6.0)
+				Sfx.play(SoundDB.hit_sound(element), point, -3.0)).set_delay(maxf(t, 0.01))
+	Sfx.play(SoundDB.cast_sound(ab))
 	# Variante "echo": la stessa area colpisce di nuovo dopo un po'
 	if float(ab.get("echo", 0.0)) > 0.0:
 		var again := ab.duplicate()
@@ -209,7 +227,7 @@ static func _aoe_self(p: Player, ab: Dictionary) -> void:
 			damage_area(p, p.global_position, radius, float(ab.get("dmg", 1.0)), float(ab.get("knock", 6.0)), ab)
 			if ab.get("spin", false):
 				Fx.swing(p, p.facing_yaw, 360.0, radius, col, interval)
-				Sfx.play("swing", null, -4.0, 0.2)
+				Sfx.play("turbine", null, 0.0, 0.2)
 			else:
 				Fx.ring(Game.world_root(), p.global_position, radius, col, 0.35)
 				Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.4, 0), col, 24, radius * 2.5, 0.12, 0.45, -2.0, 80.0)
@@ -224,7 +242,10 @@ static func _aoe_self(p: Player, ab: Dictionary) -> void:
 					for k in 4:
 						var a := randf() * TAU
 						Vfx.lightning(Game.world_root(), p.global_position + Vector3(0, 1.2, 0), p.global_position + Vector3(cos(a), 0.1, sin(a)) * radius, col, 0.15, 5)
-				Sfx.play("explosion", null, -6.0, 0.15)
+				else:
+					# Onde d'urto fisiche: crepe che si illuminano di energia
+					Vfx.scorch(Game.world_root(), p.global_position, radius * 0.7, col.lightened(0.3), 1.2, "crepa")
+				Sfx.play(SoundDB.cast_sound(ab) if i == 0 else SoundDB.explosion_sound(String(ab.get("element", "fisico"))), null, 0.0 if i == 0 else -6.0, 0.15)
 				p.shake(0.12)).set_delay(maxf(interval * i, 0.01))
 
 
@@ -234,7 +255,7 @@ static func _dash(p: Player, ab: Dictionary, point: Vector3) -> void:
 	var to := point - p.global_position
 	to.y = 0.0
 	var dir := to.normalized() if to.length() > 0.2 else p.forward()
-	Sfx.play("dash", null, -3.0)
+	Sfx.play(SoundDB.cast_sound(ab))
 	match mode:
 		"forward":
 			p.start_dash(dir, dist, 24.0, ab)
@@ -253,7 +274,7 @@ static func _dash(p: Player, ab: Dictionary, point: Vector3) -> void:
 			if float(ab.get("dmg", 0.0)) > 0.0:
 				damage_area(p, target, float(ab.get("radius", 3.0)), float(ab["dmg"]), float(ab.get("knock", 6.0)), ab)
 			Fx.burst(Game.world_root(), target + Vector3(0, 1.0, 0), col, 16, 4.0, 0.1, 0.4, 0.0)
-			Sfx.play("portal", null, -8.0, 0.2)
+			Sfx.play("teletrasporto", null, 0.0, 0.2)
 
 
 ## Atterraggio del balzo.
@@ -262,9 +283,10 @@ static func land(p: Player, ab: Dictionary) -> void:
 	damage_area(p, p.global_position, float(ab.get("radius", 4.0)), float(ab.get("dmg", 1.0)), float(ab.get("knock", 8.0)), ab)
 	Fx.ring(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)), col, 0.35)
 	Vfx.scorch(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)) * 0.6, Color(0.2, 0.17, 0.13), 4.0, "crepa")
+	Vfx.scorch(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)) * 0.5, col.lightened(0.3), 1.0, "crepa")
 	Vfx.distortion(Game.world_root(), p.global_position, float(ab.get("radius", 4.0)))
 	Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.2, 0), Color(0.5, 0.42, 0.32), 20, 7.0, 0.18, 0.5, -10.0, 70.0)
-	Sfx.play("explosion", null, -4.0)
+	Sfx.play("atterraggio")
 	p.shake(0.15)
 
 
@@ -273,13 +295,14 @@ static func _buff(p: Player, ab: Dictionary) -> void:
 	var col: Color = ab.get("color", Color.WHITE)
 	Vfx.glow(Game.world_root(), p.global_position + Vector3(0, 1.0, 0), col, 2.5, 0.35)
 	Vfx.telegraph(Game.world_root(), p.global_position, 2.2, col, 0.5)
-	Sfx.play("cast")
+	Sfx.play(SoundDB.cast_sound(ab))
 	Fx.burst(Game.world_root(), p.global_position + Vector3(0, 0.5, 0), col, 20, 5.0, 0.1, 0.7, 3.0, 40.0)
 	if ab.has("heal_pct"):
 		p.heal(float(p.stats["max_life"]) * float(ab["heal_pct"]))
 	if ab.has("shockwave"):
 		damage_area(p, p.global_position, float(ab["shockwave"]), float(ab.get("dmg", 1.0)), float(ab.get("knock", 10.0)), ab)
 		Fx.ring(Game.world_root(), p.global_position, float(ab["shockwave"]), col, 0.4)
+		Sfx.play("onda_urto")
 		p.shake(0.15)
 	else:
 		Fx.ring(Game.world_root(), p.global_position, 2.5, col, 0.5)

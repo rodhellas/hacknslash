@@ -64,6 +64,9 @@ func build(level_root: Node3D, bake: bool = true) -> String:
 	_build_roads()
 	_build_lamps()
 	_build_scatter()
+	var textured := Terrain.texture_world(world)
+	if textured > 0:
+		report.append("Texture del terreno su %d pezzi." % textured)
 	_check_hand_content()
 	if bake:
 		_bake()

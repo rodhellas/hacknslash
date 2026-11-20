@@ -76,7 +76,7 @@ func can_interact() -> bool:
 
 func interact(p: Player) -> void:
 	_face(p.global_position)
-	Sfx.play("talk", global_position)
+	Sfx.play("npc_saluto", global_position)
 	# Prima i dialoghi delle missioni (affidare / consegnare), poi il mestiere
 	var qt := Quests.talk(npc_id)
 	if qt != "":

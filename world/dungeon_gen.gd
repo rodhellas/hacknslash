@@ -106,6 +106,18 @@ func _build(cfg: Dictionary, seed_value: int) -> void:
 		if d > far:
 			far = d
 			boss_room = i
+	# Arena leggibile: tra le stanze lontane (>= 80% della distanza massima) preferisci la più lontana
+	# di almeno 7×7 celle. Cambia solo quale stanza è del boss, non le celle.
+	var best_big := -1
+	var best_d := -1
+	for i in rooms.size():
+		var c := _center(i)
+		var d := dist[c.y * w + c.x]
+		if i != start_room and rooms[i].size.x >= 7 and rooms[i].size.y >= 7 and d >= far * 0.8 and d > best_d:
+			best_d = d
+			best_big = i
+	if best_big >= 0:
+		boss_room = best_big
 
 	# 4. Tipo di ogni stanza (pesi in "room_kinds"; il resto è "normale")
 	var weights: Array = cfg.get("room_kinds", [])
@@ -125,6 +137,24 @@ func _build(cfg: Dictionary, seed_value: int) -> void:
 					k = String(kw[0])
 					break
 		kinds[i] = k
+	# Sacello (stanza di riposo) garantito se previsto dai pesi: se il caso non ne ha dato nessuno, diventa
+	# sacello la stanza normale a metà strada verso il boss. Non usa il generatore casuale: pianta invariata.
+	var wants_rest := false
+	for kw: Array in weights:
+		if String(kw[0]) == "sacello":
+			wants_rest = true
+	if wants_rest and not kinds.has("sacello"):
+		var bc := _center(boss_room)
+		var half := dist[bc.y * w + bc.x] / 2
+		var pick := -1
+		for i in rooms.size():
+			if kinds[i] != "normale":
+				continue
+			var c := _center(i)
+			if pick < 0 or absi(dist[c.y * w + c.x] - half) < absi(dist[_center(pick).y * w + _center(pick).x] - half):
+				pick = i
+		if pick >= 0:
+			kinds[pick] = "sacello"
 
 
 func _carve(r: Rect2i) -> void:

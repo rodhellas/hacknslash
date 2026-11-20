@@ -1,11 +1,20 @@
 class_name Globe
 extends Control
-## Globo di vita/risorsa in stile Diablo, disegnato a mano (sostituibile con una texture).
+## Globo di vita/risorsa in stile Diablo: liquido disegnato a mano dentro la cornice di bronzo
+## (textures/ui/globo_cornice.png, solo l'anello: le ali laterali dell'immagine non si disegnano).
 
 var value := 1.0
 var max_value := 1.0
 var fill_color := Color(0.8, 0.1, 0.1)
 var caption := ""
+
+const FRAME := "res://textures/ui/globo_cornice.png"
+## Nell'immagine da 512 px: centro del foro, raggio del foro, mezzo lato del quadrato con l'anello.
+const FRAME_CENTER := Vector2(254, 250)
+const FRAME_HOLE := 102.0
+const FRAME_HALF := 166.0
+static var _frame: Texture2D = null
+static var _frame_checked := false
 
 
 func _process(_delta: float) -> void:
@@ -13,10 +22,17 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	var r := minf(size.x, size.y) * 0.5 - 4.0
+	if not _frame_checked:
+		_frame_checked = true
+		_frame = load(FRAME) if ResourceLoader.exists(FRAME) else null
 	var c := size * 0.5
-	draw_circle(c, r + 4.0, Color(0.55, 0.42, 0.2))
-	draw_circle(c, r + 1.5, Color(0.25, 0.18, 0.08))
+	var r := minf(size.x, size.y) * 0.5 - 4.0
+	if _frame != null:
+		# L'anello della cornice sta attorno al globo: il liquido occupa il foro
+		r = minf(size.x, size.y) * 0.5 * FRAME_HOLE / FRAME_HALF * 1.12
+	else:
+		draw_circle(c, r + 4.0, Color(0.55, 0.42, 0.2))
+		draw_circle(c, r + 1.5, Color(0.25, 0.18, 0.08))
 	draw_circle(c, r, Color(0.04, 0.03, 0.03))
 	var f := clampf(value / max_value, 0.0, 1.0) if max_value > 0.0 else 0.0
 	if f > 0.002:
@@ -32,6 +48,11 @@ func _draw() -> void:
 			draw_colored_polygon(pts, fill_color)
 			draw_colored_polygon(pts, Color(1, 1, 1, 0.0))
 	draw_circle(c + Vector2(-r * 0.35, -r * 0.4), r * 0.22, Color(1, 1, 1, 0.1))
+	if _frame != null:
+		var k := (r + 2.0) / FRAME_HOLE
+		var half := FRAME_HALF * k
+		draw_texture_rect_region(_frame, Rect2(c - Vector2(half, half), Vector2(half, half) * 2.0),
+			Rect2(FRAME_CENTER - Vector2(FRAME_HALF, FRAME_HALF), Vector2(FRAME_HALF, FRAME_HALF) * 2.0))
 	var font := get_theme_default_font()
 	var txt := "%d / %d" % [roundi(value), roundi(max_value)]
 	draw_string_outline(font, Vector2(0, c.y + 6), txt, HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, 4, Color.BLACK)

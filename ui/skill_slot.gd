@@ -10,6 +10,8 @@ var locked := false
 var unaffordable := false
 var label_override := ""
 var color := Color(0.5, 0.5, 0.5)
+## Icona (textures/icone); senza icona si disegna la sigla.
+var icon: Texture2D = null
 
 
 func _ready() -> void:
@@ -21,6 +23,7 @@ func set_ability(ab: Dictionary, key: String) -> void:
 	ability = ab
 	key_text = key
 	color = ab.get("color", Color.GRAY)
+	icon = Icons.ability(String(ab.get("id", "")))
 	tooltip_text = "%s  [%s]\n%s" % [ab.get("name", ""), key, ab.get("desc", "")]
 	if String(ab.get("rune_name", "")) != "":
 		var r := SkillDB.find_rune(String(ab.get("id", "")), String(ab.get("rune", "")))
@@ -51,10 +54,13 @@ func _abbrev() -> String:
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 	draw_rect(rect, Color(0.05, 0.04, 0.03))
-	draw_rect(rect.grow(-4), color.darkened(0.55))
 	var font := get_theme_default_font()
-	draw_string_outline(font, Vector2(0, size.y * 0.62), _abbrev(), HORIZONTAL_ALIGNMENT_CENTER, size.x, 20, 4, Color.BLACK)
-	draw_string(font, Vector2(0, size.y * 0.62), _abbrev(), HORIZONTAL_ALIGNMENT_CENTER, size.x, 20, color.lightened(0.4))
+	if icon != null:
+		draw_texture_rect(icon, rect.grow(-3), false)
+	else:
+		draw_rect(rect.grow(-4), color.darkened(0.55))
+		draw_string_outline(font, Vector2(0, size.y * 0.62), _abbrev(), HORIZONTAL_ALIGNMENT_CENTER, size.x, 20, 4, Color.BLACK)
+		draw_string(font, Vector2(0, size.y * 0.62), _abbrev(), HORIZONTAL_ALIGNMENT_CENTER, size.x, 20, color.lightened(0.4))
 	if unaffordable:
 		draw_rect(rect.grow(-4), Color(0.1, 0.2, 0.7, 0.45))
 	if cd_left > 0.0 and cd_total > 0.0:

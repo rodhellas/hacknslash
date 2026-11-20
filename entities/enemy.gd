@@ -411,7 +411,7 @@ func _start_windup(kind: String) -> void:
 		special_cd = 7.0
 	Fx.set_base_overlay(model, Color(1.0, 0.45, 0.0, 0.45))
 	if not bool(data.get("ranged", false)):
-		Sfx.play("enemy_attack", global_position, -8.0, 0.2)
+		Sfx.play(SoundDB.enemy_family(type_id) + "_attacco", global_position, 0.0, 0.2)
 
 
 ## Il boss chiama rinforzi attorno a sé.
@@ -448,13 +448,14 @@ func _attack(p: Player, dist: float, dir: Vector3) -> void:
 	if bool(data.get("ranged", false)):
 		Projectile.spawn_from_enemy(global_position + Vector3(0, 1.3, 0) + dir * 0.6, dir, damage, level,
 			data.get("proj_color", Color.RED), float(data.get("proj_speed", 12.0)))
+		Sfx.play("proiettile_nemico", global_position, 0.0, 0.15)
 		return
 	if special == "slam" or special == "charge":
 		var center := global_position + dir * radius()
 		var rad := float(data.get("slam_radius", 3.0))
 		Fx.ring(Game.world_root(), center, rad, Color(1.0, 0.5, 0.1), 0.3)
 		Fx.burst(Game.world_root(), center + Vector3(0, 0.2, 0), Color(0.5, 0.42, 0.32), 16, 6.0, 0.18, 0.5, -10.0, 70.0)
-		Sfx.play("explosion", center, -6.0, 0.15)
+		Sfx.play("esplosione_fisico", center, -2.0, 0.15)
 		var d := Vector2(p.global_position.x - center.x, p.global_position.z - center.z).length()
 		if d <= rad + 0.4:
 			_hit_player(p, damage)
@@ -482,6 +483,7 @@ func _check_phase() -> void:
 
 
 func _enter_phase(ph: Dictionary) -> void:
+	Sfx.play("boss_ruggito", global_position)
 	if ph.has("say"):
 		Fx.popup_speech(self, String(ph["say"]), float(data["height"]) + 1.2, 2.5)
 	for act: String in ph.get("do", []):
@@ -546,6 +548,7 @@ func _show_shield(on: bool) -> void:
 func _boss_attack(p: Player) -> void:
 	_boss_cd = EnemyDB.BOSS_ATTACK_CD * (0.7 if enraged else 1.0)
 	var kind: String = _boss_attacks.pick_random()
+	Sfx.play("boss_attacco", global_position)
 	match kind:
 		"nova":
 			Fx.ring(Game.world_root(), global_position, 3.0, Color(1.0, 0.4, 0.9), 0.4)
@@ -789,10 +792,10 @@ func _die() -> void:
 	var h := float(data["height"]) * (1.25 if elite else 1.0)
 	Fx.burst(Game.world_root(), global_position + Vector3(0, h * 0.5, 0), Color(0.45, 0.4, 0.35), 14 if not unique else 40,
 		4.0, 0.18 if not unique else 0.3, 0.7, -6.0)
-	Sfx.play("enemy_die", global_position, 0.0 if (elite or unique) else -3.0)
+	Sfx.play(SoundDB.enemy_family(type_id) + "_morte", global_position, 3.0 if (elite or unique) else 0.0)
 	if unique:
 		Fx.explosion(Game.world_root(), global_position, 6.0, Color(1.0, 0.5, 0.1))
-		Sfx.play("explosion", global_position)
+		Sfx.play("esplosione_fuoco", global_position)
 	var p := _player()
 	if p:
 		p.add_xp(xp_value())

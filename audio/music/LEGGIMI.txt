@@ -1,11 +1,14 @@
-MUSICA DEI LIVELLI
-==================
-Metti qui i brani (.ogg consigliato, oppure .mp3 / .wav) con il nome dell'id del livello:
+MUSICA
+======
+Brani (.ogg consigliato, oppure .mp3 / .wav), in loop, con dissolvenza dall'uno all'altro:
 
-  level_01.ogg         Campagna di Lazio Prime
-  ostia_nova.ogg       Ostia Nova (città)
-  level_03_porto.ogg   Porto di Ostia Nova
+  menu.ogg               menu principale
+  level_01.ogg           Campagna di Lazio Prime
+  ostia_nova.ogg         Ostia Nova (città)
+  level_03_porto.ogg     Porto di Ostia Nova
+  dungeon.ogg            tutti i dungeon (oppure dungeon_catacombe / dungeon_caverne_clan / dungeon_cisterne)
+  labirinto.ogg          Labirinti di Dedalo
+  boss.ogg               parte da sola durante uno scontro con un boss, poi si torna al brano del luogo
 
-Il brano parte da solo entrando nel livello, va in loop e si dissolve nel successivo.
-In alternativa imposta il campo "music" nel nodo radice del livello (Inspector).
-Volume: Opzioni > Audio.
+Testi per generarli (Suno/Udio): docs/AUDIO_AI.md (parte C).
+In alternativa imposta il campo "music" nel nodo radice del livello (Inspector). Volume: Opzioni > Audio.

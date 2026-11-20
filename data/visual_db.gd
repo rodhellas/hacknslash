@@ -25,7 +25,11 @@ const MATERIALS := {
 	"oro": Color(0.95, 0.78, 0.3), "cuoio": Color(0.42, 0.28, 0.16), "stoffa": Color(0.88, 0.86, 0.8),
 	"porpora": Color(0.45, 0.2, 0.6), "rosso": Color(0.65, 0.1, 0.1), "verde": Color(0.22, 0.38, 0.22),
 	"legno": Color(0.4, 0.27, 0.15), "plasma": Color(0.2, 0.9, 1.0), "cristallo": Color(0.55, 0.65, 1.0),
+	"energia": Color(0.35, 0.85, 1.0),
 }
+## "energia" non è un materiale solido: è un guscio di energia che scorre (Vfx "energy") attorno al metallo.
+## Direzione artistica: nel 3000 le armi sono metallo (struttura) avvolto dall'energia. Il pezzo "energia"
+## va un po' più grande della lama che avvolge. Leggendari e set: l'energia prende il colore della rarità.
 ## Materiali che brillano sempre (lame al plasma, cristalli).
 const GLOW := {"plasma": 4.0, "cristallo": 3.0}
 
@@ -34,15 +38,17 @@ const VISUALS := {
 	"gladio_plasma": {"parts": [
 		["Presa_ManoDx", "box", Vector3(0, 0, 0), Vector3(0.1, 0.1, 0.22), "cuoio"],
 		["Presa_ManoDx", "box", Vector3(0, 0, -0.14), Vector3(0.22, 0.05, 0.05), "oro"],
-		["Presa_ManoDx", "box", Vector3(0, 0, -0.5), Vector3(0.09, 0.03, 0.7), "plasma"]]},
+		["Presa_ManoDx", "box", Vector3(0, 0, -0.5), Vector3(0.08, 0.025, 0.68), "acciaio"],
+		["Presa_ManoDx", "box", Vector3(0, 0, -0.51), Vector3(0.15, 0.08, 0.76), "energia"]]},
 	"spatha": {"parts": [
 		["Presa_ManoDx", "box", Vector3(0, 0, 0), Vector3(0.1, 0.1, 0.24), "cuoio"],
 		["Presa_ManoDx", "box", Vector3(0, 0, -0.15), Vector3(0.26, 0.05, 0.05), "ferro"],
 		["Presa_ManoDx", "box", Vector3(0, 0, -0.65), Vector3(0.08, 0.03, 1.0), "acciaio"],
-		["Presa_ManoDx", "box", Vector3(0, 0.02, -0.65), Vector3(0.02, 0.02, 0.95), "plasma"]]},
+		["Presa_ManoDx", "box", Vector3(0, 0, -0.66), Vector3(0.14, 0.08, 1.08), "energia"]]},
 	"scure": {"parts": [
 		["Presa_ManoDx", "box", Vector3(0, 0, -0.35), Vector3(0.07, 0.07, 0.95), "legno"],
-		["Presa_ManoDx", "box", Vector3(0, 0, -0.78), Vector3(0.06, 0.45, 0.25), "acciaio"]]},
+		["Presa_ManoDx", "box", Vector3(0, 0, -0.78), Vector3(0.06, 0.45, 0.25), "acciaio"],
+		["Presa_ManoDx", "box", Vector3(0, 0, -0.78), Vector3(0.12, 0.52, 0.32), "energia"]]},
 	"arco_plasma": {"parts": [
 		["Presa_ManoSx", "box", Vector3(0, 0, 0), Vector3(0.06, 1.5, 0.08), "legno"],
 		["Presa_ManoSx", "box", Vector3(0, 0, 0.08), Vector3(0.02, 1.4, 0.02), "plasma"]]},
@@ -67,7 +73,8 @@ const VISUALS := {
 		["Presa_AvambraccioSx", "sphere", Vector3(-0.12, 0, 0), Vector3(0.08, 0.16, 0), "ferro"]]},
 	"pugio": {"parts": [
 		["Presa_ManoSx", "box", Vector3(0, 0, 0), Vector3(0.08, 0.08, 0.14), "cuoio"],
-		["Presa_ManoSx", "box", Vector3(0, 0, -0.25), Vector3(0.07, 0.025, 0.35), "acciaio"]]},
+		["Presa_ManoSx", "box", Vector3(0, 0, -0.25), Vector3(0.07, 0.025, 0.35), "acciaio"],
+		["Presa_ManoSx", "box", Vector3(0, 0, -0.26), Vector3(0.12, 0.07, 0.41), "energia"]]},
 	"faretra": {"parts": [
 		["Presa_Schiena", "cyl", Vector3(0.12, 0, 0), Vector3(0.11, 0.75, 0.11), "cuoio", Vector3(0, 0, -20)],
 		["Presa_Schiena", "box", Vector3(0.25, 0.4, 0), Vector3(0.12, 0.12, 0.12), "plasma", Vector3(0, 0, -20)]]},

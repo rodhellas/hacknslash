@@ -7,6 +7,7 @@ var viewport: SubViewport
 var pivot: Node3D
 var model: Node3D
 var _model_path := ""
+var _look := ""
 var _drag := false
 
 
@@ -20,7 +21,8 @@ func _ready() -> void:
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
-	viewport.msaa_3d = Viewport.MSAA_2X
+	# Stesso antialiasing dello schermo: un valore diverso obbliga a ricompilare gli shader per l'anteprima
+	viewport.msaa_3d = get_viewport().msaa_3d if get_viewport() != null else Viewport.MSAA_DISABLED
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	c.add_child(viewport)
 	var cam := Camera3D.new()
@@ -44,8 +46,28 @@ func _ready() -> void:
 	viewport.add_child(pivot)
 
 
+## Prepara l'anteprima durante il caricamento del livello (dietro la schermata di caricamento):
+## modello, pezzi dell'equipaggiamento e un primo disegno fuori schermo, così gli shader del suo
+## mondo 3D si compilano subito e lo zaino si apre senza scatti.
+func prewarm(h: HeroData) -> void:
+	show_hero(h)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	# dopo il disegno torna a disegnare solo quando è visibile
+	create_tween().tween_callback(func() -> void:
+		viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE).set_delay(0.2)
+
+
 func show_hero(h: HeroData) -> void:
 	var path := h.model_path()
+	# Equipaggiamento invariato dall'ultima volta: niente da rifare (aprire lo zaino resta istantaneo)
+	var look := path
+	for slot: String in h.equipment:
+		var it: Item = h.equipment[slot]
+		look += "|%s:%d" % [slot, it.get_instance_id() if it != null else 0]
+	look += str(h.transmog) + str(h.dyes)
+	if model != null and look == _look:
+		return
+	_look = look
 	if model == null or path != _model_path:
 		if model != null:
 			model.queue_free()

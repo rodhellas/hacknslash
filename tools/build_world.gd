@@ -1,4 +1,6 @@
 extends SceneTree
+## ATTENZIONE (20-11-2026): il .tscn del livello contiene modifiche fatte dopo la generazione (level design:
+## tools/applica_proposte_livelli.gd, docs/PROPOSTE_LIVELLI.md). Rigenerare il livello le perde: dopo, rilancia quello script.
 ## GENERATORE GRAYBOXING
 ## Crea:
 ##   scenes/props/*.tscn        oggetti di scena (alberi, colonne, case...) -> da sostituire con modelli Tripo
@@ -118,6 +120,7 @@ func _process(_delta: float) -> bool:
 
 
 func _generate() -> void:
+	print("ATTENZIONE: se hai rigenerato un livello, RILANCIA applica_proposte_livelli.gd (level design) e poi test_livelli.gd.")
 	var args := OS.get_cmdline_user_args()
 	var all := args.is_empty()
 	rng.seed = SEED

@@ -290,12 +290,19 @@ func _show_loading(level_id: String) -> void:
 		bg.color = Color(0.03, 0.025, 0.02)
 		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_loading.add_child(bg)
+		var art := TextureRect.new()
+		art.name = "Art"
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_loading.add_child(art)
+		# Nome del luogo e consiglio nella zona scura in basso del dipinto
 		var v := VBoxContainer.new()
-		v.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		v.offset_left = -400
-		v.offset_right = 400
-		v.offset_top = -80
-		v.offset_bottom = 80
+		v.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+		v.offset_left = -500
+		v.offset_right = 500
+		v.offset_top = -190
+		v.offset_bottom = -40
 		v.add_theme_constant_override("separation", 18)
 		_loading.add_child(v)
 		for n: String in ["Title", "Tip"]:
@@ -305,6 +312,8 @@ func _show_loading(level_id: String) -> void:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			l.add_theme_font_size_override("font_size", 40 if n == "Title" else 18)
 			l.add_theme_color_override("font_color", Color(0.95, 0.78, 0.35) if n == "Title" else Color(0.8, 0.75, 0.65))
+			l.add_theme_constant_override("outline_size", 8)
+			l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 			v.add_child(l)
 		add_child(_loading)
 	var title := level_title(level_id)
@@ -312,6 +321,9 @@ func _show_loading(level_id: String) -> void:
 		var info: Dictionary = hero.flags.get("dungeon", {})
 		title = "Labirinto di Dedalo" if info.has("rift") else String(DungeonDB.get_data(String(info.get("id", ""))).get("title", "Dungeon"))
 	(_loading.find_child("Title", true, false) as Label).text = title
+	# Dipinto del luogo: textures/ui/caricamento_<livello>.png (dungeon e labirinti: caricamento_dungeon)
+	var art_path := "res://textures/ui/caricamento_%s.png" % level_id
+	(_loading.find_child("Art", true, false) as TextureRect).texture = load(art_path) if ResourceLoader.exists(art_path) else null
 	(_loading.find_child("Tip", true, false) as Label).text = TIPS.pick_random()
 	_loading.visible = true
 

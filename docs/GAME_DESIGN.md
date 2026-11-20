@@ -4,6 +4,17 @@
 - Genere: action RPG / hack n slash isometrico, **come Diablo 3** (mappe grandi quasi a percorso ma esplorabili, nemici a gruppi in zone, loot casuale, classi).
 - **Niente roguelike**: i livelli sono fatti a mano.
 - Ambientazione: l'**Impero Romano nel 3000 d.C.** L'Impero non è mai caduto. Tecnologia sci-fi con estetica romana: gladi al plasma, scuta a campo di forza, pila elettromagnetici, droni, navette, legionari cyborg, culti degli dèi come forze "divine".
+- **Direzione artistica delle armi (decisa il 20-11-2026)**: nel 3000 si usa poco il semplice metallo e molta
+  **energia**. Le armi bianche hanno il **corpo in metallo avvolto da un guscio di energia** che scorre e crepita
+  (gladio, spatha, scure, pugio); i proiettili delle abilità sono **energia pura** (il pilum è una lancia di energia
+  che il legionario forgia in mano e scaglia). Nel gioco l'energia è un effetto di Godot (shader `energy` in
+  `core/vfx.gd`, materiale `"energia"` in `data/visual_db.gd`), non fa parte del modello Tripo.
+  Scelte per le abilità (20-11-2026): dardi e frecce del Sagittario = **dardi di energia**; oggetti lanciati =
+  **energia pura** (granata = sfera instabile lanciata ad arco, trappola = disco a terra che pulsa, bolas = due sfere
+  legate da un raggio, rete = filamenti di energia), tranne la **Scure rotante** che è l'arma vera (metallo + energia);
+  Sciame di corvi = **corvi di energia** evocati; Bombardamento orbitale = **raggio dall'orbita** (puntamento sottile,
+  poi colpo largo che lascia il terreno rovente). Le onde d'urto fisiche (terremoti, atterraggio del balzo) lasciano
+  crepe che si illuminano. Fulmini, sfere di fuoco, meteora, anelli, scudi e falci erano già energia.
 - L'idea iniziale (Bud Spencer e Terence Hill nel mondo di Star Wars) è stata **scartata**: tutto deve restare originale.
 
 ## Trama

@@ -50,5 +50,5 @@ func _on_body_entered(body: Node) -> void:
 		if vesta:
 			p.resource = minf(p.resource + float(p.stats["resource_max"]) * 0.2, p.stats["resource_max"])
 		Fx.burst(Game.world_root(), global_position + Vector3(0, 0.6, 0), Color(1.0, 0.2, 0.25), 10, 3.0, 0.1, 0.4, 2.0)
-		Sfx.play("potion", null, -6.0)
+		Sfx.play("globo_vita")
 		queue_free()

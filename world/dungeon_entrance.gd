@@ -33,5 +33,5 @@ func interact(p: Player) -> void:
 		return
 	var back := return_point()
 	Game.hero.flags["dungeon"] = {"id": dungeon_id, "return_level": Game.level.level_id, "x": back.x, "z": back.z}
-	Sfx.play("portal")
+	Sfx.play("ingresso_dungeon")
 	Game.travel("dungeon")

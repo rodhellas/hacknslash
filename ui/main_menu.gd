@@ -3,6 +3,8 @@ extends Control
 
 const GOLD := Color(0.95, 0.78, 0.35)
 
+const BACKGROUND := "res://textures/ui/sfondo_menu.png"
+var shade: ColorRect
 var pages: Dictionary = {}
 var slot_list: VBoxContainer
 var slot_mode := "new"   # "new" o "load"
@@ -24,6 +26,20 @@ func _ready() -> void:
 	bg.color = Color(0.05, 0.03, 0.06)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	# Sfondo dipinto (textures/ui/sfondo_menu.png): la zona scura a sinistra è per i pulsanti
+	if ResourceLoader.exists(BACKGROUND):
+		var art := TextureRect.new()
+		art.texture = load(BACKGROUND)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(art)
+	shade = ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.0)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(shade)
 	var stripe := ColorRect.new()
 	stripe.color = Color(0.45, 0.05, 0.05, 0.5)
 	stripe.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -42,6 +58,13 @@ func _ready() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(sub)
 
+	if ResourceLoader.exists(BACKGROUND):
+		# Titolo nella zona scura a sinistra del dipinto, con il contorno per leggerlo sopra l'immagine
+		for c: Control in [stripe, title, sub]:
+			c.anchor_right = 0.42
+		for l: Label in [title, sub]:
+			l.add_theme_constant_override("outline_size", 10)
+			l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	pages["main"] = _build_main()
 	pages["slots"] = _build_slots()
 	pages["class"] = _build_class()
@@ -54,6 +77,7 @@ func _ready() -> void:
 		_show("class"))
 	add_child(confirm)
 	_show("main")
+	Music.play_level(["menu"])
 
 
 func _page() -> VBoxContainer:
@@ -70,6 +94,10 @@ func _page() -> VBoxContainer:
 func _show(page: String) -> void:
 	for k: String in pages:
 		(pages[k] as Control).get_parent().visible = k == page
+	# Pagina principale: pulsanti nella zona scura a sinistra del dipinto; le altre (larghe) al centro, su fondo scurito
+	var main_center := (pages["main"] as Control).get_parent() as Control
+	main_center.anchor_right = 0.42 if ResourceLoader.exists(BACKGROUND) else 1.0
+	shade.color.a = 0.0 if page == "main" else 0.6
 	if page == "slots":
 		_refresh_slots()
 	elif page == "main":
