@@ -1,95 +1,161 @@
 [gd_scene format=3]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dnnm2"]
-albedo_color = Color(0.25, 0.45, 0.25, 1)
-roughness = 0.8
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_kkp0k"]
-radius = 0.38
-height = 1.5
-radial_segments = 12
-rings = 4
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0vr20"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gc1dd"]
 albedo_color = Color(0.85, 0.65, 0.5, 1)
 roughness = 0.8
 
-[sub_resource type="SphereMesh" id="SphereMesh_d1ipk"]
-radius = 0.26
-height = 0.5
-radial_segments = 14
-rings = 7
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_dnnm2"]
+radius = 0.11
+height = 0.92
+radial_segments = 12
+rings = 4
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dqnmv"]
-albedo_color = Color(0.18, 0.32, 0.18, 1)
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_kkp0k"]
+radius = 0.11
+height = 0.92
+radial_segments = 12
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d1ipk"]
+albedo_color = Color(0.3, 0.25, 0.15, 1)
 roughness = 0.8
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_l7gge"]
-top_radius = 0.0
+[sub_resource type="CylinderMesh" id="CylinderMesh_dqnmv"]
+top_radius = 0.28
 bottom_radius = 0.34
-height = 0.6
+height = 0.5
 radial_segments = 12
 rings = 1
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfctt"]
-albedo_color = Color(0.45, 0.32, 0.2, 1)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_l7gge"]
+albedo_color = Color(0.25, 0.45, 0.25, 1)
 roughness = 0.8
 
 [sub_resource type="BoxMesh" id="BoxMesh_yyhjs"]
-size = Vector3(0.06, 1.5, 0.08)
+size = Vector3(0.6, 0.5, 0.32)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_04sxt"]
-albedo_color = Color(0.2, 0.9, 1, 1)
-roughness = 0.8
-emission_enabled = true
-emission = Color(0.2, 0.9, 1, 1)
-emission_energy_multiplier = 4.0
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_aljys"]
+radius = 0.085
+height = 0.66
+radial_segments = 12
+rings = 4
 
-[sub_resource type="BoxMesh" id="BoxMesh_aljys"]
-size = Vector3(0.02, 1.4, 0.02)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ixi3o"]
-albedo_color = Color(0.35, 0.25, 0.15, 1)
-roughness = 0.8
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_ixi3o"]
+radius = 0.085
+height = 0.66
+radial_segments = 12
+rings = 4
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_j0ftc"]
-top_radius = 0.12
-bottom_radius = 0.12
-height = 0.8
+top_radius = 0.07
+bottom_radius = 0.08
+height = 0.12
 radial_segments = 12
 rings = 1
 
-[node name="Model" type="Node3D" unique_id=1093836719]
+[sub_resource type="SphereMesh" id="SphereMesh_a1evo"]
+radius = 0.16
+height = 0.34
+radial_segments = 14
+rings = 7
 
-[node name="Graybox" type="Node3D" parent="." unique_id=59665199]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gu6m0"]
+albedo_color = Color(0.5, 0.35, 0.18, 1)
+roughness = 0.8
 
-[node name="capsule_0" type="MeshInstance3D" parent="Graybox" unique_id=306664947]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
-material_override = SubResource("StandardMaterial3D_dnnm2")
+[sub_resource type="SphereMesh" id="SphereMesh_fovwt"]
+radius = 0.17
+height = 0.24
+radial_segments = 14
+rings = 7
+
+[node name="Model" type="Node3D" unique_id=1528870234]
+
+[node name="Graybox" type="Node3D" parent="." unique_id=944817689]
+
+[node name="capsule_0" type="MeshInstance3D" parent="Graybox" unique_id=1778926292]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.46, 0)
+material_override = SubResource("StandardMaterial3D_gc1dd")
+mesh = SubResource("CapsuleMesh_dnnm2")
+
+[node name="capsule_1" type="MeshInstance3D" parent="Graybox" unique_id=971976623]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13, 0.46, 0)
+material_override = SubResource("StandardMaterial3D_gc1dd")
 mesh = SubResource("CapsuleMesh_kkp0k")
 
-[node name="sphere_1" type="MeshInstance3D" parent="Graybox" unique_id=252505259]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.72, 0)
-material_override = SubResource("StandardMaterial3D_0vr20")
-mesh = SubResource("SphereMesh_d1ipk")
+[node name="Tunica" type="MeshInstance3D" parent="Graybox" unique_id=1187142512]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0)
+material_override = SubResource("StandardMaterial3D_d1ipk")
+mesh = SubResource("CylinderMesh_dqnmv")
+metadata/body_part = true
 
-[node name="cyl_2" type="MeshInstance3D" parent="Graybox" unique_id=306954404]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.85, 0.03)
-material_override = SubResource("StandardMaterial3D_dqnmv")
-mesh = SubResource("CylinderMesh_l7gge")
-
-[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=1523553905]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 1, -0.3)
-material_override = SubResource("StandardMaterial3D_pfctt")
+[node name="Busto" type="MeshInstance3D" parent="Graybox" unique_id=1687819054]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0)
+material_override = SubResource("StandardMaterial3D_l7gge")
 mesh = SubResource("BoxMesh_yyhjs")
+metadata/body_part = true
 
-[node name="box_4" type="MeshInstance3D" parent="Graybox" unique_id=189885876]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.43, 1, -0.22)
-material_override = SubResource("StandardMaterial3D_04sxt")
-cast_shadow = 0
-mesh = SubResource("BoxMesh_aljys")
+[node name="capsule_4" type="MeshInstance3D" parent="Graybox" unique_id=390570300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.1, 0)
+material_override = SubResource("StandardMaterial3D_gc1dd")
+mesh = SubResource("CapsuleMesh_aljys")
 
-[node name="cyl_5" type="MeshInstance3D" parent="Graybox" unique_id=21707672]
-transform = Transform3D(0.9659258, 0.25881904, 0, -0.24321035, 0.90767336, -0.34202012, -0.088521324, 0.33036608, 0.9396926, 0.2, 1.2, 0.35)
-material_override = SubResource("StandardMaterial3D_ixi3o")
+[node name="capsule_5" type="MeshInstance3D" parent="Graybox" unique_id=1970230043]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.1, 0)
+material_override = SubResource("StandardMaterial3D_gc1dd")
+mesh = SubResource("CapsuleMesh_ixi3o")
+
+[node name="cyl_6" type="MeshInstance3D" parent="Graybox" unique_id=481152431]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+material_override = SubResource("StandardMaterial3D_gc1dd")
 mesh = SubResource("CylinderMesh_j0ftc")
+
+[node name="Testa" type="MeshInstance3D" parent="Graybox" unique_id=1332068126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.74, 0)
+material_override = SubResource("StandardMaterial3D_gc1dd")
+mesh = SubResource("SphereMesh_a1evo")
+metadata/body_part = true
+
+[node name="Capelli" type="MeshInstance3D" parent="Graybox" unique_id=1342199021]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0.03)
+material_override = SubResource("StandardMaterial3D_gu6m0")
+mesh = SubResource("SphereMesh_fovwt")
+metadata/body_part = true
+
+[node name="Prese" type="Node3D" parent="." unique_id=1538355529]
+
+[node name="Presa_Testa" type="Marker3D" parent="Prese" unique_id=1848968770]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.74, 0)
+
+[node name="Presa_Busto" type="Marker3D" parent="Prese" unique_id=1092019833]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0)
+
+[node name="Presa_Schiena" type="Marker3D" parent="Prese" unique_id=2004471319]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0.2)
+
+[node name="Presa_Bacino" type="Marker3D" parent="Prese" unique_id=1376534711]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0)
+
+[node name="Presa_ManoDx" type="Marker3D" parent="Prese" unique_id=637124969]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.78, -0.08)
+
+[node name="Presa_ManoSx" type="Marker3D" parent="Prese" unique_id=1270042477]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.78, -0.08)
+
+[node name="Presa_AvambraccioDx" type="Marker3D" parent="Prese" unique_id=1220633636]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.95, 0)
+
+[node name="Presa_AvambraccioSx" type="Marker3D" parent="Prese" unique_id=1150516525]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.95, 0)
+
+[node name="Presa_StincoDx" type="Marker3D" parent="Prese" unique_id=779120805]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.3, 0)
+
+[node name="Presa_StincoSx" type="Marker3D" parent="Prese" unique_id=1540133019]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13, 0.3, 0)
+
+[node name="Presa_PiedeDx" type="Marker3D" parent="Prese" unique_id=514767666]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.06, -0.03)
+
+[node name="Presa_PiedeSx" type="Marker3D" parent="Prese" unique_id=2054921529]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13, 0.06, -0.03)

@@ -54,7 +54,8 @@ func _physics_process(delta: float) -> void:
 	if Game.level == null or Game.level.player == null:
 		return
 	var d := Game.level.player.global_position.distance_to(global_position)
-	if d < activation_range:
+	# Aspetta che la navmesh sia pronta (al caricamento del livello serve un frame)
+	if d < activation_range and NavigationServer3D.map_get_iteration_id(get_world_3d().navigation_map) > 0:
 		spawn()
 
 
@@ -62,21 +63,51 @@ func spawn() -> void:
 	spawned = true
 	var map := get_world_3d().navigation_map
 	var container: Node = Game.level.enemies_root if Game.level else get_parent()
-	if unique_id != "" and not (Game.hero and Game.hero.flags.has("unique_" + unique_id)):
+	if unique_id != "" and not (Game.hero and Game.hero.flags.has("unique_" + unique_id) and not Bounties.wants_boss(unique_id)):
 		_spawn_one(unique_id, global_position, false, map, container)
-	for i in count:
+	# Gruppi elite (come in D3): "Campioni" (tutti blu, stessi affissi) oppure un capo raro (giallo)
+	# con i suoi servitori normali. Il numero di affissi dipende dalla difficoltà.
+	var affs: Array = []
+	var rare_pack := false
+	var pack_name := ""
+	var n := count
+	if elite and count > 0:
+		affs = roll_affixes(int(Game.enemy_scaling().get("affixes", 1)))
+		rare_pack = randf() < 0.5
+		if rare_pack:
+			pack_name = "%s %s" % [EnemyDB.RARE_NAMES_A.pick_random(), EnemyDB.RARE_NAMES_B.pick_random()]
+			n = count + 2   # i servitori
+		else:
+			pack_name = Enemy.ELITE_PREFIX.pick_random()
+		if affs.has("orda"):
+			n += 3
+	for i in n:
 		var t: String = enemy_types[i % enemy_types.size()] if enemy_types.size() > 0 else "predone"
 		var a := randf() * TAU
 		var pos := global_position + Vector3(cos(a), 0, sin(a)) * radius * sqrt(randf())
-		_spawn_one(t, pos, elite, map, container)
+		if not elite:
+			_spawn_one(t, pos, false, map, container)
+		elif rare_pack:
+			# il primo è il capo, gli altri servitori normali
+			_spawn_one(t, pos, i == 0, map, container, affs if i == 0 else [], i == 0, pack_name)
+		else:
+			_spawn_one(t, pos, true, map, container, affs, false, pack_name)
 
 
-func _spawn_one(t: String, pos: Vector3, is_elite: bool, map: RID, container: Node) -> void:
+## Affissi casuali per un gruppo elite.
+static func roll_affixes(n: int) -> Array:
+	var pool: Array = EnemyDB.ELITE_AFFIXES.keys()
+	pool.shuffle()
+	return pool.slice(0, clampi(n, 0, pool.size()))
+
+
+func _spawn_one(t: String, pos: Vector3, is_elite: bool, map: RID, container: Node,
+		affs: Array = [], is_rare: bool = false, p_pack: String = "") -> void:
 	var snapped := NavigationServer3D.map_get_closest_point(map, pos)
-	if snapped != Vector3.ZERO and snapped.y < 0.3 and snapped.distance_to(pos) < 6.0:
+	if snapped != Vector3.ZERO and snapped.y < 1.0 and Vector2(snapped.x - pos.x, snapped.z - pos.z).length() < 6.0:
 		pos = snapped
 	pos.y = 0.0
-	var e := Enemy.create(t, enemy_level, is_elite)
+	var e := Enemy.create(t, enemy_level, is_elite, affs, is_rare, p_pack)
 	e.zone = self
 	e.position = pos
 	container.add_child(e)
@@ -91,7 +122,7 @@ func alert() -> void:
 	for e: Variant in enemies:
 		if is_instance_valid(e):
 			(e as Enemy).aggro()
-	get_tree().create_timer(4.0).timeout.connect(func() -> void: alerted = false)
+	create_tween().tween_callback(func() -> void: alerted = false).set_delay(4.0)
 
 
 # --- Visualizzazione nell'editor -------------------------------------------------------

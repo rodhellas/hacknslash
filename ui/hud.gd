@@ -32,6 +32,36 @@ var lore_text: RichTextLabel
 var end_panel: Control
 var end_title: Label
 var end_text: Label
+var waypoint_panel: Control
+var waypoint_list: VBoxContainer
+var cast_bar: ProgressBar
+var cast_label: Label
+var quest_tracker: RichTextLabel
+var quest_log: Control
+var quest_log_text: RichTextLabel
+var choice_panel: Control
+var choice_title: Label
+var choice_body: Label
+var choice_list: VBoxContainer
+var rift_box: PanelContainer
+var rift_label: Label
+var rift_bar: ProgressBar
+var event_box: PanelContainer
+var event_label: Label
+var buff_label: Label
+var _pad_glyphs := false
+var boss_box: PanelContainer
+var boss_name: Label
+var boss_bar: ProgressBar
+## Barra in basso (globi + barra delle abilità); sul touch la barra delle abilità si nasconde (ci sono i
+## pulsanti a video) e il resto si stringe per non finire sotto il joystick e l'arco delle abilità.
+var bottom: HBoxContainer
+var skill_row: HBoxContainer
+var _touch_layout := -1
+const BAR_TEXTURE := "res://textures/ui/barra_abilita.png"
+const BAR_SCALE := 0.75
+## Centri dei 6 fori della barra (pixel dell'immagine da 1024 × 256).
+const BAR_HOLES := [Vector2(234, 127), Vector2(345, 127), Vector2(457, 127), Vector2(568, 127), Vector2(678, 127), Vector2(790, 127)]
 var _banner_t := 0.0
 var _msg_t := 0.0
 var _warn_t := 0.0
@@ -44,20 +74,19 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# --- Barra in basso ---
-	var bottom := HBoxContainer.new()
+	# --- Barra in basso: globi con la cornice, barra delle abilità decorata (textures/ui) ---
+	bottom = HBoxContainer.new()
 	bottom.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	bottom.offset_left = -430
-	bottom.offset_right = 430
-	bottom.offset_top = -150
-	bottom.offset_bottom = -6
+	bottom.offset_left = -640
+	bottom.offset_right = 640
+	bottom.offset_bottom = -18   # la cornice dei globi sporge di ~13 px
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 14)
+	bottom.add_theme_constant_override("separation", 30)
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bottom)
 
 	life_globe = Globe.new()
-	life_globe.custom_minimum_size = Vector2(140, 140)
+	life_globe.custom_minimum_size = Vector2(160, 160)
 	life_globe.fill_color = Color(0.75, 0.06, 0.08)
 	life_globe.caption = "Vita"
 	life_globe.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -72,24 +101,51 @@ func _ready() -> void:
 	mid.add_child(xp_label)
 	xp_bar = _bar(Color(0.85, 0.65, 0.2), Vector2(520, 8))
 	mid.add_child(xp_bar)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mid.add_child(row)
+	skill_row = HBoxContainer.new()
+	skill_row.add_theme_constant_override("separation", 6)
+	skill_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	skill_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_child(skill_row)
 	potion_slot = SkillSlot.new()
 	potion_slot.set_ability({"name": "Pozione", "color": Color(0.9, 0.15, 0.2), "desc": "Cura il 60% della vita. Ricarica 30 s."}, "Q")
 	potion_slot.label_override = "POZ"
-	row.add_child(potion_slot)
+	potion_slot.icon = Icons.potion()
+	potion_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	skill_row.add_child(potion_slot)
 	var sep := Control.new()
-	sep.custom_minimum_size = Vector2(10, 0)
-	row.add_child(sep)
-	for s: String in HeroClasses.SLOT_ORDER:
-		var sl := SkillSlot.new()
-		row.add_child(sl)
-		slots[s] = sl
+	sep.custom_minimum_size = Vector2(4, 0)
+	skill_row.add_child(sep)
+	var bar_tex: Texture2D = load(BAR_TEXTURE) if ResourceLoader.exists(BAR_TEXTURE) else null
+	if bar_tex != null:
+		# Le 6 abilità nei 6 fori della barra decorata
+		var bar := Control.new()
+		bar.name = "BarraAbilita"
+		bar.custom_minimum_size = Vector2(bar_tex.get_size()) * BAR_SCALE
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		skill_row.add_child(bar)
+		var tr := TextureRect.new()
+		tr.texture = bar_tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_SCALE
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.add_child(tr)
+		var i := 0
+		for s: String in HeroClasses.SLOT_ORDER:
+			var sl := SkillSlot.new()
+			bar.add_child(sl)
+			sl.size = Vector2(62, 62)
+			sl.position = BAR_HOLES[i] * BAR_SCALE - Vector2(31, 31)
+			slots[s] = sl
+			i += 1
+	else:
+		for s: String in HeroClasses.SLOT_ORDER:
+			var sl := SkillSlot.new()
+			skill_row.add_child(sl)
+			slots[s] = sl
 
 	res_globe = Globe.new()
-	res_globe.custom_minimum_size = Vector2(140, 140)
+	res_globe.custom_minimum_size = Vector2(160, 160)
 	res_globe.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bottom.add_child(res_globe)
 
@@ -110,6 +166,64 @@ func _ready() -> void:
 	tv.add_child(target_bar)
 	target_box.visible = false
 	root.add_child(target_box)
+
+	# --- Barra del boss (in alto, grande) ---
+	boss_box = PanelContainer.new()
+	boss_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	boss_box.offset_left = -330
+	boss_box.offset_right = 330
+	boss_box.offset_top = 8
+	boss_box.add_theme_stylebox_override("panel", _panel_style(0.7))
+	boss_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bv := VBoxContainer.new()
+	boss_box.add_child(bv)
+	boss_name = _label(22, Color(1.0, 0.6, 0.15))
+	boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	bv.add_child(boss_name)
+	boss_bar = _bar(Color(0.85, 0.35, 0.05), Vector2(620, 22))
+	bv.add_child(boss_bar)
+	boss_box.visible = false
+	root.add_child(boss_box)
+
+	# --- Labirinto di Dedalo: tempo e avanzamento ---
+	rift_box = PanelContainer.new()
+	rift_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	rift_box.offset_left = 14
+	rift_box.offset_top = 14
+	rift_box.add_theme_stylebox_override("panel", _panel_style(0.65))
+	rift_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rv := VBoxContainer.new()
+	rift_box.add_child(rv)
+	rift_label = _label(16, Color(0.85, 0.7, 1.0))
+	rv.add_child(rift_label)
+	rift_bar = _bar(Color(0.6, 0.3, 1.0), Vector2(300, 14))
+	rv.add_child(rift_bar)
+	rift_box.visible = false
+	root.add_child(rift_box)
+
+	# --- Evento in corso ---
+	event_box = PanelContainer.new()
+	event_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	event_box.offset_left = -230
+	event_box.offset_right = 230
+	event_box.offset_top = 150
+	event_box.add_theme_stylebox_override("panel", _panel_style(0.6))
+	event_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	event_label = _label(17, Color(1.0, 0.6, 0.95))
+	event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	event_box.add_child(event_label)
+	event_box.visible = false
+	root.add_child(event_box)
+
+	# --- Potenziamenti attivi (santuari, piloni, abilità), sopra la barra ---
+	buff_label = _label(15, Color(0.9, 0.95, 1.0))
+	buff_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	buff_label.offset_left = -400
+	buff_label.offset_right = 400
+	buff_label.offset_top = -180
+	buff_label.offset_bottom = -156
+	buff_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root.add_child(buff_label)
 
 	# --- Minimappa ---
 	minimap = Minimap.new()
@@ -167,6 +281,66 @@ func _ready() -> void:
 	])
 	end_title = end_panel.find_child("Title", true, false)
 	end_text = end_panel.find_child("Body", true, false)
+	waypoint_panel = _make_panel(root, "Viaggio rapido", "Scegli un altare già attivato.",
+		[["Chiudi", func() -> void: waypoint_panel.visible = false]])
+	waypoint_list = VBoxContainer.new()
+	waypoint_list.add_theme_constant_override("separation", 6)
+	var wbody := waypoint_panel.find_child("Body", true, false) as Label
+	wbody.get_parent().add_child(waypoint_list)
+	wbody.get_parent().move_child(waypoint_list, wbody.get_index() + 1)
+	choice_panel = _make_panel(root, "", "", [])
+	choice_title = choice_panel.find_child("Title", true, false)
+	choice_body = choice_panel.find_child("Body", true, false)
+	choice_list = VBoxContainer.new()
+	choice_list.add_theme_constant_override("separation", 6)
+	choice_list.alignment = BoxContainer.ALIGNMENT_CENTER
+	choice_body.get_parent().add_child(choice_list)
+	choice_body.get_parent().move_child(choice_list, choice_body.get_index() + 1)
+
+	# --- Missioni: elenco a sinistra e diario (J) ---
+	quest_tracker = RichTextLabel.new()
+	quest_tracker.bbcode_enabled = true
+	quest_tracker.fit_content = true
+	quest_tracker.scroll_active = false
+	quest_tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	quest_tracker.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	quest_tracker.offset_left = 16
+	quest_tracker.offset_top = 16
+	quest_tracker.custom_minimum_size = Vector2(360, 0)
+	quest_tracker.add_theme_font_size_override("normal_font_size", 15)
+	quest_tracker.add_theme_font_size_override("bold_font_size", 17)
+	quest_tracker.add_theme_constant_override("outline_size", 5)
+	quest_tracker.add_theme_color_override("font_outline_color", Color.BLACK)
+	root.add_child(quest_tracker)
+	quest_log = _make_panel(root, "Diario delle missioni", "", [["Chiudi", func() -> void: quest_log.visible = false]])
+	var qbody := quest_log.find_child("Body", true, false) as Label
+	quest_log_text = RichTextLabel.new()
+	quest_log_text.bbcode_enabled = true
+	quest_log_text.fit_content = true
+	quest_log_text.custom_minimum_size = Vector2(620, 0)
+	quest_log_text.add_theme_font_size_override("normal_font_size", 16)
+	qbody.get_parent().add_child(quest_log_text)
+	qbody.get_parent().move_child(quest_log_text, qbody.get_index())
+	qbody.queue_free()
+	Game.quests_changed.connect(update_quests)
+
+	# --- Barra di canalizzazione (portale cittadino) ---
+	var cast_box := VBoxContainer.new()
+	cast_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	cast_box.offset_left = -160
+	cast_box.offset_right = 160
+	cast_box.offset_top = -230
+	cast_box.offset_bottom = -190
+	cast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(cast_box)
+	cast_label = _label(15, Color(0.7, 0.85, 1.0))
+	cast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cast_label.text = "Portale verso %s" % Game.level_title(Game.HUB)
+	cast_box.add_child(cast_label)
+	cast_bar = _bar(Color(0.35, 0.65, 1.0), Vector2(320, 12))
+	cast_box.add_child(cast_bar)
+	cast_box.visible = false
+	cast_bar.set_meta("box", cast_box)
 
 
 func bind(p: Player, l: Level) -> void:
@@ -176,11 +350,53 @@ func bind(p: Player, l: Level) -> void:
 	area_label.text = l.level_title
 	res_globe.fill_color = p.cls["resource_color"]
 	res_globe.caption = p.cls["resource"]
-	for s: String in slots:
-		var ab: Dictionary = p.abilities.get(s, {})
-		(slots[s] as SkillSlot).set_ability(ab, HeroClasses.SLOT_KEYS[s])
+	_bind_slots()
+	p.abilities_changed.connect(_bind_slots)
 	p.xp_changed.connect(func(_a: int, _b: int, _c: int) -> void: _update_xp())
 	_update_xp()
+	update_quests()
+
+
+## Pulsanti del controller mostrati sulla barra quando si gioca col controller.
+const PAD_KEYS := {"lmb": "A", "rmb": "X", "1": "Y", "2": "B", "3": "LB", "4": "RB"}
+
+
+func _bind_slots() -> void:
+	_pad_glyphs = player.using_pad
+	for s: String in slots:
+		var ab: Dictionary = player.abilities.get(s, {})
+		(slots[s] as SkillSlot).set_ability(ab, PAD_KEYS[s] if _pad_glyphs else HeroClasses.SLOT_KEYS[s])
+	potion_slot.key_text = "RT" if _pad_glyphs else "Q"
+
+
+## Disposizione della barra in basso: completa (mouse/controller) o stretta (touch, abilità sui pulsanti a video).
+func _set_touch_layout(touch: bool) -> void:
+	_touch_layout = 1 if touch else 0
+	skill_row.visible = not touch
+	xp_bar.custom_minimum_size.x = 440.0 if touch else skill_row.get_combined_minimum_size().x
+	bottom.offset_top = -188.0 if touch else -248.0
+	buff_label.offset_top = bottom.offset_top - 30.0
+	buff_label.offset_bottom = bottom.offset_top - 6.0
+	var cast_box: Control = cast_bar.get_meta("box")
+	cast_box.offset_top = bottom.offset_top - 80.0
+	cast_box.offset_bottom = bottom.offset_top - 40.0
+
+
+## Suggerimento mostrato una sola volta per eroe (primi minuti di gioco).
+func hint(id: String, text: String) -> void:
+	if Game.hero == null or Game.hero.flags.has("hint_" + id):
+		return
+	Game.hero.flags["hint_" + id] = true
+	show_message("Suggerimento: " + text, 6.0)
+
+
+func set_event(title: String, objective: String) -> void:
+	event_box.visible = true
+	event_label.text = "%s\n%s" % [title, objective]
+
+
+func clear_event() -> void:
+	event_box.visible = false
 
 
 func _update_xp() -> void:
@@ -193,6 +409,9 @@ func _update_xp() -> void:
 func _process(delta: float) -> void:
 	if player == null:
 		return
+	var touch_on := 1 if Settings.touch_enabled() else 0
+	if touch_on != _touch_layout:
+		_set_touch_layout(touch_on == 1)
 	life_globe.value = player.life
 	life_globe.max_value = player.stats["max_life"]
 	res_globe.value = player.resource
@@ -206,8 +425,20 @@ func _process(delta: float) -> void:
 		sl.cd_left = player.cooldown_left(ab)
 		sl.cd_total = maxf(float(ab.get("cooldown", 1.0)), 0.01)
 		sl.unaffordable = player.resource < float(ab.get("cost", 0.0))
+	if player.using_pad != _pad_glyphs:
+		_bind_slots()
+	var bt: Array = []
+	for b: Dictionary in player.buffs:
+		if String(b.get("name", "")) != "":
+			bt.append("%s %d s" % [b["name"], ceili(float(b["time"]))])
+	buff_label.text = "   ".join(bt)
 	potion_slot.cd_left = maxf(player.potion_cd, 0.0)
-	potion_slot.cd_total = Player.POTION_CD
+	potion_slot.cd_total = player.potion_cooldown()
+	var cast_box: Control = cast_bar.get_meta("box")
+	cast_box.visible = player.portal_t > 0.0
+	if cast_box.visible:
+		cast_bar.max_value = Player.PORTAL_TIME
+		cast_bar.value = Player.PORTAL_TIME - player.portal_t
 
 	# Bersaglio: il nemico sotto il cursore, altrimenti l'ultimo colpito
 	var t: Enemy = null
@@ -216,13 +447,29 @@ func _process(delta: float) -> void:
 	elif _target != null and is_instance_valid(_target) and not _target.dead and _target_timer > 0.0:
 		t = _target
 	_target_timer -= delta
+	# Barra del boss: un nemico unico che ti ha notato, entro 45 m
+	var boss: Enemy = _active_boss()
+	Music.set_boss(boss != null)
+	boss_box.visible = boss != null
+	if boss != null:
+		boss_name.text = boss.display_name
+		boss_bar.max_value = boss.max_life
+		boss_bar.value = boss.life
+		if t == boss:
+			t = null
+	target_box.offset_top = 86 if boss != null else 10
 	target_box.visible = t != null
 	if t != null:
-		target_name.text = t.display_name + ("   (liv. %d)" % t.level)
-		target_name.add_theme_color_override("font_color",
-			Color(1.0, 0.6, 0.15) if t.unique else (Color(0.45, 0.65, 1.0) if t.elite else Color.WHITE))
+		var txt := t.display_name + ("   (liv. %d)" % t.level)
+		if not t.affixes.is_empty():
+			txt += "\n" + t.affix_text()
+		target_name.text = txt
+		target_name.add_theme_color_override("font_color", t.name_color())
+		if t.elite and not t.affixes.is_empty():
+			hint("elite", "le elite hanno affissi (scritti sotto il nome): Scudato è invulnerabile a tratti, Incendiario lascia fuoco a terra...")
 		target_bar.max_value = t.max_life
 		target_bar.value = t.life
+	_update_rift()
 
 	# Etichetta sotto il cursore per oggetti interagibili
 	if level.hover["kind"] == "interact" and is_instance_valid(level.hover["node"]):
@@ -239,6 +486,61 @@ func _process(delta: float) -> void:
 	message.modulate.a = clampf(_msg_t, 0.0, 1.0)
 	_warn_t -= delta
 	warning.modulate.a = clampf(_warn_t * 2.0, 0.0, 1.0)
+
+
+func _active_boss() -> Enemy:
+	for e: Enemy in get_tree().get_nodes_in_group("enemies"):
+		if e.unique and not e.dead and e.state != Enemy.State.IDLE and e.global_position.distance_to(player.global_position) < 45.0:
+			return e
+	return null
+
+
+func _update_rift() -> void:
+	var grade := int(level.rift_grade)
+	rift_box.visible = grade > 0
+	if grade <= 0:
+		return
+	var t := float(level.get("rift_time"))
+	var lim := DifficultyDB.RIFT_TIME
+	var txt := "Labirinto grado %d   %02d:%02d / %02d:00" % [grade, int(t) / 60, int(t) % 60, int(lim / 60.0)]
+	if bool(level.get("rift_done")):
+		txt += "\nCompletato!"
+	elif bool(level.get("guardian_spawned")):
+		txt += "\nIl Guardiano è arrivato"
+	rift_label.text = txt
+	rift_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4) if t > lim else Color(0.85, 0.7, 1.0))
+	rift_bar.max_value = maxf(float(level.get("rift_target")), 1.0)
+	rift_bar.value = float(level.get("rift_progress"))
+
+
+## Pannello con una scelta tra più opzioni: options = [[testo, Callable], ...] (+ "Annulla").
+func show_choice(title: String, body: String, options: Array) -> void:
+	choice_title.text = title
+	choice_body.text = body
+	for c in choice_list.get_children():
+		c.queue_free()
+	var first: Button = null
+	for o: Array in options:
+		var b := Button.new()
+		b.text = String(o[0])
+		b.custom_minimum_size = Vector2(360, 38)
+		b.disabled = o.size() > 2 and bool(o[2])
+		b.pressed.connect(o[1])
+		choice_list.add_child(b)
+		if first == null and not b.disabled:
+			first = b
+	var cancel := Button.new()
+	cancel.text = "Annulla"
+	cancel.custom_minimum_size = Vector2(360, 38)
+	cancel.pressed.connect(hide_choice)
+	choice_list.add_child(cancel)
+	choice_panel.visible = true
+	if first != null:
+		first.grab_focus()
+
+
+func hide_choice() -> void:
+	choice_panel.visible = false
 
 
 func set_target(e: Enemy) -> void:
@@ -274,8 +576,17 @@ func log_pickup(text: String, col: Color) -> void:
 	tw.tween_callback(l.queue_free)
 
 
-func show_death() -> void:
+func show_death(recap: String = "") -> void:
+	(death_panel.find_child("Body", true, false) as Label).text = "Gli dèi ti concedono un'altra possibilità.\n\n" + recap
 	death_panel.visible = true
+
+
+## Morte in hardcore: niente rinascita.
+func show_hardcore_death(text: String) -> void:
+	show_choice("CADUTO PER SEMPRE", text, [["Torna al menu", func() -> void: Game.quit_to_menu(false)]])
+	for c in choice_list.get_children():
+		if c is Button and (c as Button).text == "Annulla":
+			c.queue_free()
 
 
 func hide_death() -> void:
@@ -286,6 +597,75 @@ func show_lore(title: String, text: String) -> void:
 	lore_title.text = title
 	lore_text.text = text
 	lore_panel.visible = true
+
+
+## Missioni attive in alto a sinistra (obiettivo corrente).
+func update_quests() -> void:
+	if Game.hero == null:
+		return
+	var t := ""
+	for id: String in Quests.active_ids():
+		var q := QuestDB.get_data(id)
+		t += "[b][color=#f2c75a]%s[/color][/b]\n[color=#e8e0d0]• %s[/color]\n" % [q["title"], Quests.step_text(id)]
+	var bl: Array = Bounties.tracker_lines()
+	if not bl.is_empty():
+		t += "[b][color=#f2c75a]Taglie[/color][/b]\n"
+		for line: String in bl:
+			t += "[color=#e8e0d0]• %s[/color]\n" % line
+	if t != "":
+		t += "[color=#888888][font_size=12]J: diario delle missioni[/font_size][/color]"
+	quest_tracker.text = t
+	if quest_log.visible:
+		_fill_quest_log()
+
+
+func toggle_quest_log() -> void:
+	quest_log.visible = not quest_log.visible
+	if quest_log.visible:
+		_fill_quest_log()
+
+
+func _fill_quest_log() -> void:
+	var active := ""
+	var done := ""
+	for id: String in QuestDB.ORDER:
+		var q := QuestDB.get_data(id)
+		match Quests.state(id):
+			"active":
+				active += "[b][color=#f2c75a]%s[/color][/b]  [color=#888888](atto %d)[/color]\n%s\n[color=#9fd0ff]Obiettivo: %s[/color]\n\n" % [
+					q["title"], int(q.get("act", 1)), q.get("desc", ""), Quests.step_text(id)]
+			"done":
+				done += "[color=#8a8a8a]✔ %s[/color]\n" % q["title"]
+	var t := "[font_size=19][color=#c8a050]In corso[/color][/font_size]\n" + (active if active != "" else "Nessuna missione in corso.\n\n")
+	if done != "":
+		t += "[font_size=19][color=#c8a050]Completate[/color][/font_size]\n" + done
+	quest_log_text.text = t
+
+
+## Elenco degli altari attivati, raggruppati per livello (viaggio rapido).
+func show_waypoints(current_id: String = "") -> void:
+	for c in waypoint_list.get_children():
+		c.queue_free()
+	var wps: Dictionary = Game.hero.waypoints
+	for lvl: String in Game.LEVEL_TITLES:
+		var ids: Array = []
+		for id: String in wps:
+			if String(wps[id]["level"]) == lvl:
+				ids.append(id)
+		if ids.is_empty():
+			continue
+		var head := _label(18, GOLD)
+		head.text = Game.level_title(lvl)
+		waypoint_list.add_child(head)
+		for id: String in ids:
+			var b := Button.new()
+			b.text = String(wps[id]["title"]) + ("   (sei qui)" if id == current_id else "")
+			b.disabled = id == current_id
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(360, 36)
+			b.pressed.connect(func() -> void: level.travel_to_waypoint(id))
+			waypoint_list.add_child(b)
+	waypoint_panel.visible = true
 
 
 func show_end(title: String, text: String) -> void:
@@ -333,7 +713,17 @@ func _center(l: Label, y: float, h: float) -> void:
 	l.modulate.a = 0.0
 
 
-static func _panel_style(alpha: float = 0.92) -> StyleBoxFlat:
+## Stile dei pannelli. Le finestre grandi (alpha >= 0.9) hanno la cornice di bronzo (textures/ui/cornice_pannello.png);
+## i riquadri piccoli e semitrasparenti (bersaglio, boss, eventi) e i tooltip restano semplici.
+static func _panel_style(alpha: float = 0.92, framed: bool = true) -> StyleBox:
+	if framed and alpha >= 0.9:
+		var tex := _frame_texture(alpha)
+		if tex != null:
+			var st := StyleBoxTexture.new()
+			st.texture = tex
+			st.set_texture_margin_all(FRAME_MARGIN)
+			st.set_content_margin_all(16)
+			return st
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.05, 0.04, alpha)
 	sb.border_color = Color(0.6, 0.48, 0.25)
@@ -341,6 +731,33 @@ static func _panel_style(alpha: float = 0.92) -> StyleBoxFlat:
 	sb.set_corner_radius_all(4)
 	sb.set_content_margin_all(14)
 	return sb
+
+
+const FRAME_TEXTURE := "res://textures/ui/cornice_pannello.png"
+const FRAME_SIZE := 128     # la cornice da 512 px ridotta: bordo di circa 20 px
+const FRAME_MARGIN := 21.0
+static var _frames: Dictionary = {}
+
+
+## Cornice ridotta con il fondo scuro dentro (l'immagine originale ha il centro trasparente).
+static func _frame_texture(alpha: float) -> Texture2D:
+	var key := snappedf(alpha, 0.01)
+	if _frames.has(key):
+		return _frames[key]
+	if not ResourceLoader.exists(FRAME_TEXTURE):
+		_frames[key] = null
+		return null
+	var frame := (load(FRAME_TEXTURE) as Texture2D).get_image()
+	if frame.is_compressed():
+		frame.decompress()
+	frame.convert(Image.FORMAT_RGBA8)
+	frame.resize(FRAME_SIZE, FRAME_SIZE, Image.INTERPOLATE_LANCZOS)
+	var img := Image.create(FRAME_SIZE, FRAME_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill_rect(Rect2i(8, 8, FRAME_SIZE - 16, FRAME_SIZE - 16), Color(0.07, 0.05, 0.04, alpha))
+	img.blend_rect(frame, Rect2i(0, 0, FRAME_SIZE, FRAME_SIZE), Vector2i.ZERO)
+	var tex := ImageTexture.create_from_image(img)
+	_frames[key] = tex
+	return tex
 
 
 func _make_panel(root: Control, title: String, body: String, buttons: Array) -> Control:

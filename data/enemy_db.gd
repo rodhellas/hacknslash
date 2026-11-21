@@ -9,7 +9,9 @@ extends RefCounted
 ##   aggro           distanza a cui ti nota
 ##   ranged          spara proiettili invece di colpire in mischia
 ##   special         "slam" (colpo ad area), "charge" (carica a distanza)
+##   summon          tipo di nemico che chiama in aiuto (summon_count alla volta, ogni summon_cd secondi)
 ##   model           scena del modello 3D (sostituibile con quello di Tripo)
+##   model_scale     ingrandisce il modello (per riusare quello di un altro nemico, es. i boss dei dungeon)
 
 const DATA := {
 	"predone": {
@@ -47,6 +49,52 @@ const DATA := {
 		"name": "Legionario rinnegato", "hp": 70.0, "damage": 12.0, "speed": 4.2, "range": 2.2, "windup": 0.55, "cooldown": 1.2,
 		"radius": 0.5, "height": 1.9, "xp": 22, "aggro": 12.0, "knock_resist": 0.6, "model": "res://scenes/enemies/rinnegato.tscn",
 	},
+	# --- Atto 2: porto di Ostia Nova ---
+	"pirata": {
+		"name": "Pirata cilicio", "hp": 60.0, "damage": 11.0, "speed": 5.0, "range": 1.9, "windup": 0.4, "cooldown": 1.0,
+		"radius": 0.45, "height": 1.8, "xp": 18, "aggro": 12.0, "model": "res://scenes/enemies/pirata.tscn",
+	},
+	"arpionatore": {
+		"name": "Arpionatore", "hp": 42.0, "damage": 10.0, "speed": 4.0, "range": 13.0, "windup": 0.7, "cooldown": 1.7,
+		"radius": 0.45, "height": 1.8, "xp": 18, "aggro": 15.0, "ranged": true, "proj_speed": 18.0,
+		"proj_color": Color(0.3, 0.9, 0.8), "model": "res://scenes/enemies/arpionatore.tscn",
+	},
+	"granchio": {
+		"name": "Granchio meccanico", "hp": 20.0, "damage": 6.0, "speed": 6.4, "range": 1.4, "windup": 0.25, "cooldown": 0.8,
+		"radius": 0.5, "height": 0.7, "xp": 7, "aggro": 12.0, "model": "res://scenes/enemies/granchio.tscn",
+	},
+	"automa": {
+		"name": "Automa portuale", "hp": 230.0, "damage": 24.0, "speed": 2.6, "range": 2.8, "windup": 0.9, "cooldown": 1.7,
+		"radius": 0.9, "height": 2.8, "xp": 55, "aggro": 10.0, "special": "slam", "slam_radius": 3.4,
+		"knock_resist": 0.2, "interruptible": false, "model": "res://scenes/enemies/automa.tscn",
+	},
+	"vulso": {
+		"name": "Vulso il Corsaro", "hp": 1500.0, "damage": 28.0, "speed": 3.9, "range": 3.0, "windup": 0.75, "cooldown": 1.3,
+		"radius": 1.0, "height": 3.1, "xp": 800, "aggro": 18.0, "unique": true, "special": "charge", "slam_radius": 3.6,
+		"summon": "pirata", "summon_count": 3, "summon_cd": 14.0,
+		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/vulso.tscn",
+	},
+	# --- Dungeon: Catacombe del Mausoleo ---
+	"custode": {
+		"name": "Il Custode delle Ossa", "hp": 1100.0, "damage": 22.0, "speed": 3.4, "range": 3.0, "windup": 0.8, "cooldown": 1.4,
+		"radius": 0.9, "height": 2.9, "xp": 500, "aggro": 16.0, "unique": true, "special": "slam", "slam_radius": 4.0,
+		"summon": "lemure", "summon_count": 3, "summon_cd": 12.0,
+		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/bruto.tscn",
+	},
+	# --- Dungeon: Cisterne del Porto ---
+	"madre_granchi": {
+		"name": "La Madre dei Granchi", "hp": 1900.0, "damage": 30.0, "speed": 3.2, "range": 3.2, "windup": 0.85, "cooldown": 1.5,
+		"radius": 1.6, "height": 2.2, "xp": 900, "aggro": 16.0, "unique": true, "special": "slam", "slam_radius": 4.5,
+		"summon": "granchio", "summon_count": 5, "summon_cd": 10.0,
+		"knock_resist": 0.0, "interruptible": false, "model": "res://scenes/enemies/granchio.tscn", "model_scale": 3.2,
+	},
+	# --- Dungeon: Caverne del Clan ---
+	"tharvo": {
+		"name": "Tharvo Mangiaferro", "hp": 850.0, "damage": 22.0, "speed": 3.8, "range": 2.8, "windup": 0.7, "cooldown": 1.3,
+		"radius": 0.9, "height": 3.0, "xp": 380, "aggro": 16.0, "unique": true, "special": "charge", "slam_radius": 3.5,
+		"summon": "barbaro", "summon_count": 2, "summon_cd": 15.0,
+		"knock_resist": 0.05, "interruptible": false, "model": "res://scenes/enemies/barbaro.tscn", "model_scale": 1.6,
+	},
 	"brenno": {
 		"name": "Brenno il Rinnegato", "hp": 900.0, "damage": 24.0, "speed": 3.6, "range": 3.2, "windup": 0.8, "cooldown": 1.4,
 		"radius": 1.0, "height": 3.3, "xp": 400, "aggro": 16.0, "unique": true, "special": "charge", "slam_radius": 3.8,
@@ -57,3 +105,46 @@ const DATA := {
 
 static func get_data(type_id: String) -> Dictionary:
 	return DATA.get(type_id, DATA["predone"])
+
+
+## Affissi delle elite (come in Diablo 3). Il numero di affissi dipende dalla difficoltà
+## (DifficultyDB). Comportamento in entities/enemy.gd (_tick_affixes, take_damage, _die).
+const ELITE_AFFIXES := {
+	"rapido": {"name": "Rapido", "desc": "Si muove e attacca più velocemente."},
+	"corazzato": {"name": "Corazzato", "desc": "Subisce il 35% di danni in meno e non viene respinto."},
+	"vampirico": {"name": "Vampirico", "desc": "Si cura del 30% dei danni che infligge."},
+	"scudato": {"name": "Scudato", "desc": "Ogni tanto diventa invulnerabile per qualche secondo."},
+	"incendiario": {"name": "Incendiario", "desc": "Fa comparire pozze di fuoco sotto i tuoi piedi."},
+	"gelido": {"name": "Gelido", "desc": "Sfere di ghiaccio esplodono attorno a te e ti rallentano."},
+	"teletrasporto": {"name": "Teletrasporto", "desc": "Ricompare accanto a te."},
+	"esplosivo": {"name": "Esplosivo", "desc": "Morendo esplode dopo un istante."},
+	"elettrico": {"name": "Elettrico", "desc": "Lancia scariche in tutte le direzioni."},
+	"orda": {"name": "Orda", "desc": "Il gruppo è più numeroso."},
+}
+## Nomi dei capi rari (gialli): prima parte + seconda parte.
+const RARE_NAMES_A := ["Vibio", "Tullo", "Opimia", "Gneo", "Marzia", "Ostorio", "Velia", "Sesto", "Fulvia", "Aulo"]
+const RARE_NAMES_B := ["il Crudele", "Mezzomorto", "Ferrocuore", "la Vipera", "Spaccaossa", "il Muto", "Senzanome", "l'Insonne"]
+
+
+## Boss: attacchi speciali (uno ogni BOSS_ATTACK_CD secondi) e fasi a soglie di vita.
+##   Attacchi: "nova" (anello di proiettili), "pioggia" (fuoco dal cielo attorno all'eroe),
+##             "onda" (onda d'urto attorno al boss: allontanati), "salto" (piomba dove sei).
+##   Azioni di fase: "enrage" (più veloce e forte), "summon" (rinforzi subito, tipo "type", quanti "n"),
+##             "shield" (invulnerabile finché non uccidi i rinforzi), "attack:<nome>" (nuovo attacco).
+const BOSS_ATTACK_CD := 6.0
+const BOSSES := {
+	"brenno": {"attacks": ["onda"], "phases": [
+		{"at": 0.66, "say": "Rinnegati, a me!", "do": ["summon"], "type": "rinnegato", "n": 3},
+		{"at": 0.33, "say": "Basta giocare!", "do": ["enrage", "attack:salto"]}]},
+	"custode": {"attacks": ["pioggia"], "phases": [
+		{"at": 0.66, "say": "Le ossa mi proteggono...", "do": ["shield"], "type": "lemure", "n": 4},
+		{"at": 0.33, "say": "Unitevi a loro!", "do": ["enrage", "attack:nova"]}]},
+	"tharvo": {"attacks": ["salto"], "phases": [
+		{"at": 0.5, "say": "TIIIHARVO!", "do": ["enrage", "attack:onda"]}]},
+	"vulso": {"attacks": ["nova"], "phases": [
+		{"at": 0.66, "say": "Ciurma, fate muro!", "do": ["shield"], "type": "pirata", "n": 4},
+		{"at": 0.33, "say": "Vi affondo tutti!", "do": ["enrage", "attack:pioggia"]}]},
+	"madre_granchi": {"attacks": ["onda"], "phases": [
+		{"at": 0.66, "say": "*stridio*", "do": ["summon"], "type": "granchio", "n": 6},
+		{"at": 0.33, "say": "*stridio furioso*", "do": ["enrage", "attack:pioggia"]}]},
+}

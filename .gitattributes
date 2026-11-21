@@ -1,0 +1,4 @@
+* text=auto
+*.res binary
+*.glb binary
+*.png binary

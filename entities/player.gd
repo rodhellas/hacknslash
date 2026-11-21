@@ -4,6 +4,7 @@ extends CharacterBody3D
 ##   Clic sinistro (tieni premuto): muovi / attacca il nemico sotto il cursore / raccogli / interagisci
 ##   Shift + clic sinistro: attacca sul posto        Clic destro, 1-4: abilità
 ##   Q: pozione    E: interagisci con l'oggetto più vicino    WASD: movimento diretto (opzionale)
+##   T: portale cittadino (torna a Ostia Nova; in città compare il portale per tornare indietro)
 ## Il modello 3D viene caricato dalla scena indicata nella classe (sostituibile con un modello Tripo).
 ## Se il modello contiene un AnimationPlayer con animazioni "idle", "run", "attack", "cast", "hit",
 ## "death" vengono riprodotte automaticamente.
@@ -15,6 +16,7 @@ signal died
 const POTION_CD := 30.0
 const POTION_HEAL := 0.6
 const INTERACT_RANGE := 2.4
+const PORTAL_TIME := 1.5
 
 var hero: HeroData
 var cls: Dictionary
@@ -31,6 +33,16 @@ var cast_lock := 0.0
 var combo_step := 0
 var combo_timer := 0.0
 var facing_yaw := 0.0
+var powers: Dictionary = {}      # poteri dei leggendari indossati
+var skill_bonus: Dictionary = {}  # +% danni per abilità (bonus dei set): id abilità -> %
+var leg_gems: Dictionary = {}     # gemme leggendarie incastonate: id -> grado
+var shield := 0.0                # scudo che assorbe danni (Scutum dell'Ultima Legione)
+var _shield_t := 0.0
+var _shield_cd := 0.0
+var portal_t := 0.0              # > 0 mentre si apre il portale cittadino
+var kills_since_death := 0       # riepilogo alla morte
+var time_since_death := 0.0
+var gold_at_spawn := 0
 
 var move_target := Vector3.INF
 var attack_target: Enemy = null
@@ -51,9 +63,9 @@ var _bob_t := 0.0
 func setup(p_hero: HeroData) -> void:
 	hero = p_hero
 	cls = HeroClasses.get_data(hero.class_id)
-	for ab: Dictionary in cls["abilities"]:
-		abilities[ab["slot"]] = ab
+	hero.fill_default_skills()
 	refresh_stats()
+	gold_at_spawn = hero.gold
 	life = stats["max_life"]
 	resource = stats["resource_max"] if cls.get("resource_starts_full", true) else 0.0
 
@@ -77,9 +89,10 @@ func _ready() -> void:
 	nav.height = 1.8
 	add_child(nav)
 
-	var scene := load(cls["model"]) as PackedScene
+	var scene := load(hero.model_path()) as PackedScene
 	model = scene.instantiate() if scene else Node3D.new()
 	add_child(model)
+	Appearance.apply(model, hero.equipment, hero.transmog, hero.dyes)
 	anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 
 	buff_bubble = MeshInstance3D.new()
@@ -87,7 +100,7 @@ func _ready() -> void:
 	sb.radius = 1.3
 	sb.height = 2.6
 	buff_bubble.mesh = sb
-	buff_bubble.material_override = Fx.mat(Color(1.0, 0.85, 0.4, 0.18), 1.5, true, true)
+	Vfx.make_bubble(buff_bubble, Color(1.0, 0.85, 0.4, 0.6))
 	buff_bubble.position.y = 1.0
 	buff_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	buff_bubble.visible = false
@@ -101,8 +114,32 @@ func _ready() -> void:
 
 func refresh_stats() -> void:
 	stats = hero.compute_stats()
+	powers = hero.legendary_powers()
+	skill_bonus = hero.skill_bonuses()
+	leg_gems = hero.legendary_gems()
+	rebuild_abilities()
+	if model != null:
+		Appearance.apply(model, hero.equipment, hero.transmog, hero.dyes)   # equipaggiamento visibile addosso
 	life = minf(life, stats["max_life"])
 	resource = minf(resource, stats["resource_max"])
+
+
+## Abilità effettive sui tasti: scelta dell'eroe + variante + leggendari che le modificano.
+signal abilities_changed
+
+
+func rebuild_abilities() -> void:
+	abilities.clear()
+	for slot: String in HeroClasses.SLOT_ORDER:
+		var sk: Dictionary = hero.skills.get(slot, {})
+		var ab := SkillDB.resolve(hero.class_id, slot, String(sk.get("id", "")), String(sk.get("rune", "")), powers)
+		if not ab.is_empty():
+			abilities[slot] = ab
+	abilities_changed.emit()
+
+
+func has_passive(id: String) -> bool:
+	return hero.has_passive(id)
 
 
 func attack_speed() -> float:
@@ -116,6 +153,14 @@ func buff_sum(key: String) -> float:
 	return t
 
 
+func has_power(id: String) -> bool:
+	return powers.has(id)
+
+
+func potion_cooldown() -> float:
+	return POTION_CD * (0.5 if has_power("achille") else 1.0)
+
+
 func is_unlocked(ab: Dictionary) -> bool:
 	return Game.debug_unlock_all or hero.level >= int(ab.get("unlock", 1))
 
@@ -126,18 +171,38 @@ func cooldown_left(ab: Dictionary) -> float:
 	return float(cooldowns.get(ab["id"], 0.0))
 
 
-## Ritorna [danno, critico]
-func roll_damage(mult: float) -> Array:
+## Ritorna [danno, critico]. extra_crit = +% critico (variante dell'abilità).
+func roll_damage(mult: float, extra_crit: float = 0.0) -> Array:
 	var dmg := randf_range(stats["weapon_min"], stats["weapon_max"])
 	dmg *= (1.0 + float(stats["main_stat"]) / 100.0) * (1.0 + float(stats["damage_pct"]) / 100.0)
 	dmg *= mult * (1.0 + buff_sum("damage"))
-	var crit := randf() * 100.0 < minf(stats["crit_chance"], 75.0)
+	var crit := randf() * 100.0 < minf(float(stats["crit_chance"]) + buff_sum("crit") + extra_crit, 75.0)
 	if crit:
 		dmg *= 1.0 + float(stats["crit_damage"]) / 100.0
 	return [dmg, crit]
 
 
-func on_damage_dealt(amount: float) -> void:
+## Moltiplicatore dei danni per poteri speciali contro un nemico (gemme leggendarie, santuari...).
+func special_damage_mult(e: Enemy) -> float:
+	var m := 1.0
+	var r := legendary_gem_rank("dente_cerbero")
+	if r > 0 and (e.elite or e.unique):
+		m *= 1.0 + (0.2 + 0.01 * r)
+	return m
+
+
+## Grado della gemma leggendaria incastonata (0 = non indossata).
+func legendary_gem_rank(id: String) -> int:
+	return int(leg_gems.get(id, 0))
+
+
+func on_damage_dealt(amount: float, target: Enemy = null) -> void:
+	var lr := legendary_gem_rank("lacrima_niobe")
+	if lr > 0:
+		heal(amount * (0.01 + 0.001 * lr), false)
+	var vr := legendary_gem_rank("scintilla_vulcano")
+	if vr > 0 and target != null and randf() < 0.15:
+		target.apply_dot(float(roll_damage(1.0 + 0.1 * vr)[0]), 3.0, Color(1.0, 0.45, 0.1))
 	var h := float(stats["life_on_hit"]) + amount * buff_sum("lifesteal")
 	if h > 0.0:
 		life = minf(life + h, stats["max_life"])
@@ -149,6 +214,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	if dead or Game.level == null:
 		return
 	var h: Dictionary = Game.level.hover
+	# Controller: niente cursore, si mira da soli (nemico più vicino davanti all'eroe)
+	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		using_pad = true
+		if get_viewport().gui_get_focus_owner() != null:
+			return   # un pannello aperto usa il controller
+		if event.is_action_pressed("pad_primary"):
+			_pad_primary()
+			get_viewport().set_input_as_handled()
+			return
+		for pair: Array in [["secondary", "rmb"], ["skill_1", "1"], ["skill_2", "2"], ["skill_3", "3"], ["skill_4", "4"]]:
+			if event.is_action_pressed(pair[0]):
+				_try_cast(pair[1], pad_aim(abilities.get(pair[1], {})))
+				get_viewport().set_input_as_handled()
+				return
+	elif event is InputEventMouseButton or event is InputEventKey:
+		using_pad = false
 	if event.is_action_pressed("primary"):
 		lmb_held = true
 		_on_primary_click(h)
@@ -168,6 +249,66 @@ func _unhandled_input(event: InputEvent) -> void:
 		use_potion()
 	elif event.is_action_pressed("interact"):
 		_interact_nearest()
+	elif event.is_action_pressed("town_portal"):
+		start_town_portal()
+	elif event.is_action_pressed("turbo"):
+		turbo = not turbo
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.6, 0), "Velocità ×5" if turbo else "Velocità normale",
+			Color(0.5, 0.9, 1.0), 36)
+
+
+## Ultimo input dal controller (cambia il modo di mirare).
+var using_pad := false
+## Controlli touch (ui/touch_controls.gd): direzione del joystick a video (come lo stick del
+## controller, y verso il basso) e pulsante d'attacco tenuto premuto.
+var touch_move := Vector2.ZERO
+var touch_attack := false
+
+
+## Punto di mira col controller: il nemico più vicino nella direzione dello stick (o davanti), altrimenti avanti.
+func pad_aim(ab: Dictionary = {}) -> Vector3:
+	var reach := 14.0 if ab.is_empty() else maxf(_ability_reach(ab) + 2.0, 4.0)
+	var dir := _input_direction()
+	if dir.length() < 0.2:
+		dir = forward()
+	var best: Enemy = null
+	var best_score := INF
+	for e: Enemy in get_tree().get_nodes_in_group("enemies"):
+		if e.dead:
+			continue
+		var to := e.global_position - global_position
+		to.y = 0.0
+		var d := to.length()
+		if d > reach:
+			continue
+		var ang := rad_to_deg(dir.angle_to(to.normalized())) if d > 0.1 else 0.0
+		if ang > 70.0:
+			continue
+		var score := d + ang * 0.08
+		if score < best_score:
+			best_score = score
+			best = e
+	if best != null:
+		return best.global_position
+	return global_position + dir.normalized() * minf(reach, 6.0)
+
+
+## Pulsante A: interagisce con ciò che è vicino, altrimenti attacca con l'abilità principale.
+func _pad_primary() -> void:
+	var near_enemy := false
+	for e: Enemy in Abilities.enemies_in_radius(get_tree(), global_position, 4.0):
+		near_enemy = true
+		break
+	if not near_enemy:
+		var before := interact_target
+		_interact_nearest()
+		if before != interact_target or _interacted_recently:
+			return
+	var target := pad_aim(abilities.get("lmb", {}))
+	_try_cast("lmb", target)
+
+
+var _interacted_recently := false
 
 
 func _input(event: InputEvent) -> void:
@@ -216,6 +357,15 @@ func _physics_process(delta: float) -> void:
 			_process_dash(delta)
 		return
 	var wish := _input_direction()
+	if portal_t > 0.0:
+		if wish != Vector3.ZERO or move_target != Vector3.INF or attack_target != null or interact_target != null:
+			cancel_town_portal()
+		else:
+			portal_t -= delta
+			_animate(delta, Vector3.ZERO)
+			if portal_t <= 0.0 and Game.level:
+				Game.level.use_town_portal()
+			return
 	if wish != Vector3.ZERO:
 		move_target = Vector3.INF
 		attack_target = null
@@ -223,24 +373,63 @@ func _physics_process(delta: float) -> void:
 	else:
 		_follow_mouse_hold()
 		wish = _auto_actions()
+		# Controller: tenendo premuto A si continua ad attaccare
+		var holding := (using_pad and Input.is_action_pressed("pad_primary")) or touch_attack
+		if holding and wish == Vector3.ZERO and attack_cd <= 0.0 and cast_lock <= 0.0:
+			if not Abilities.enemies_in_radius(get_tree(), global_position, 14.0).is_empty():
+				_try_cast("lmb", pad_aim(abilities.get("lmb", {})))
 	if cast_lock > 0.0:
 		wish = Vector3.ZERO
-	velocity = wish * float(stats["move_speed"])
+	velocity = wish * move_speed()
 	move_and_slide()
 	if wish.length() > 0.1:
 		_face_dir(wish, delta)
 	_animate(delta, wish)
 
 
+func move_speed() -> float:
+	return float(stats["move_speed"]) * (1.0 + buff_sum("move")) * (TURBO_MULT if turbo else 1.0)
+
+
+## Movimento veloce per le prove (tasto F2, azione "turbo"): velocità ×5, si accende e si spegne.
+const TURBO_MULT := 5.0
+static var turbo := false
+
+
 func _input_direction() -> Vector3:
-	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if input.length() < 0.1 or camera == null:
+	if using_pad and get_viewport().gui_get_focus_owner() != null:
+		return Vector3.ZERO   # lo stick sta navigando in un pannello
+	var input := touch_move if touch_move.length() >= 0.1 else Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if input.length() < 0.1:
+		return Vector3.ZERO
+	return screen_to_world_dir(input)
+
+
+## Direzione sullo schermo (x a destra, y in basso) -> direzione sul terreno vista dalla telecamera.
+func screen_to_world_dir(v: Vector2) -> Vector3:
+	if camera == null:
 		return Vector3.ZERO
 	var fwd := -camera.global_basis.z
 	fwd.y = 0.0
 	var right := camera.global_basis.x
 	right.y = 0.0
-	return (right.normalized() * input.x - fwd.normalized() * input.y).limit_length(1.0)
+	return (right.normalized() * v.x - fwd.normalized() * v.y).limit_length(1.0)
+
+
+## Touch: punto di mira di un'abilità. aim = trascinamento dal pulsante (lunghezza 0..1, y in basso);
+## quasi zero = mira automatica come col controller.
+func touch_aim_point(slot: String, aim: Vector2) -> Vector3:
+	var ab: Dictionary = abilities.get(slot, {})
+	if aim.length() < 0.05:
+		return pad_aim(ab)
+	var reach := _ability_reach(ab) if not ab.is_empty() else 6.0
+	var dir := screen_to_world_dir(aim.normalized())
+	return global_position + dir.normalized() * maxf(reach * clampf(aim.length(), 0.15, 1.0), 1.5)
+
+
+## Touch: lancia l'abilità del tasto `slot` (vedi touch_aim_point).
+func touch_cast(slot: String, aim: Vector2) -> bool:
+	return _try_cast(slot, touch_aim_point(slot, aim))
 
 
 func _auto_actions() -> Vector3:
@@ -297,8 +486,8 @@ func _nav_toward(target: Vector3) -> Vector3:
 func snap_to_nav(p: Vector3) -> Vector3:
 	var map := get_world_3d().navigation_map
 	var s := NavigationServer3D.map_get_closest_point(map, p)
-	# Scarta i punti vuoti o sulle "isole" della navmesh sopra gli oggetti alti
-	if (s == Vector3.ZERO and p.length() > 1.0) or s.y > 0.3:
+	# Scarta i punti vuoti o sulle "isole" della navmesh sopra gli oggetti alti (il suolo è a y 0.5, le isole da 2 m in su)
+	if (s == Vector3.ZERO and p.length() > 1.0) or s.y > 1.0:
 		return Vector3(p.x, 0.0, p.z)
 	return Vector3(s.x, 0.0, s.z)
 
@@ -335,12 +524,34 @@ func _tick(delta: float) -> void:
 		buffs[i]["time"] = float(buffs[i]["time"]) - delta
 		if buffs[i]["time"] <= 0.0:
 			buffs.remove_at(i)
-	buff_bubble.visible = buff_sum("dr") > 0.0
+	_shield_cd -= delta
+	time_since_death += delta
+	if shield > 0.0:
+		_shield_t -= delta
+		if _shield_t <= 0.0:
+			shield = 0.0
+	buff_bubble.visible = buff_sum("dr") > 0.0 or shield > 0.0 or buff_sum("invuln") > 0.0
 	life = minf(life + float(stats["life_regen"]) * delta, stats["max_life"])
 	resource = clampf(resource + float(stats["resource_regen"]) * delta, 0.0, stats["resource_max"])
 
 
+## Passi: un suono ogni mezzo passo (terra all'aperto, pietra in città, al porto e nei dungeon).
+var _step_t := 0.0
+
+
+func _footsteps(delta: float, moving: bool) -> void:
+	if not moving:
+		_step_t = 0.0
+		return
+	_step_t -= delta * move_speed() / 7.0
+	if _step_t <= 0.0:
+		_step_t = 0.36
+		var stone := Game.level != null and (Game.level.is_town or Game.level.level_id in ["dungeon", "level_03_porto"])
+		Sfx.play("passo_pietra" if stone else "passo_terra", null, 0.0, 0.12)
+
+
 func _animate(delta: float, wish: Vector3) -> void:
+	_footsteps(delta, wish.length() > 0.1 and _dash.is_empty())
 	if anim != null:
 		if cast_lock <= 0.0:
 			_play_anim("run" if wish.length() > 0.1 else "idle")
@@ -369,27 +580,40 @@ func _try_cast(slot: String, point: Vector3) -> bool:
 		return false
 	if cast_lock > 0.0:
 		return false
+	cancel_town_portal()
 	if slot == "lmb":
 		if attack_cd > 0.0:
 			return false
 	elif cooldown_left(ab) > 0.0:
 		return false
 	var cost := float(ab.get("cost", 0.0))
+	if buff_sum("channel") > 0.0:
+		cost = 0.0   # Pilone del Flusso
 	if resource < cost:
 		_warn("%s insufficiente" % cls["resource"])
 		return false
+	if cost > 0.0 and has_power("pontefice") and randf() < 0.25:
+		cost = 0.0
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.6, 0), "Gratis!", Color(0.6, 0.7, 1.0), 30)
 	resource = clampf(resource - cost + float(ab.get("gain", 0.0)), 0.0, stats["resource_max"])
 	var aps := attack_speed() * float(ab.get("speed", 1.0))
 	if slot == "lmb":
 		attack_cd = 1.0 / aps
 		cast_lock = minf(0.75 / aps, 0.4)
 	else:
-		cooldowns[ab["id"]] = float(ab.get("cooldown", 0.0)) * (1.0 - minf(stats["cdr_pct"], 40.0) / 100.0)
+		cooldowns[ab["id"]] = float(ab.get("cooldown", 0.0)) * (1.0 - minf(stats["cdr_pct"], 40.0) / 100.0) \
+			* (0.25 if buff_sum("channel") > 0.0 else 1.0)
 		cast_lock = 0.25
 	_face_point(point)
 	move_target = Vector3.INF
+	if ab.has("self_buff"):
+		var sb: Dictionary = (ab["self_buff"] as Dictionary).duplicate()
+		sb["id"] = String(ab["id"]) + "_effetto"
+		add_buff(sb)
 	Abilities.execute(self, ab, point)
 	_play_anim("attack" if ab["kind"] == "melee" else "cast")
+	if ab["kind"] == "dash" and has_power("mercurio"):
+		add_buff({"id": "mercurio", "duration": 4.0, "aspd": 0.3})
 	return true
 
 
@@ -401,8 +625,15 @@ func start_dash(dir: Vector3, distance: float, speed: float, ab: Dictionary) -> 
 	attack_target = null
 
 
+var _ghost_t := 0.0
+
+
 func _process_dash(delta: float) -> void:
 	var spd := float(_dash["speed"])
+	_ghost_t -= delta
+	if _ghost_t <= 0.0:
+		_ghost_t = 0.05
+		Vfx.afterimage(model, (_dash["ab"] as Dictionary).get("color", Color(0.6, 0.8, 1.0)), 0.3)
 	velocity = (_dash["dir"] as Vector3) * spd
 	move_and_slide()
 	_dash["remaining"] = float(_dash["remaining"]) - spd * delta
@@ -445,7 +676,10 @@ func add_buff(ab: Dictionary) -> void:
 	buffs.append({
 		"id": ab["id"], "time": float(ab.get("duration", 5.0)), "dr": float(ab.get("dr", 0.0)),
 		"damage": float(ab.get("damage", 0.0)), "aspd": float(ab.get("aspd", 0.0)),
-		"lifesteal": float(ab.get("lifesteal", 0.0)),
+		"lifesteal": float(ab.get("lifesteal", 0.0)), "invuln": float(ab.get("invuln", 0.0)),
+		"move": float(ab.get("move", 0.0)), "crit": float(ab.get("crit", 0.0)),
+		"xp": float(ab.get("xp", 0.0)), "fortune": float(ab.get("fortune", 0.0)), "channel": float(ab.get("channel", 0.0)),
+		"name": String(ab.get("name", "")) if String(ab.get("id", "")).begins_with("santuario_") else "",
 	})
 
 
@@ -453,14 +687,44 @@ func use_potion() -> void:
 	if potion_cd > 0.0:
 		_warn("Pozione in ricarica (%d s)" % ceili(potion_cd))
 		return
-	potion_cd = POTION_CD
+	potion_cd = potion_cooldown()
 	heal(float(stats["max_life"]) * POTION_HEAL)
 	Fx.ring(Game.world_root(), global_position, 2.0, Color(1, 0.2, 0.3), 0.4)
+	Fx.burst(Game.world_root(), global_position + Vector3(0, 1.0, 0), Color(1, 0.25, 0.35), 14, 3.0, 0.12, 0.6, 3.0)
+	Sfx.play("pozione")
+	if has_power("achille"):
+		add_buff({"id": "achille", "duration": 2.0, "invuln": 1.0})
+
+
+# --- Portale cittadino ---------------------------------------------------------------
+
+func start_town_portal() -> void:
+	if dead or Game.level == null or portal_t > 0.0:
+		return
+	if Game.level.is_town:
+		_warn("Sei già in città")
+		return
+	if not Game.hero.flags.has("visited_" + Game.HUB):
+		_warn("Non conosci ancora la strada per %s" % Game.level_title(Game.HUB))
+		return
+	portal_t = PORTAL_TIME
+	move_target = Vector3.INF
+	attack_target = null
+	interact_target = null
+	lmb_held = false
+	_play_anim("cast")
+	Sfx.play("portale", null, -4.0)
+	Fx.ring(Game.world_root(), global_position, 1.6, Color(0.35, 0.65, 1.0), PORTAL_TIME)
+
+
+func cancel_town_portal() -> void:
+	portal_t = 0.0
 
 
 # --- Interazione --------------------------------------------------------------------
 
 func _interact_nearest() -> void:
+	_interacted_recently = false
 	var best: Node3D = null
 	var best_d := 3.5
 	for n: Node3D in get_tree().get_nodes_in_group("interactable"):
@@ -471,6 +735,7 @@ func _interact_nearest() -> void:
 			best_d = d
 			best = n
 	if best != null:
+		_interacted_recently = true
 		_interact_with(best)
 
 
@@ -486,15 +751,56 @@ func _interact_with(n: Node3D) -> void:
 func take_damage(raw: float, attacker_level: int = 1) -> void:
 	if dead or not _dash.is_empty():
 		return
+	if buff_sum("invuln") > 0.0:
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.3, 0), "Immune", Color(0.8, 0.8, 1.0), 30)
+		return
+	if portal_t > 0.0:
+		cancel_town_portal()
+		_warn("Portale interrotto")
 	var armor := float(stats["armor"])
 	var armor_dr := clampf(armor / (armor + 50.0 * attacker_level), 0.0, 0.75)
-	var amount := raw * (1.0 - armor_dr) * (1.0 - clampf(buff_sum("dr"), 0.0, 0.85))
+	var dr := buff_sum("dr") + float(stats.get("dr_pct", 0.0)) / 100.0
+	if has_passive("baluardo") and life < float(stats["max_life"]) * 0.35:
+		dr += 0.25
+	var amount := raw * (1.0 - armor_dr) * (1.0 - clampf(dr, 0.0, 0.85))
+	if shield > 0.0:
+		var absorbed := minf(shield, amount)
+		shield -= absorbed
+		amount -= absorbed
 	life -= amount
 	Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.3, 0), str(roundi(amount)), Color(1, 0.25, 0.25), 38)
 	Fx.flash(model, Color(1, 0.15, 0.15, 0.6))
+	Sfx.play("eroe_ferito_" + ("f" if hero.sex == "f" else "m"))
 	shake(0.08)
 	if life <= 0.0:
 		_die()
+		return
+	if has_power("ultima_legione") and _shield_cd <= 0.0 and life < float(stats["max_life"]) * 0.3:
+		shield = float(stats["max_life"]) * 0.3
+		_shield_t = 8.0
+		_shield_cd = 60.0
+		Fx.ring(Game.world_root(), global_position, 3.0, Color(1.0, 0.8, 0.3), 0.5)
+		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.8, 0), "Ultima Legione!", Color(1.0, 0.6, 0.15), 40)
+
+
+## Chiamato dal nemico quando muore (poteri leggendari "all'uccisione").
+func on_enemy_killed(_e: Enemy) -> void:
+	kills_since_death += 1
+	if has_passive("gloria"):
+		heal(float(stats["max_life"]) * 0.02, false)
+	if has_passive("sete"):
+		heal(float(stats["max_life"]) * 0.03, false)
+	if has_power("spartaco"):
+		heal(float(stats["max_life"]) * 0.03, false)
+		var stacks := 1
+		for b: Dictionary in buffs:
+			if b["id"] == "spartaco":
+				stacks = mini(int(b.get("stacks", 1)) + 1, 5)
+		add_buff({"id": "spartaco", "duration": 5.0, "damage": 0.05 * stacks})
+		buffs[-1]["stacks"] = stacks
+	if has_power("romolo"):
+		for k: String in cooldowns.keys():
+			cooldowns[k] = maxf(0.0, float(cooldowns[k]) - 1.0)
 
 
 func heal(amount: float, show: bool = true) -> void:
@@ -508,21 +814,25 @@ func heal(amount: float, show: bool = true) -> void:
 func add_xp(amount: int) -> void:
 	if hero.level >= HeroData.MAX_LEVEL:
 		return
+	amount = roundi(amount * (1.0 + buff_sum("xp")))
 	hero.xp += amount
 	var leveled := false
 	while hero.xp >= HeroData.xp_to_next(hero.level) and hero.level < HeroData.MAX_LEVEL:
 		hero.xp -= HeroData.xp_to_next(hero.level)
 		hero.level += 1
 		leveled = true
-		for ab: Dictionary in cls["abilities"]:
-			if int(ab["unlock"]) == hero.level and Game.level:
-				Game.level.hud.show_message("Nuova abilità: %s  [%s]" % [ab["name"], HeroClasses.SLOT_KEYS[ab["slot"]]], 4.0)
+		var news := SkillDB.unlocks_at(hero.class_id, hero.level)
+		if not news.is_empty() and Game.level:
+			Game.level.hud.show_message("Sbloccato: %s  (Abilità: K)" % ", ".join(news), 4.0)
+			Game.level.hud.hint("abilita", "premi K per scegliere abilità, varianti e passive.")
 	if leveled:
 		refresh_stats()
 		life = stats["max_life"]
 		resource = maxf(resource, stats["resource_max"] * 0.5)
 		Fx.popup_text(Game.world_root(), global_position + Vector3(0, 3.0, 0), "LIVELLO %d!" % hero.level, Color(1, 0.85, 0.3), 80)
 		Fx.ring(Game.world_root(), global_position, 4.0, Color(1, 0.85, 0.3), 0.7)
+		Fx.pillar(Game.world_root(), global_position, Color(1, 0.85, 0.3), 12.0, 1.4)
+		Sfx.play("livello")
 	xp_changed.emit(hero.xp, HeroData.xp_to_next(hero.level), hero.level)
 
 
@@ -531,7 +841,10 @@ func _die() -> void:
 	life = 0.0
 	velocity = Vector3.ZERO
 	lmb_held = false
+	portal_t = 0.0
+	shield = 0.0
 	_play_anim("death")
+	Sfx.play("eroe_morte_" + ("f" if hero.sex == "f" else "m"))
 	if anim == null:
 		create_tween().tween_property(model, "rotation:x", deg_to_rad(-90.0), 0.5)
 	died.emit()
@@ -539,6 +852,9 @@ func _die() -> void:
 
 func revive(pos: Vector3) -> void:
 	dead = false
+	kills_since_death = 0
+	time_since_death = 0.0
+	gold_at_spawn = hero.gold
 	global_position = pos
 	life = stats["max_life"]
 	resource = stats["resource_max"] if cls.get("resource_starts_full", true) else 0.0
@@ -560,3 +876,4 @@ func _warn(text: String) -> void:
 		return
 	_warn_cd = 0.8
 	Game.level.hud.show_warning(text)
+	Sfx.play("errore")

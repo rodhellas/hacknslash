@@ -5,12 +5,20 @@ extends Area3D
 
 var item: Item = null
 var gold := 0
+var gem := ""   # chiave di una gemma ("rubino:2"): si raccoglie passandoci sopra come i sesterzi
 var _visual: Node3D
+var _label: Label3D
 
 
 static func make_item(it: Item) -> LootDrop:
 	var d := LootDrop.new()
 	d.item = it
+	return d
+
+
+static func make_gem(key: String) -> LootDrop:
+	var d := LootDrop.new()
+	d.gem = key
 	return d
 
 
@@ -23,7 +31,7 @@ static func make_gold(amount: int) -> LootDrop:
 func _ready() -> void:
 	add_to_group("interactable")
 	collision_layer = Layers.INTERACT
-	collision_mask = Layers.PLAYER if gold > 0 else 0
+	collision_mask = Layers.PLAYER if item == null else 0
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = 0.7
@@ -41,6 +49,7 @@ func _ready() -> void:
 	label.visibility_range_end = 40.0
 	label.position.y = 1.0
 	add_child(label)
+	_label = label
 
 	if item != null:
 		var col := item.color()
@@ -51,13 +60,13 @@ func _ready() -> void:
 		box.material_override = Fx.mat(col, 2.5 if item.rarity >= Item.Rarity.RARO else 0.4)
 		box.position.y = 0.11
 		_visual.add_child(box)
-		label.text = item.item_name
+		label.text = item.item_name if not Settings.colorblind else "[%s] %s" % [item.rarity_letter(), item.item_name]
 		label.modulate = col
 		label.font_size = 30
 		if item.rarity >= Item.Rarity.RARO:
 			var beam := MeshInstance3D.new()
 			var cm := CylinderMesh.new()
-			var h := 9.0 if item.rarity == Item.Rarity.LEGGENDARIO else 3.5
+			var h := 9.0 if item.is_special() else 3.5
 			cm.top_radius = 0.12
 			cm.bottom_radius = 0.18
 			cm.height = h
@@ -69,6 +78,26 @@ func _ready() -> void:
 			beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			_visual.add_child(beam)
 			Fx.minimap_icon(self, col, 1.2, "square")
+			Sfx.play("drop_leggendario" if item.is_special() else "drop_raro", global_position)
+			if item.is_special() and Game.level:
+				Game.level.hud.hint("leggendario", "un leggendario! Il suo potere arancione può cambiare un'abilità: guarda il tooltip.")
+	elif gem != "":
+		var gc := ItemDB.gem_color(gem)
+		var stone := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.16
+		sm.height = 0.26
+		sm.radial_segments = 6
+		sm.rings = 2
+		stone.mesh = sm
+		stone.material_override = Fx.mat(gc, 2.5)
+		stone.position.y = 0.16
+		_visual.add_child(stone)
+		label.text = ItemDB.gem_name(gem)
+		label.modulate = gc
+		label.font_size = 24
+		Fx.minimap_icon(self, gc, 1.0, "square")
+		body_entered.connect(_on_body_entered)
 	else:
 		for i in 3:
 			var coin := MeshInstance3D.new()
@@ -91,8 +120,19 @@ func _ready() -> void:
 	tw.tween_property(_visual, "position:y", 0.0, 0.45).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 
 
+## Nomi a terra: sempre visibili (opzione) oppure, come in D3, solo rari in su e tutti tenendo Alt.
+func _process(_delta: float) -> void:
+	if _label == null:
+		return
+	var alt := Input.is_action_pressed("show_items")
+	_label.visible = Settings.always_show_items or alt or gold > 0 or gem != "" or (item != null and item.rarity >= Item.Rarity.RARO)
+	_label.scale = Vector3.ONE * (1.3 if alt else 1.0)
+
+
 func interact_name() -> String:
-	return item.item_name if item != null else "%d sesterzi" % gold
+	if item != null:
+		return item.item_name
+	return ItemDB.gem_name(gem) if gem != "" else "%d sesterzi" % gold
 
 
 func can_interact() -> bool:
@@ -103,12 +143,16 @@ func interact(p: Player) -> void:
 	if item == null:
 		_take_gold()
 		return
+	item.is_new = true
 	if Game.hero.add_item(item):
 		Game.level.hud.log_pickup(item.item_name, item.color())
+		Sfx.play("raccogli")
 		p.inventory_changed.emit()
 		queue_free()
 	else:
+		item.is_new = false
 		Game.level.hud.show_warning("Inventario pieno")
+		Game.level.hud.hint("zaino_pieno", "zaino pieno: vendi o smonta gli oggetti in città, oppure usa il portale (T).")
 
 
 func _on_body_entered(body: Node) -> void:
@@ -117,6 +161,20 @@ func _on_body_entered(body: Node) -> void:
 
 
 func _take_gold() -> void:
+	if is_queued_for_deletion():
+		return
+	if gem != "":
+		Game.level.hud.hint("gemme", "le gemme si incastonano dal gioielliere (scheda del fabbro): tre uguali ne fanno una migliore.")
+		Game.hero.add_gem(gem)
+		Game.level.hud.log_pickup(ItemDB.gem_name(gem), ItemDB.gem_color(gem))
+		Sfx.play("gemma")
+		Game.level.player.inventory_changed.emit()
+		queue_free()
+		return
 	Game.hero.gold += gold
 	Game.level.hud.log_pickup("+%d sesterzi" % gold, Color(1.0, 0.85, 0.3))
+	Sfx.play("monete")
+	var p := Game.level.player
+	if p and p.has_power("cesare"):
+		p.heal(float(p.stats["max_life"]) * 0.02, false)
 	queue_free()

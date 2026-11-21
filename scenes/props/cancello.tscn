@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sdhf3"]
+albedo_color = Color(0.32000002, 0.336, 0.368, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_vy1cs"]
+size = Vector3(10, 7, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vqmpt"]
+albedo_color = Color(0.2, 0.9, 1, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.2, 0.9, 1, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_qbbl5"]
+size = Vector3(9.6, 0.15, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_pvgq8"]
+size = Vector3(9.6, 0.15, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hq7fa"]
+albedo_color = Color(0.9, 0.72, 0.3, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.72, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_kggqo"]
+size = Vector3(1.6, 1.6, 0.05)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_78qp4"]
+size = Vector3(10, 7, 0.6)
+
+[node name="Cancello" type="StaticBody3D" unique_id=1981122037]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=616870595]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=1121712626]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+material_override = SubResource("StandardMaterial3D_sdhf3")
+mesh = SubResource("BoxMesh_vy1cs")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=1624890730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -0.22)
+material_override = SubResource("StandardMaterial3D_vqmpt")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_qbbl5")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=1239970249]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, -0.22)
+material_override = SubResource("StandardMaterial3D_vqmpt")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_pvgq8")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=5112306]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -0.24)
+material_override = SubResource("StandardMaterial3D_hq7fa")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_kggqo")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=1057372847]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+shape = SubResource("BoxShape3D_78qp4")

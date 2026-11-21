@@ -1,0 +1,863 @@
+class_name Vfx
+extends RefCounted
+## Kit degli effetti visivi (vedi docs/EFFETTI_VISIVI.md): pochi shader, poche mesh e 14 texture in scala
+## di grigi (textures/vfx/, vedi TEXTURES), riusati da tutti gli effetti e colorati per elemento.
+##
+## Shader (in cache, condivisi; il colore è un "instance uniform" per oggetto):
+##   glow      bagliore rivolto alla telecamera (lampi, nuclei dei proiettili); "glow:stella" per i critici
+##   fire      fiamma dipinta deformata dal rumore, rivolta alla telecamera (fuoco, nemici in fiamme)
+##   smoke     fumo che sale e ruota (dopo esplosioni e incendi)
+##   ring      anello d'urto a terra che si allarga
+##   telegraph avviso a terra con cerchio di rune che si riempie fino al colpo (aree, boss, pericoli)
+##   scorch    segno a terra che svanisce: "scorch:crepa" / "scorch:bruciatura" / "scorch:brina"
+##   pool      pozza animata (fuoco, ghiaccio) per i pericoli a terra
+##   slash     falce del fendente con scia e striature; "slash_tex" = falce dipinta sopra
+##   bolt      fulmine dipinto tra due punti ("bolt:1".."bolt:3")
+##   energy    guscio di energia che scorre e crepita (lame delle armi, lancia di energia del pilum)
+##   fresnel   bolla luminosa sui bordi (scudi, aura)
+##   dissolve  dissolvenza con bordo luminoso (morte dei nemici)
+##   distort   distorsione dell'aria (onde d'urto grandi)
+
+const ELEMENT_COLORS := {
+	"fisico": Color(1.0, 0.92, 0.75), "fuoco": Color(1.0, 0.5, 0.12),
+	"freddo": Color(0.5, 0.85, 1.0), "fulmine": Color(0.75, 0.65, 1.0),
+}
+
+static var _shaders: Dictionary = {}
+static var _materials: Dictionary = {}
+static var _meshes: Dictionary = {}
+static var _hitstop_until := 0
+
+## Rumore: la texture ripetibile rumore.png (prima era calcolato con fbm procedurale).
+const _NOISE := """
+uniform sampler2D noise_tex : hint_default_white, repeat_enable, filter_linear_mipmap;
+float fbm(vec2 p) { return texture(noise_tex, p * 0.16).r; }
+"""
+
+const _BILLBOARD := """
+void vertex() {
+	mat4 mv = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX = mv * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0), vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0),
+		vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+}
+"""
+
+## Texture in scala di grigi (textures/vfx/<nome>.png) per ogni materiale: "tipo" o "tipo:variante".
+## Il bianco è l'effetto, il nero è vuoto; il colore lo mette `tint`.
+const TEXTURES := {
+	"glow": "glow", "glow:stella": "stella", "fire": "fiamma", "smoke": "fumo", "ring": "anello",
+	"telegraph": "rune", "scorch:crepa": "crepa", "scorch:bruciatura": "bruciatura", "scorch:brina": "brina",
+	"slash_tex": "fendente", "bolt:1": "fulmine_1", "bolt:2": "fulmine_2", "bolt:3": "fulmine_3",
+}
+const TEX_DIR := "res://textures/vfx/"
+
+const SHADER_CODE := {
+	"glow": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+instance uniform float intensity = 2.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+%s
+void fragment() {
+	float a = texture(mask, UV).r;
+	ALBEDO = tint.rgb * intensity * (0.6 + 0.8 * a);
+	ALPHA = a * tint.a * fade;
+}""",
+	"fire": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+instance uniform float seed = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+%s
+%s
+void fragment() {
+	float up = 1.0 - UV.y;
+	// La fiamma dipinta viene deformata dal rumore che sale: guizza senza bisogno di fotogrammi
+	float n = fbm(vec2(UV.x * 5.0 + seed, UV.y * 4.5 + TIME * 10.0)) - 0.5;
+	vec2 uv = UV + vec2(n * 0.2, n * 0.1) * (0.2 + up);
+	float f = texture(mask, uv).r * (0.85 + 0.3 * fbm(vec2(seed * 3.0, TIME * 4.0)));
+	vec3 col = mix(vec3(0.9, 0.18, 0.03), vec3(1.0, 0.85, 0.35), clamp(f * 1.3, 0.0, 1.0)) * tint.rgb;
+	ALBEDO = col * 2.2;
+	ALPHA = clamp(f * 1.4, 0.0, 1.0) * fade * tint.a;
+}""",
+	"smoke": """shader_type spatial;
+render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(0.25, 0.23, 0.21, 0.6);
+instance uniform float fade = 1.0;
+instance uniform float seed = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+%s
+void fragment() {
+	float a = seed + TIME * 0.25;
+	vec2 p = UV - 0.5;
+	p = vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a));
+	float m = texture(mask, p + 0.5).r;
+	ALBEDO = tint.rgb * (0.7 + 0.5 * m);
+	ALPHA = m * tint.a * fade;
+}""",
+	"ring": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+instance uniform float width = 0.25;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+void fragment() {
+	float d = length(UV - 0.5) * 2.0;
+	float a = texture(mask, UV).r * (0.8 + width * 1.5);
+	a += (1.0 - smoothstep(0.0, 1.0, d)) * 0.08;
+	ALBEDO = tint.rgb * 2.5;
+	ALPHA = clamp(a, 0.0, 1.0) * fade * tint.a;
+}""",
+	"telegraph": """shader_type spatial;
+render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+instance uniform float progress = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+void fragment() {
+	vec2 p = UV - 0.5;
+	float d = length(p) * 2.0;
+	if (d > 1.0) { discard; }
+	float edge = smoothstep(0.9, 0.96, d) * (1.0 - smoothstep(0.985, 1.0, d));
+	float fill = (1.0 - smoothstep(progress - 0.04, progress, d)) * 0.35;
+	// Cerchio di rune che gira piano e si accende man mano che il colpo si avvicina
+	float a = TIME * 0.35;
+	vec2 r = vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a)) * 1.04 + 0.5;
+	float rune = texture(mask, r).r;
+	float pulse = 0.85 + 0.15 * sin(TIME * 10.0);
+	ALBEDO = tint.rgb * 1.6;
+	ALPHA = clamp(edge * pulse + fill + rune * (0.35 + 0.45 * progress) + 0.04, 0.0, 1.0) * fade * tint.a;
+}""",
+	"scorch": """shader_type spatial;
+render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(0.1, 0.08, 0.06, 1.0);
+instance uniform float fade = 1.0;
+instance uniform float seed = 0.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+%s
+void fragment() {
+	float m = texture(mask, UV).r;
+	float n = fbm(UV * 6.0 + seed);
+	ALBEDO = tint.rgb * (0.7 + 0.6 * n);
+	ALPHA = clamp(m * 1.4, 0.0, 1.0) * 0.85 * fade * tint.a;
+}""",
+	"pool": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0, 0.4, 0.1, 1.0);
+instance uniform float fade = 1.0;
+%s
+void fragment() {
+	float d = length(UV - 0.5) * 2.0;
+	float n = fbm(UV * 5.0 + vec2(TIME * 1.5, -TIME * 1.1)) * 0.6 + fbm(UV * 9.0 - vec2(TIME * 1.0, TIME * 1.4)) * 0.4;
+	float a = (1.0 - smoothstep(0.75, 1.0, d)) * (0.35 + 0.65 * n);
+	ALBEDO = tint.rgb * (0.8 + 1.6 * n);
+	ALPHA = a * fade * tint.a;
+}""",
+	"slash": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+instance uniform float head = 0.0;
+%s
+void fragment() {
+	float along = UV.x;
+	float trail = clamp(1.0 - (head - along) / 0.55, 0.0, 1.0) * step(along, head);
+	float radial = smoothstep(0.0, 0.75, UV.y) * (1.0 - smoothstep(0.9, 1.0, UV.y));
+	float streak = 0.55 + 0.9 * fbm(vec2(along * 2.0, UV.y * 30.0));   // striature lungo l'arco
+	ALBEDO = tint.rgb * (1.0 + trail * 2.5);
+	ALPHA = clamp(trail * radial * streak, 0.0, 1.0) * fade * tint.a;
+}""",
+	"slash_tex": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+void fragment() {
+	float m = texture(mask, vec2(UV.x, 1.0 - UV.y)).r;
+	ALBEDO = tint.rgb * (1.2 + 1.8 * m);
+	ALPHA = m * fade * tint.a;
+}""",
+	"bolt": """shader_type spatial;
+render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+uniform sampler2D mask : hint_default_black, filter_linear_mipmap;
+void fragment() {
+	float m = texture(mask, UV).r;
+	ALBEDO = mix(tint.rgb, vec3(1.0), m * m) * 3.0;
+	ALPHA = m * fade * tint.a;
+}""",
+	"energy": """shader_type spatial;
+render_mode blend_add, unshaded, cull_back, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(0.35, 0.85, 1.0, 1.0);
+instance uniform float fade = 1.0;
+varying vec3 lpos;
+%s
+void vertex() { lpos = VERTEX; }
+void fragment() {
+	// Guscio di energia: bordo luminoso, corrente che scorre lungo l'arma (asse z) e scariche
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 1.5);
+	float flow = fbm(vec2((lpos.x + lpos.y) * 20.0, lpos.z * 14.0 + TIME * 9.0));
+	float crackle = smoothstep(0.58, 0.72, fbm(vec2(lpos.z * 22.0 - TIME * 14.0, (lpos.x - lpos.y) * 40.0 + TIME * 4.0)));
+	ALBEDO = tint.rgb * (1.4 + 2.2 * crackle) + vec3(crackle * 0.6);
+	ALPHA = clamp(0.18 + rim * 0.75 + flow * 0.35 + crackle * 0.7, 0.0, 1.0) * tint.a * fade;
+}""",
+	"fresnel": """shader_type spatial;
+render_mode blend_add, unshaded, cull_back, depth_draw_never, shadows_disabled;
+instance uniform vec4 tint : source_color = vec4(1.0);
+instance uniform float fade = 1.0;
+void fragment() {
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
+	ALBEDO = tint.rgb * 2.0;
+	ALPHA = (rim * 0.9 + 0.05 + 0.04 * sin(TIME * 4.0)) * tint.a * fade;
+}""",
+	"dissolve": """shader_type spatial;
+instance uniform vec4 base : source_color = vec4(0.5, 0.5, 0.5, 1.0);
+instance uniform float progress = 0.0;
+uniform vec4 edge : source_color = vec4(1.0, 0.55, 0.15, 1.0);
+varying vec3 wpos;
+%s
+void vertex() { wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+void fragment() {
+	float n = fbm(wpos.xz * 2.5 + vec2(wpos.y * 1.7));
+	if (n < progress) { discard; }
+	ALBEDO = base.rgb;
+	ROUGHNESS = 0.8;
+	EMISSION = edge.rgb * (1.0 - smoothstep(progress, progress + 0.07, n)) * 5.0 * step(0.001, progress);
+}""",
+	"distort": """shader_type spatial;
+render_mode blend_mix, unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
+instance uniform float fade = 1.0;
+void fragment() {
+	vec2 p = UV - 0.5;
+	float d = length(p) * 2.0;
+	float band = smoothstep(0.6, 0.85, d) * (1.0 - smoothstep(0.88, 1.0, d));
+	vec2 off = normalize(p + 0.0001) * band * 0.025 * fade;
+	ALBEDO = texture(screen_tex, SCREEN_UV - off).rgb;
+	ALPHA = band * fade;
+}""",
+}
+
+
+# --- Risorse condivise ---------------------------------------------------------------------------
+
+static func material(kind: String) -> ShaderMaterial:
+	if _materials.has(kind):
+		return _materials[kind]
+	var base := kind.get_slice(":", 0)
+	if not _shaders.has(base):
+		var code: String = SHADER_CODE[base]
+		match base:
+			"glow", "smoke": code = code % _BILLBOARD
+			"fire": code = code % [_NOISE, _BILLBOARD]
+			"scorch", "pool", "dissolve", "slash", "energy": code = code % _NOISE
+		var sh := Shader.new()
+		sh.code = code
+		_shaders[base] = sh
+	var m := ShaderMaterial.new()
+	m.shader = _shaders[base]
+	if TEXTURES.has(kind):
+		m.set_shader_parameter("mask", texture(TEXTURES[kind]))
+	if base in ["fire", "scorch", "pool", "dissolve", "slash", "energy"]:
+		m.set_shader_parameter("noise_tex", texture("rumore"))
+	_materials[kind] = m
+	return m
+
+
+## Texture degli effetti (textures/vfx/<nome>.png), in cache. null se manca il file.
+static func texture(tex_name: String) -> Texture2D:
+	var key := "tex_" + tex_name
+	if not _meshes.has(key):
+		var path := TEX_DIR + tex_name + ".png"
+		_meshes[key] = load(path) if ResourceLoader.exists(path) else null
+	return _meshes[key]
+
+
+static func quad() -> QuadMesh:
+	if not _meshes.has("quad"):
+		var q := QuadMesh.new()
+		q.size = Vector2.ONE
+		_meshes["quad"] = q
+	return _meshes["quad"]
+
+
+## Piano orizzontale 2 × 2 (raggio 1): si scala al raggio voluto.
+static func plane() -> PlaneMesh:
+	if not _meshes.has("plane"):
+		var p := PlaneMesh.new()
+		p.size = Vector2(2, 2)
+		_meshes["plane"] = p
+	return _meshes["plane"]
+
+
+static func _mi(mesh: Mesh, kind: String, color: Color) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = material(kind)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.set_instance_shader_parameter("tint", color)
+	return mi
+
+
+static func _fade(mi: GeometryInstance3D, from: float, to: float, time: float, delay: float = 0.0) -> Tween:
+	var tw := mi.create_tween()
+	if delay > 0.0:
+		tw.tween_interval(delay)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), from, to, time)
+	return tw
+
+
+static func element_color(element: String) -> Color:
+	return ELEMENT_COLORS.get(element, ELEMENT_COLORS["fisico"])
+
+
+static func reduced() -> bool:
+	return Settings.reduced_vfx
+
+
+# --- Effetti di base -----------------------------------------------------------------------------
+
+## Bagliore che si allarga e svanisce (lampi dei colpi, esplosioni).
+## life <= 0: resta attaccato a `parent` (anche se non è ancora nella scena: posizione locale zero).
+static func glow(parent: Node, pos: Vector3, color: Color, size: float = 1.0, life: float = 0.2, grow: float = 1.6, kind: String = "glow") -> MeshInstance3D:
+	if parent == null or (not parent.is_inside_tree() and life > 0.0):
+		return null
+	var mi := _mi(quad(), kind, color)
+	parent.add_child(mi)
+	if parent.is_inside_tree():
+		mi.global_position = pos
+	mi.scale = Vector3.ONE * size
+	if life > 0.0:
+		var tw := mi.create_tween().set_parallel(true)
+		tw.tween_property(mi, "scale", Vector3.ONE * size * grow, life).set_ease(Tween.EASE_OUT)
+		tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life)
+		tw.chain().tween_callback(mi.queue_free)
+	return mi
+
+
+## Fiamma rivolta alla telecamera. life <= 0 = resta (va tolta da chi la crea).
+static func fire(parent: Node, pos: Vector3, size: float = 1.0, life: float = 0.6, tint: Color = Color.WHITE) -> MeshInstance3D:
+	if parent == null or (not parent.is_inside_tree() and life > 0.0):
+		return null
+	var mi := _mi(quad(), "fire", tint)
+	mi.set_instance_shader_parameter("seed", randf() * 50.0)
+	parent.add_child(mi)
+	if parent.is_inside_tree():
+		mi.global_position = pos
+	mi.scale = Vector3(size, size * 1.4, size)
+	if life > 0.0:
+		var tw := mi.create_tween().set_parallel(true)
+		tw.tween_property(mi, "global_position", pos + Vector3(0, size * 0.5, 0), life)
+		tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life)
+		tw.chain().tween_callback(mi.queue_free)
+	return mi
+
+
+## Fumo che sale, si allarga e svanisce (spento con "effetti ridotti").
+static func smoke(parent: Node, pos: Vector3, size: float = 2.0, life: float = 1.8, color: Color = Color(0.25, 0.23, 0.21, 0.6)) -> void:
+	if parent == null or not parent.is_inside_tree() or reduced():
+		return
+	var mi := _mi(quad(), "smoke", color)
+	mi.set_instance_shader_parameter("seed", randf() * TAU)
+	parent.add_child(mi)
+	mi.global_position = pos
+	mi.scale = Vector3.ONE * size
+	var tw := mi.create_tween().set_parallel(true)
+	tw.tween_property(mi, "global_position", pos + Vector3(randf_range(-0.4, 0.4), size * 0.8, randf_range(-0.4, 0.4)), life).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mi, "scale", Vector3.ONE * size * 1.7, life).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(mi.queue_free)
+
+
+## Anello d'urto a terra che si allarga.
+static func shockwave(parent: Node, pos: Vector3, radius: float, color: Color, time: float = 0.35, width: float = 0.25) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var mi := _mi(plane(), "ring", color)
+	mi.set_instance_shader_parameter("width", width)
+	parent.add_child(mi)
+	mi.global_position = Vector3(pos.x, 0.08, pos.z)
+	mi.scale = Vector3(0.15, 1, 0.15) * maxf(radius, 0.5)
+	var tw := mi.create_tween().set_parallel(true)
+	tw.tween_property(mi, "scale", Vector3(radius, 1, radius), time).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, time)
+	tw.chain().tween_callback(mi.queue_free)
+
+
+## Avviso a terra: il disco si riempie dal centro fino al momento del colpo.
+static func telegraph(parent: Node, pos: Vector3, radius: float, color: Color, time: float) -> MeshInstance3D:
+	if parent == null or not parent.is_inside_tree():
+		return null
+	var mi := _mi(plane(), "telegraph", color)
+	parent.add_child(mi)
+	mi.global_position = Vector3(pos.x, 0.06, pos.z)
+	mi.scale = Vector3(radius, 1, radius)
+	var tw := mi.create_tween()
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("progress", v), 0.0, 1.0, maxf(time, 0.05))
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, 0.15)
+	tw.tween_callback(mi.queue_free)
+	return mi
+
+
+## Segno a terra che svanisce piano. pattern: "bruciatura", "brina" o "crepa".
+static func scorch(parent: Node, pos: Vector3, radius: float, color: Color, life: float = 6.0, pattern: String = "bruciatura") -> void:
+	if parent == null or not parent.is_inside_tree() or reduced():
+		return
+	var mi := _mi(plane(), "scorch:" + pattern, color)
+	mi.set_instance_shader_parameter("seed", randf() * 30.0)
+	parent.add_child(mi)
+	mi.global_position = Vector3(pos.x, 0.04 + randf() * 0.01, pos.z)
+	mi.scale = Vector3(radius, 1, radius)
+	mi.rotation.y = randf() * TAU
+	_fade(mi, 1.0, 0.0, life * 0.4, life * 0.6).tween_callback(mi.queue_free)
+
+
+## Pozza animata (fuoco, ghiaccio) come figlio di `owner` (resta finché c'è il nodo).
+static func pool(owner: Node3D, radius: float, color: Color) -> MeshInstance3D:
+	var mi := _mi(plane(), "pool", color)
+	owner.add_child(mi)
+	mi.position = Vector3(0, 0.07, 0)
+	mi.scale = Vector3(radius, 1, radius)
+	return mi
+
+
+## Distorsione dell'aria che si allarga (solo esplosioni grandi; spenta con "effetti ridotti").
+static func distortion(parent: Node, pos: Vector3, radius: float, time: float = 0.4) -> void:
+	if parent == null or not parent.is_inside_tree() or reduced():
+		return
+	var mi := MeshInstance3D.new()
+	mi.mesh = plane()
+	mi.material_override = material("distort")
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mi)
+	mi.global_position = Vector3(pos.x, 0.6, pos.z)
+	mi.rotation_degrees.x = -35.0
+	mi.scale = Vector3.ONE * radius * 0.3
+	var tw := mi.create_tween().set_parallel(true)
+	tw.tween_property(mi, "scale", Vector3.ONE * radius * 1.3, time).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, time)
+	tw.chain().tween_callback(mi.queue_free)
+
+
+## Falce del fendente: arco luminoso con scia, ruota da un lato all'altro.
+static func slash(owner: Node3D, yaw: float, arc_deg: float, reach: float, color: Color, time: float = 0.15) -> void:
+	var mi := _mi(_slash_mesh(arc_deg, reach), "slash", color)
+	owner.add_child(mi)
+	mi.position = Vector3(0, 1.0, 0)
+	mi.rotation.y = yaw
+	var tw := mi.create_tween()
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("head", v), 0.0, 1.55, time + 0.12)
+	tw.tween_callback(mi.queue_free)
+	if arc_deg < 300.0:
+		# Falce dipinta davanti all'eroe, che si allarga e svanisce
+		var d := _mi(plane(), "slash_tex", color)
+		owner.add_child(d)
+		d.position = Vector3(0, 1.0, 0)
+		d.rotation.y = yaw
+		if randf() < 0.5:
+			d.scale.x = -1.0
+		var s0 := Vector3(reach * 0.85 * signf(d.scale.x), 1.0, reach * 0.85)
+		d.scale = s0
+		var td := d.create_tween().set_parallel(true)
+		td.tween_property(d, "scale", s0 * Vector3(1.15, 1.0, 1.15), time + 0.15).set_ease(Tween.EASE_OUT)
+		td.tween_method(func(v: float) -> void: d.set_instance_shader_parameter("fade", v), 1.0, 0.0, time + 0.15).set_ease(Tween.EASE_IN)
+		td.chain().tween_callback(d.queue_free)
+
+
+## Nastro ad arco (UV.x lungo l'arco, UV.y dal centro al bordo), centrato su −Z.
+static func _slash_mesh(arc_deg: float, reach: float) -> ArrayMesh:
+	var key := "slash_%d_%d" % [roundi(arc_deg), roundi(reach * 10.0)]
+	if _meshes.has(key):
+		return _meshes[key]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var seg := maxi(8, roundi(arc_deg / 8.0))
+	var half := deg_to_rad(arc_deg) * 0.5
+	var r0 := reach * 0.35
+	var r1 := reach * 1.05
+	for i in seg:
+		var a0 := half - (2.0 * half) * i / seg
+		var a1 := half - (2.0 * half) * (i + 1) / seg
+		var u0 := float(i) / seg
+		var u1 := float(i + 1) / seg
+		var p := [Vector3(-sin(a0) * r0, 0, -cos(a0) * r0), Vector3(-sin(a0) * r1, 0, -cos(a0) * r1),
+			Vector3(-sin(a1) * r1, 0, -cos(a1) * r1), Vector3(-sin(a1) * r0, 0, -cos(a1) * r0)]
+		var uv := [Vector2(u0, 0), Vector2(u0, 1), Vector2(u1, 1), Vector2(u1, 0)]
+		for k: int in [0, 1, 2, 0, 2, 3]:
+			st.set_normal(Vector3.UP)
+			st.set_uv(uv[k])
+			st.add_vertex(p[k])
+	var m := st.commit()
+	_meshes[key] = m
+	return m
+
+
+## Fulmine dipinto da a a b (una delle 3 texture, stirata tra i due punti e girata verso la telecamera),
+## che sfarfalla e sparisce. `segments` non serve più (resta per compatibilità).
+static func lightning(parent: Node, a: Vector3, b: Vector3, color: Color, life: float = 0.18, _segments: int = 7) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var axis := b - a
+	var length := axis.length()
+	if length < 0.05:
+		return
+	var cam := parent.get_viewport().get_camera_3d()
+	var mid := (a + b) * 0.5
+	var view := (cam.global_position - mid).normalized() if cam != null else Vector3.UP
+	var side := axis.cross(view)
+	if side.length() < 0.001:
+		side = axis.cross(Vector3.RIGHT)
+	var width := clampf(length * 0.3, 0.8, 3.5) * (1.0 if randf() < 0.5 else -1.0)
+	side = side.normalized() * width
+	var mi := _mi(quad(), "bolt:%d" % randi_range(1, 3), color.lightened(0.2))
+	parent.add_child(mi)
+	mi.global_transform = Transform3D(Basis(axis, side, axis.normalized().cross(side).normalized()), mid)
+	glow(parent, b, color, 0.9, life)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "visible", false, 0.04).set_delay(life * 0.4)
+	tw.tween_property(mi, "visible", true, 0.0).set_delay(0.03)
+	tw.tween_method(func(v: float) -> void: mi.set_instance_shader_parameter("fade", v), 1.0, 0.0, life * 0.5)
+	tw.tween_callback(mi.queue_free)
+
+
+# --- Colpi per elemento ---------------------------------------------------------------------------
+
+## Effetto di un colpo su un nemico: lampo + schegge diverse per elemento; più grande per i critici.
+static func hit(parent: Node, pos: Vector3, element: String, crit: bool = false) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var col := element_color(element)
+	var k := 1.6 if crit else 1.0
+	var n := 1 if reduced() else 2
+	glow(parent, pos, col, 0.9 * k, 0.14)
+	match element:
+		"fuoco":
+			Fx.burst(parent, pos, Color(1.0, 0.55, 0.15), 5 * n, 3.5 * k, 0.07, 0.6, 4.0, 70.0)
+			fire(parent, pos - Vector3(0, 0.2, 0), 0.7 * k, 0.4)
+		"freddo":
+			Fx.shards(parent, pos, Color(0.7, 0.92, 1.0), 4 * n, 5.0 * k, 0.5)
+			glow(parent, pos, Color(0.6, 0.85, 1.0, 0.5), 1.6 * k, 0.5, 1.3)
+		"fulmine":
+			for i in (2 if crit else 1) + n - 1:
+				var dir := Vector3(randf_range(-1, 1), randf_range(-0.3, 0.6), randf_range(-1, 1)).normalized()
+				lightning(parent, pos, pos + dir * randf_range(0.8, 1.6) * k, col, 0.12, 4)
+		_:
+			Fx.shards(parent, pos, Color(1.0, 0.85, 0.5), 4 * n, 6.0 * k, 0.25)
+	if crit:
+		shockwave(parent, pos - Vector3(0, pos.y, 0), 1.6, col, 0.25, 0.4)
+		glow(parent, pos, col.lightened(0.3), 2.2, 0.22, 1.3, "glow:stella")
+
+
+## Esplosione per elemento: lampo, anello, schegge, segno a terra, distorsione se grande.
+static func explosion(parent: Node, pos: Vector3, radius: float, element: String, color: Color = Color(0, 0, 0, 0)) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var col := color if color.a > 0.0 else element_color(element)
+	var ground := Vector3(pos.x, 0.0, pos.z)
+	glow(parent, ground + Vector3(0, 1.0, 0), col, radius * 1.1, 0.3, 1.5)
+	shockwave(parent, ground, radius, col, 0.35)
+	match element:
+		"fuoco":
+			for i in (3 if reduced() else 6):
+				var o := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * radius * 0.5
+				fire(parent, ground + o + Vector3(0, 0.6, 0), radius * 0.45, randf_range(0.5, 0.9))
+			scorch(parent, ground, radius * 0.8, Color(0.08, 0.05, 0.04), 6.0, "bruciatura")
+			smoke(parent, ground + Vector3(0, 1.0, 0), radius * 0.9, 2.0)
+		"freddo":
+			Fx.shards(parent, ground + Vector3(0, 0.4, 0), Color(0.75, 0.93, 1.0), 14, radius * 3.0, 0.7)
+			scorch(parent, ground, radius * 0.9, Color(0.8, 0.95, 1.0), 4.0, "brina")
+		"fulmine":
+			for i in (3 if reduced() else 6):
+				var a := randf() * TAU
+				lightning(parent, ground + Vector3(0, 2.5, 0), ground + Vector3(cos(a), 0.1, sin(a)) * radius * randf_range(0.3, 1.0), col, 0.2, 5)
+			scorch(parent, ground, radius * 0.6, Color(0.12, 0.1, 0.16), 3.0, "bruciatura")
+		_:
+			scorch(parent, ground, radius * 0.7, Color(0.18, 0.15, 0.12), 4.0, "crepa")
+			smoke(parent, ground + Vector3(0, 0.5, 0), radius * 0.7, 1.2, Color(0.45, 0.4, 0.33, 0.45))
+	if radius >= 4.0:
+		distortion(parent, ground, radius)
+
+
+## Colpo dal cielo (meteora, bombardamento, saetta): oggetto che cade con la scia fino a `pos`.
+static func strike(parent: Node, pos: Vector3, delay: float, element: String, size: float = 0.8) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var col := element_color(element)
+	var from := pos + Vector3(-4, 22, 4)
+	if element == "fulmine":
+		var t := parent.create_tween()
+		t.tween_interval(maxf(delay - 0.05, 0.0))
+		t.tween_callback(func() -> void: lightning(parent, pos + Vector3(0, 18, 0), pos, col, 0.25, 9))
+		return
+	var root := Node3D.new()
+	parent.add_child(root)
+	root.global_position = from
+	var core := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = size * 0.6
+	sm.height = size * 1.2
+	core.mesh = sm
+	core.material_override = Fx.mat(col, 6.0, false, true)
+	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(core)
+	var g := glow(root, from, col, size * 3.0, 0.0)
+	if g:
+		g.position = Vector3.ZERO
+	if element == "fuoco":
+		var f := fire(root, from, size * 2.0, 0.0)
+		if f:
+			f.position = Vector3(0, 0.6, 0)
+	Fx.trail(root, col, size * 0.35)
+	var tw := root.create_tween()
+	tw.tween_property(root, "global_position", pos, maxf(delay, 0.05)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(root.queue_free)
+
+
+# --- Abilità di energia (direzione artistica: nel 3000 si usa l'energia, vedi docs/GAME_DESIGN.md) ---------
+
+## Pezzo di energia (guscio che scorre) come figlio di `parent`, in coordinate locali.
+static func energy_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.rotation_degrees = rot_deg
+	make_energy(mi, color)
+	parent.add_child(mi)
+	return mi
+
+
+static func _sphere(r: float) -> SphereMesh:
+	var key := "sphere_%d" % roundi(r * 100.0)
+	if not _meshes.has(key):
+		var sm := SphereMesh.new()
+		sm.radius = r
+		sm.height = r * 2.0
+		sm.radial_segments = 16
+		sm.rings = 8
+		_meshes[key] = sm
+	return _meshes[key]
+
+
+static func _box(size: Vector3) -> BoxMesh:
+	var key := "box_%s" % str(size)
+	if not _meshes.has(key):
+		var bm := BoxMesh.new()
+		bm.size = size
+		_meshes[key] = bm
+	return _meshes[key]
+
+
+## Raggio della flotta in orbita: prima un raggio sottile di puntamento, poi il colpo largo che si allarga
+## e svanisce lasciando il terreno rovente. Il colpo arriva dopo `delay` secondi.
+static func orbital_beam(parent: Node, pos: Vector3, radius: float, delay: float, color: Color) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var ground := Vector3(pos.x, 0.0, pos.z)
+	var root := Node3D.new()
+	parent.add_child(root)
+	root.global_position = ground
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 1.0
+	cyl.bottom_radius = 1.0
+	cyl.height = 40.0
+	cyl.radial_segments = 20
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	var aim := energy_part(root, cyl, Vector3(0, 20.0, 0), color)
+	aim.scale = Vector3(0.06, 1.0, 0.06)
+	var tw := root.create_tween()
+	tw.tween_property(aim, "scale", Vector3(0.18, 1.0, 0.18), maxf(delay - 0.08, 0.05))
+	tw.tween_callback(func() -> void:
+		aim.scale = Vector3(radius * 0.15, 1.0, radius * 0.15)
+		aim.set_instance_shader_parameter("tint", color.lightened(0.35))
+		glow(parent, ground + Vector3(0, 1.0, 0), color, radius * 1.6, 0.35, 1.4)
+		scorch(parent, ground, radius * 0.75, Color(0.1, 0.06, 0.04), 6.0, "bruciatura"))
+	tw.tween_property(aim, "scale", Vector3(radius * 0.55, 1.0, radius * 0.55), 0.12).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float) -> void: aim.set_instance_shader_parameter("fade", v), 1.0, 0.0, 0.4)
+	tw.tween_callback(root.queue_free)
+
+
+## Sfera di energia lanciata ad arco (granata): parte da `from` e atterra in `to` dopo `time` secondi.
+static func lob(parent: Node, from: Vector3, to: Vector3, time: float, color: Color, size: float = 0.25) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var orb := Node3D.new()
+	parent.add_child(orb)
+	orb.global_position = from
+	energy_part(orb, _sphere(size), Vector3.ZERO, color)
+	var g := glow(orb, from, color, size * 6.0, 0.0)
+	if g:
+		g.position = Vector3.ZERO
+	var target := Vector3(to.x, 0.3, to.z)
+	var height := 2.5 + from.distance_to(target) * 0.15
+	var tw := orb.create_tween()
+	tw.tween_method(func(t: float) -> void:
+		var p := from.lerp(target, t)
+		p.y += sin(t * PI) * height
+		orb.global_position = p
+		orb.scale = Vector3.ONE * (1.0 + 0.25 * sin(t * 40.0)), 0.0, 1.0, maxf(time, 0.05))
+	tw.tween_callback(orb.queue_free)
+
+
+## Trappola di energia a terra: disco che pulsa sempre più forte fino all'esplosione dopo `time` secondi.
+static func energy_trap(parent: Node, pos: Vector3, radius: float, time: float, color: Color) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var root := Node3D.new()
+	parent.add_child(root)
+	root.global_position = Vector3(pos.x, 0.0, pos.z)
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.45
+	cyl.bottom_radius = 0.55
+	cyl.height = 0.12
+	energy_part(root, cyl, Vector3(0, 0.08, 0), color)
+	for i in 3:
+		var a := TAU * i / 3.0
+		energy_part(root, _box(Vector3(0.08, 0.06, radius * 0.45)), Vector3(cos(a), 0.06, sin(a)) * radius * 0.3, color, Vector3(0, -rad_to_deg(a) + 90.0, 0))
+	var g := glow(root, root.global_position, color, 1.2, 0.0)
+	if g:
+		g.position = Vector3(0, 0.3, 0)
+	var tw := root.create_tween()
+	tw.tween_property(root, "scale", Vector3(1.25, 1.0, 1.25), maxf(time, 0.05)).set_trans(Tween.TRANS_ELASTIC)
+	tw.tween_callback(root.queue_free)
+
+
+## Corvo di energia che piomba dall'alto su `to` in `time` secondi (Sciame di corvi).
+static func raven_dive(parent: Node, to: Vector3, color: Color, time: float = 0.22) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var bird := Node3D.new()
+	parent.add_child(bird)
+	var a := randf() * TAU
+	var from := to + Vector3(cos(a) * 5.0, 6.0, sin(a) * 5.0)
+	bird.global_position = from
+	var body := CapsuleMesh.new()
+	body.radius = 0.09
+	body.height = 0.5
+	energy_part(bird, body, Vector3.ZERO, color, Vector3(90, 0, 0))
+	energy_part(bird, _sphere(0.08), Vector3(0, 0.03, -0.26), color)
+	var wl := energy_part(bird, _box(Vector3(0.55, 0.02, 0.2)), Vector3(-0.3, 0.02, 0), color, Vector3(0, 0, 25))
+	var wr := energy_part(bird, _box(Vector3(0.55, 0.02, 0.2)), Vector3(0.3, 0.02, 0), color, Vector3(0, 0, -25))
+	energy_part(bird, _box(Vector3(0.18, 0.02, 0.2)), Vector3(0, 0, 0.3), color)
+	var g := glow(bird, from, color.lightened(0.3), 0.7, 0.0)
+	if g:
+		g.position = Vector3(0, 0, -0.26)
+	if (to - from).length() > 0.1:
+		bird.look_at(to, Vector3.UP)
+	var flap := bird.create_tween().set_loops(6)
+	flap.tween_property(wl, "rotation_degrees:z", -20.0, 0.04)
+	flap.parallel().tween_property(wr, "rotation_degrees:z", 20.0, 0.04)
+	flap.tween_property(wl, "rotation_degrees:z", 30.0, 0.04)
+	flap.parallel().tween_property(wr, "rotation_degrees:z", -30.0, 0.04)
+	var tw := bird.create_tween()
+	tw.tween_property(bird, "global_position", to + Vector3(0, 0.4, 0), time).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func() -> void: glow(parent, to + Vector3(0, 0.5, 0), color, 1.2, 0.18))
+	tw.tween_callback(bird.queue_free)
+
+
+## Dardo di energia che cade dal cielo su `to` (Pioggia di frecce).
+static func falling_bolt(parent: Node, to: Vector3, color: Color, time: float = 0.18) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+	var dart := Node3D.new()
+	parent.add_child(dart)
+	var from := to + Vector3(-2.0, 12.0, 2.0)
+	dart.global_position = from
+	energy_part(dart, _box(Vector3(0.07, 0.07, 1.0)), Vector3.ZERO, color)
+	var g := glow(dart, from, color, 0.6, 0.0)
+	if g:
+		g.position = Vector3(0, 0, -0.5)
+	dart.look_at(to, Vector3.UP)
+	var tw := dart.create_tween()
+	tw.tween_property(dart, "global_position", to, time).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func() -> void: glow(parent, to + Vector3(0, 0.2, 0), color, 0.8, 0.12))
+	tw.tween_callback(dart.queue_free)
+
+
+# --- Personaggi -----------------------------------------------------------------------------------
+
+## Guscio di energia su una mesh (lame avvolte dall'energia, lancia del pilum).
+static func make_energy(mi: MeshInstance3D, color: Color) -> void:
+	mi.material_override = material("energy")
+	mi.set_instance_shader_parameter("tint", color)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Materiale "bolla" (bordo luminoso) da mettere su una sfera: scudi, protezioni.
+static func make_bubble(mi: MeshInstance3D, color: Color) -> void:
+	mi.material_override = material("fresnel")
+	mi.set_instance_shader_parameter("tint", color)
+
+
+## Dissolvenza del modello (morte dei nemici). Il colore di ogni pezzo resta quello del suo materiale.
+static func dissolve(model: Node3D, time: float = 0.9, edge: Color = Color(1.0, 0.55, 0.15)) -> void:
+	if model == null or not model.is_inside_tree():
+		return
+	var mat := material("dissolve")
+	mat.set_shader_parameter("edge", edge)
+	var list: Array = []
+	for gi: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := gi as MeshInstance3D
+		var base := Color(0.5, 0.5, 0.5)
+		var m: Material = mi.material_override if mi.material_override else (mi.mesh.surface_get_material(0) if mi.mesh and mi.mesh.get_surface_count() > 0 else null)
+		if m is StandardMaterial3D:
+			if (m as StandardMaterial3D).transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				mi.visible = false
+				continue
+			base = (m as StandardMaterial3D).albedo_color
+		elif m is ShaderMaterial:
+			mi.visible = false
+			continue
+		mi.material_override = mat
+		mi.material_overlay = null
+		mi.set_instance_shader_parameter("base", base)
+		list.append(mi)
+	var tw := model.create_tween()
+	tw.tween_method(func(v: float) -> void:
+		for x: Variant in list:
+			if is_instance_valid(x):
+				(x as MeshInstance3D).set_instance_shader_parameter("progress", v), 0.0, 1.05, time)
+
+
+## Immagine fantasma del modello (scatti, cariche): copia trasparente che svanisce.
+static func afterimage(model: Node3D, color: Color, life: float = 0.3) -> void:
+	if model == null or not model.is_inside_tree() or reduced():
+		return
+	var ghost := model.duplicate(0) as Node3D
+	for c: Node in ghost.find_children("*", "", true, false):
+		if not c is MeshInstance3D:
+			if c is Light3D or c is CPUParticles3D or c is Label3D:
+				c.queue_free()
+			continue
+		var mi := c as MeshInstance3D
+		if mi.layers & Layers.VIS_MINIMAP:
+			mi.visible = false
+			continue
+		mi.material_override = material("fresnel")
+		mi.material_overlay = null
+		mi.set_instance_shader_parameter("tint", color)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var parent := Game.world_root()
+	parent.add_child(ghost)
+	ghost.global_transform = model.global_transform
+	var tw := ghost.create_tween()
+	tw.tween_method(func(v: float) -> void:
+		for c: Node in ghost.find_children("*", "MeshInstance3D", true, false):
+			(c as MeshInstance3D).set_instance_shader_parameter("fade", v), 0.5, 0.0, life)
+	tw.tween_callback(ghost.queue_free)
+
+
+## Micro-pausa sui colpi forti (sensazione d'impatto). Non in headless (test) e non con gli effetti ridotti.
+static func hitstop(seconds: float = 0.05) -> void:
+	if DisplayServer.get_name() == "headless" or reduced():
+		return
+	var now := Time.get_ticks_msec()
+	if now < _hitstop_until + 250:
+		return
+	_hitstop_until = now + roundi(seconds * 1000.0)
+	Engine.time_scale = 0.05
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.create_timer(seconds, true, false, true).timeout.connect(func() -> void: Engine.time_scale = 1.0)

@@ -1,0 +1,5 @@
+AMBIENTI IN LOOP
+================
+Suoni d'ambiente (vento, città, porto, gocce...) che vanno in loop sotto la musica.
+Nomi: level_01, ostia_nova, level_03_porto, dungeon_catacombe, dungeon_caverne_clan, dungeon_cisterne, labirinto
+(.ogg consigliato). Testi per generarli: docs/AUDIO_AI.md (parte B). Volume: quello della musica, -4 dB.

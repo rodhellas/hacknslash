@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lgpr6"]
+albedo_color = Color(0.45, 0.32, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_qvcsm"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iwva6"]
+albedo_color = Color(0.40499997, 0.288, 0.17999999, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_qrmr4"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6mtwa"]
+albedo_color = Color(0.494, 0.3744, 0.264, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_t8gel"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_32i5j"]
+albedo_color = Color(0.3, 0.45, 0.55, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_r7e6u"]
+size = Vector3(1, 1.2, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_77q7y"]
+size = Vector3(2.6, 2.4, 2.4)
+
+[node name="PilaCasse" type="StaticBody3D" unique_id=82748880 groups=["fadeable"]]
+collision_mask = 0
+
+[node name="Graybox" type="Node3D" parent="." unique_id=1583498829]
+
+[node name="box_0" type="MeshInstance3D" parent="Graybox" unique_id=880841653]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.6, 0)
+material_override = SubResource("StandardMaterial3D_lgpr6")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_qvcsm")
+
+[node name="box_1" type="MeshInstance3D" parent="Graybox" unique_id=794505105]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 0.6, 0.1)
+material_override = SubResource("StandardMaterial3D_iwva6")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_qrmr4")
+
+[node name="box_2" type="MeshInstance3D" parent="Graybox" unique_id=942075299]
+transform = Transform3D(0.9659258, 0, 0.25881904, 0, 1, 0, -0.25881904, 0, 0.9659258, 0, 1.8, 0)
+material_override = SubResource("StandardMaterial3D_6mtwa")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_t8gel")
+
+[node name="box_3" type="MeshInstance3D" parent="Graybox" unique_id=1742233772]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -1.2)
+material_override = SubResource("StandardMaterial3D_32i5j")
+visibility_range_end = 110.0
+visibility_range_end_margin = 6.0
+mesh = SubResource("BoxMesh_r7e6u")
+
+[node name="Collision0" type="CollisionShape3D" parent="." unique_id=647001540]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -0.3)
+shape = SubResource("BoxShape3D_77q7y")

@@ -1,0 +1,2 @@
+Voci delle cutscene. Nome automatico: <id cutscene>_<numero inquadratura>.ogg (dalla 1), oppure il campo "voice"
+dell'inquadratura in data/cutscene_db.gd. La durata dell'inquadratura segue la voce. Formati: ogg, wav, mp3.

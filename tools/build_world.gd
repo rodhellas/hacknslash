@@ -1,14 +1,20 @@
 extends SceneTree
+## ATTENZIONE (20-11-2026): il .tscn del livello contiene modifiche fatte dopo la generazione (level design:
+## tools/applica_proposte_livelli.gd, docs/PROPOSTE_LIVELLI.md). Rigenerare il livello le perde: dopo, rilancia quello script.
 ## GENERATORE GRAYBOXING
 ## Crea:
 ##   scenes/props/*.tscn        oggetti di scena (alberi, colonne, case...) -> da sostituire con modelli Tripo
 ##   scenes/characters/*.tscn   modelli segnaposto delle 4 classi
 ##   scenes/enemies/*.tscn      modelli segnaposto dei nemici
-##   scenes/levels/level_01.tscn  la mappa del livello 1, con navmesh già calcolata
+##   scenes/npcs/*.tscn         modelli segnaposto dei personaggi non giocanti
+##   scenes/levels/level_01.tscn  la mappa del livello 1: luoghi, nemici e la FORMA (strade, aree,
+##                                fiume); terreno, vegetazione e navmesh li costruisce tools/map_builder.gd
+##   (la città di Ostia Nova ha il suo generatore: tools/build_ostia.gd, che riusa questo file)
 ##
 ## Uso (da terminale, nella cartella del progetto):
 ##   Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/build_world.gd
 ## Opzioni dopo "--":  props  models  level   (default: tutto)
+##                     missing  = crea SOLO props e modelli che non esistono ancora (non tocca gli altri)
 ##
 ## ATTENZIONE: rigenerare il livello SOVRASCRIVE level_01.tscn. Quando inizierai a ritoccare la
 ## mappa a mano nell'editor, non rigenerarla più (puoi ancora rigenerare props e modelli).
@@ -114,14 +120,20 @@ func _process(_delta: float) -> bool:
 
 
 func _generate() -> void:
+	print("ATTENZIONE: se hai rigenerato un livello, RILANCIA applica_proposte_livelli.gd (level design) e poi test_livelli.gd.")
 	var args := OS.get_cmdline_user_args()
 	var all := args.is_empty()
 	rng.seed = SEED
 	_compute_road()
-	if all or "props" in args or "level" in args:
+	if "missing" in args:
+		_build_props(true)
+		_build_models(true)
+	if all or "props" in args:
 		_build_props()
 	if all or "models" in args:
 		_build_models()
+	if "characters" in args:
+		_build_models(false, "characters/")
 	if all or "level" in args:
 		_build_level()
 	print("Generazione completata.")
@@ -377,6 +389,16 @@ func _prop_defs() -> Dictionary:
 	d["tomba"] = {"parts": [["box", Vector3(0, 1.2, 0), Vector3(5, 2.4, 5), STONE], ["cyl", Vector3(0, 3.6, 0), Vector3(2.2, 2.4, 2.2), STONE.lightened(0.1)],
 			["cyl", Vector3(0, 5.2, 0), Vector3(0, 0.8, 2.3), STONE.darkened(0.1)]],
 		"col": [["box", Vector3(0, 2.5, 0), Vector3(5, 5, 5)]], "fade": true}
+	# Entrata di un dungeon (world/dungeon_entrance.gd): portale di pietra con scala che scende, apertura verso +Z
+	d["ingresso_catacombe"] = {"parts": [["box", Vector3(0, 0.15, -0.6), Vector3(5.6, 0.3, 4.4), STONE.darkened(0.2)],
+			["box", Vector3(-2.2, 1.6, 0), Vector3(1, 3.2, 1.2), STONE], ["box", Vector3(2.2, 1.6, 0), Vector3(1, 3.2, 1.2), STONE],
+			["box", Vector3(0, 3.5, 0), Vector3(5.6, 0.7, 1.4), STONE.lightened(0.1)],
+			["box", Vector3(0, 1.6, -0.5), Vector3(3.4, 3.2, 0.2), Color(0.02, 0.02, 0.03)],
+			["box", Vector3(0, 0.32, 0.9), Vector3(3.2, 0.06, 0.6), STONE.darkened(0.35)],
+			["box", Vector3(0, 0.26, 0.4), Vector3(3.2, 0.06, 0.6), STONE.darkened(0.45)],
+			["box", Vector3(0, 3.95, 0.72), Vector3(0.9, 0.5, 0.06), Color(0.85, 0.4, 1.0), 2.0]],
+		"col": [["box", Vector3(0, 1.8, -0.6), Vector3(5.6, 3.6, 2.4)]], "script": "res://world/dungeon_entrance.gd",
+		"light": [Vector3(0, 2.0, 1.2), Color(0.85, 0.4, 1.0), 1.2, 6.0]}
 	d["sarcofago"] = {"parts": [["box", Vector3(0, 0.45, 0), Vector3(2.2, 0.9, 1), STONE], ["box", Vector3(0, 1.0, 0), Vector3(2.3, 0.2, 1.1), MARBLE]],
 		"col": [["box", Vector3(0, 0.55, 0), Vector3(2.3, 1.1, 1.1)]], "vis": 110.0}
 	d["staccionata"] = {"parts": [["box", Vector3(-1.9, 0.6, 0), Vector3(0.15, 1.2, 0.15), WOOD], ["box", Vector3(1.9, 0.6, 0), Vector3(0.15, 1.2, 0.15), WOOD],
@@ -452,14 +474,100 @@ func _prop_defs() -> Dictionary:
 			["cyl", Vector3(-1.1, 0.5, 1), Vector3(0.5, 0.15, 0.5), WOOD.darkened(0.3), 0.0, Vector3(0, 0, 90)],
 			["cyl", Vector3(1.1, 0.5, 1), Vector3(0.5, 0.15, 0.5), WOOD.darkened(0.3), 0.0, Vector3(0, 0, 90)]],
 		"col": [["box", Vector3(0, 0.7, 0), Vector3(2.4, 1.4, 3.4)]], "vis": 110.0}
+	# --- Città (Ostia Nova) ---
+	d["bancarella"] = {"parts": [["box", Vector3(0, 0.5, 0), Vector3(3.2, 1.0, 1.4), WOOD],
+			["box", Vector3(-1.5, 1.3, -0.6), Vector3(0.12, 2.6, 0.12), WOOD], ["box", Vector3(1.5, 1.3, -0.6), Vector3(0.12, 2.6, 0.12), WOOD],
+			["box", Vector3(-1.5, 1.1, 0.6), Vector3(0.12, 2.2, 0.12), WOOD], ["box", Vector3(1.5, 1.1, 0.6), Vector3(0.12, 2.2, 0.12), WOOD],
+			["box", Vector3(0, 2.45, 0), Vector3(3.6, 0.08, 1.9), RED, 0.0, Vector3(-12, 0, 0)],
+			["box", Vector3(-0.8, 1.15, 0), Vector3(0.6, 0.3, 0.5), TERRACOTTA], ["box", Vector3(0.2, 1.12, 0.1), Vector3(0.5, 0.25, 0.4), GOLD, 0.5],
+			["sphere", Vector3(1.0, 1.2, -0.1), Vector3(0.22, 0.4, 0), PLASMA, 3.0]],
+		"col": [["box", Vector3(0, 0.6, 0), Vector3(3.2, 1.2, 1.5)]], "vis": 110.0}
+	d["fucina"] = {"parts": [["box", Vector3(0, 0.6, 0), Vector3(2.6, 1.2, 2.0), STONE.darkened(0.2)],
+			["box", Vector3(0, 1.25, 0), Vector3(2.0, 0.1, 1.5), FIRE, 5.0],
+			["box", Vector3(0, 2.8, 0.6), Vector3(1.0, 3.2, 0.8), STONE.darkened(0.3)],
+			["box", Vector3(2.6, 0.4, 0.2), Vector3(0.6, 0.8, 0.5), STONE], ["box", Vector3(2.6, 0.9, 0.2), Vector3(1.1, 0.25, 0.45), METAL.darkened(0.3)],
+			["box", Vector3(-2.5, 2, -1.8), Vector3(0.25, 4, 0.25), WOOD], ["box", Vector3(3.5, 2, -1.8), Vector3(0.25, 4, 0.25), WOOD],
+			["box", Vector3(-2.5, 2, 1.8), Vector3(0.25, 4, 0.25), WOOD], ["box", Vector3(3.5, 2, 1.8), Vector3(0.25, 4, 0.25), WOOD],
+			["box", Vector3(0.5, 4.1, 0), Vector3(6.6, 0.25, 4.2), ROOF.darkened(0.25)]],
+		"col": [["box", Vector3(0, 0.8, 0), Vector3(2.6, 1.6, 2.0)], ["box", Vector3(2.6, 0.5, 0.2), Vector3(1.1, 1.0, 0.5)]],
+		"occ": ["box", Vector3(0.5, 4.1, 0), Vector3(6.6, 0.6, 4.2)], "fade": true, "light": [Vector3(0, 2.0, 0), FIRE, 2.5, 9.0]}
+	d["fontana"] = {"parts": [["cyl", Vector3(0, 0.4, 0), Vector3(3.2, 0.8, 3.3), MARBLE],
+			["cyl", Vector3(0, 0.75, 0), Vector3(2.9, 0.1, 2.9), Color(0.2, 0.5, 0.8), 1.0],
+			["cyl", Vector3(0, 1.4, 0), Vector3(0.4, 1.6, 0.5), MARBLE], ["cyl", Vector3(0, 2.2, 0), Vector3(1.1, 0.2, 0.6), MARBLE],
+			["sphere", Vector3(0, 2.6, 0), Vector3(0.35, 0.7, 0), PLASMA, 4.0]],
+		"col": [["cyl", Vector3(0, 0.5, 0), Vector3(3.3, 1.0, 0)]], "light": [Vector3(0, 2.8, 0), PLASMA, 1.5, 10.0]}
+	var bas := [["box", Vector3(0, 0.3, 0), Vector3(26, 0.6, 16), MARBLE.darkened(0.1)],
+		["box", Vector3(0, 4.5, 1.5), Vector3(24, 8, 12), PLASTER], ["prism", Vector3(0, 9.7, 1.5), Vector3(14, 2.4, 25), ROOF, 0.0, Vector3(0, 90, 0)],
+		["box", Vector3(0, 2.0, -4.55), Vector3(3, 4, 0.1), WOOD.darkened(0.2)], ["box", Vector3(0, 8.3, -5.6), Vector3(24, 0.6, 2.2), MARBLE]]
+	for i in 8:
+		bas.append(["cyl", Vector3(-10.5 + i * 3.0, 4.3, -6.2), Vector3(0.45, 7.4, 0.5), MARBLE])
+	d["basilica"] = {"parts": bas, "col": [["box", Vector3(0, 4, 0.5), Vector3(24.5, 8, 14)]],
+		"occ": ["box", Vector3(0, 8.5, 0.5), Vector3(26, 4, 15)], "fade": true}
+	d["insula"] = {"parts": [["box", Vector3(0, 5, 0), Vector3(12, 10, 10), PLASTER.darkened(0.08)],
+			["box", Vector3(0, 10.2, 0), Vector3(12.4, 0.4, 10.4), ROOF],
+			["box", Vector3(0, 1.4, -5.05), Vector3(2.2, 2.8, 0.1), WOOD], ["box", Vector3(-3.5, 1.6, -5.05), Vector3(2.4, 1.4, 0.1), RED, 0.3],
+			["box", Vector3(-3, 5, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(3, 5, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)],
+			["box", Vector3(-3, 8, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(3, 8, -5.05), Vector3(1.0, 1.2, 0.1), Color(0.15, 0.2, 0.3)],
+			["box", Vector3(0, 6.5, -5.4), Vector3(12, 0.2, 0.8), WOOD]],
+		"col": [["box", Vector3(0, 5, 0), Vector3(12, 10, 10)]], "occ": ["box", Vector3(0, 7, 0), Vector3(12.4, 7, 10.4)], "fade": true}
+	d["scrigno"] = {"parts": [["box", Vector3(0, 0.45, 0), Vector3(1.8, 0.9, 1.1), Color(0.2, 0.28, 0.45)],
+			["box", Vector3(0, 1.0, 0), Vector3(1.85, 0.25, 1.15), GOLD, 0.4, Vector3.ZERO, "Lid"],
+			["box", Vector3(0, 0.6, -0.57), Vector3(0.35, 0.35, 0.05), PLASMA, 3.0],
+			["box", Vector3(0, 0.05, 0), Vector3(2.4, 0.1, 1.6), MARBLE]],
+		"col": [["box", Vector3(0, 0.6, 0), Vector3(1.8, 1.2, 1.1)]], "script": "res://world/stash.gd"}
+	# --- Porto (atto 2) ---
+	d["magazzino"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(16, 7, 10), Color(0.6, 0.5, 0.4)],
+			["prism", Vector3(0, 8.2, 0), Vector3(10.6, 2.4, 16.4), ROOF.darkened(0.15), 0.0, Vector3(0, 90, 0)],
+			["box", Vector3(0, 2.4, -5.05), Vector3(5, 4.8, 0.1), WOOD.darkened(0.25)],
+			["box", Vector3(-6, 5, -5.05), Vector3(1.5, 1, 0.1), Color(0.15, 0.2, 0.3)], ["box", Vector3(6, 5, -5.05), Vector3(1.5, 1, 0.1), Color(0.15, 0.2, 0.3)]],
+		"col": [["box", Vector3(0, 3.5, 0), Vector3(16, 7, 10)]], "occ": ["box", Vector3(0, 7.5, 0), Vector3(16.4, 3, 10.6)], "fade": true}
+	d["gru"] = {"parts": [["box", Vector3(0, 0.4, 0), Vector3(3, 0.8, 3), METAL.darkened(0.2)],
+			["box", Vector3(0, 7.5, 0), Vector3(1.2, 14, 1.2), Color(0.85, 0.65, 0.15)],
+			["box", Vector3(3.5, 14.5, 0), Vector3(14, 0.9, 0.9), Color(0.85, 0.65, 0.15)],
+			["box", Vector3(-3.5, 13.8, 0), Vector3(2, 1.6, 1.6), METAL.darkened(0.3)],
+			["cyl", Vector3(9.5, 11, 0), Vector3(0.04, 7, 0.04), METAL], ["box", Vector3(9.5, 7.3, 0), Vector3(0.6, 0.5, 0.3), METAL.darkened(0.3)],
+			["sphere", Vector3(10.4, 14.5, 0), Vector3(0.25, 0.5, 0), Color(1, 0.2, 0.1), 5.0]],
+		"col": [["box", Vector3(0, 3, 0), Vector3(3, 6, 3)]], "occ": ["box", Vector3(3.5, 12, 0), Vector3(15, 6, 1.5)], "fade": true}
+	d["nave"] = {"parts": [["box", Vector3(0, 1.0, 0), Vector3(7, 3, 22), WOOD.darkened(0.35)],
+			["prism", Vector3(0, 1.0, -12.5), Vector3(7, 3, 3), WOOD.darkened(0.35), 0.0, Vector3(90, 0, 0)],
+			["box", Vector3(0, 2.55, 0), Vector3(6.6, 0.15, 21), WOOD.lightened(0.1)],
+			["cyl", Vector3(0, 9, -2), Vector3(0.25, 13, 0.3), WOOD.darkened(0.2)],
+			["box", Vector3(0, 10, -2.4), Vector3(9, 7, 0.1), Color(0.75, 0.2, 0.15)],
+			["box", Vector3(0, 3.6, 8), Vector3(5, 2, 4), WOOD.darkened(0.2)],
+			["box", Vector3(3.55, 1.6, 0), Vector3(0.05, 0.3, 18), PLASMA, 3.0]],
+		"col": [["box", Vector3(0, 1.5, 0), Vector3(7, 3, 24)]], "occ": ["box", Vector3(0, 9, -2), Vector3(9, 8, 2)], "fade": true}
+	d["pila_casse"] = {"parts": [["box", Vector3(-0.6, 0.6, 0), Vector3(1.2, 1.2, 1.2), WOOD], ["box", Vector3(0.65, 0.6, 0.1), Vector3(1.2, 1.2, 1.2), WOOD.darkened(0.1)],
+			["box", Vector3(0, 1.8, 0), Vector3(1.2, 1.2, 1.2), WOOD.lightened(0.08), 0.0, Vector3(0, 15, 0)], ["box", Vector3(0, 0.6, -1.2), Vector3(1.0, 1.2, 1.0), Color(0.3, 0.45, 0.55)]],
+		"col": [["box", Vector3(0, 1.2, -0.3), Vector3(2.6, 2.4, 2.4)]], "fade": true, "vis": 110.0}
+	d["piattaforma"] = {"parts": [["cyl", Vector3(0, 0.05, 0), Vector3(7, 0.1, 7), METAL.darkened(0.1)],
+			["torus", Vector3(0, 0.12, 0), Vector3(6.2, 6.6, 0), PLASMA, 3.0], ["box", Vector3(0, 0.11, 0), Vector3(6, 0.02, 0.6), GOLD, 1.0],
+			["box", Vector3(0, 0.11, 0), Vector3(0.6, 0.02, 6), GOLD, 1.0]]}
+	d["faro"] = {"parts": [["cyl", Vector3(0, 1.5, 0), Vector3(4, 3, 4.4), STONE],
+			["cyl", Vector3(0, 12, 0), Vector3(2.0, 18, 2.8), MARBLE], ["cyl", Vector3(0, 21.5, 0), Vector3(2.4, 1, 2.4), STONE],
+			["sphere", Vector3(0, 23, 0), Vector3(1.4, 2.6, 0), Color(1.0, 0.85, 0.4), 6.0], ["cyl", Vector3(0, 24.6, 0), Vector3(0, 1.6, 2.2), ROOF]],
+		"col": [["cyl", Vector3(0, 5, 0), Vector3(4.4, 10, 0)]], "occ": ["box", Vector3(0, 14, 0), Vector3(5, 18, 5)], "fade": true,
+		"light": [Vector3(0, 23, 0), Color(1.0, 0.85, 0.4), 4.0, 40.0]}
+	d["bitta"] = {"parts": [["cyl", Vector3(0, 0.4, 0), Vector3(0.3, 0.8, 0.35), METAL.darkened(0.3)], ["cyl", Vector3(0, 0.85, 0), Vector3(0.42, 0.12, 0.42), METAL.darkened(0.3)]],
+		"col": [["cyl", Vector3(0, 0.45, 0), Vector3(0.4, 0.9, 0)]], "vis": 90.0}
+	d["isolato"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(8.2, 7, 8.2), PLASTER.darkened(0.2)],
+			["box", Vector3(1.5, 7.6, -1), Vector3(5, 1.4, 5), ROOF.darkened(0.1)], ["box", Vector3(-2, 8.2, 2), Vector3(3.5, 2.4, 3.5), PLASTER.darkened(0.25)]],
+		"col": [["box", Vector3(0, 3, 0), Vector3(8, 6, 8)]], "fade": true}
+	d["cancello"] = {"parts": [["box", Vector3(0, 3.5, 0), Vector3(10, 7, 0.4), METAL.darkened(0.2)],
+			["box", Vector3(0, 2.0, -0.22), Vector3(9.6, 0.15, 0.05), PLASMA, 3.0], ["box", Vector3(0, 4.5, -0.22), Vector3(9.6, 0.15, 0.05), PLASMA, 3.0],
+			["box", Vector3(0, 3.5, -0.24), Vector3(1.6, 1.6, 0.05), GOLD, 1.0]],
+		"col": [["box", Vector3(0, 3.5, 0), Vector3(10, 7, 0.6)]]}
 	return d
 
 
-func _build_props() -> void:
+func _build_props(only_missing: bool = false) -> void:
 	DirAccess.make_dir_recursive_absolute("res://scenes/props")
 	var defs := _prop_defs()
 	for pname: String in defs:
 		var def: Dictionary = defs[pname]
+		var out_path := "res://scenes/props/%s.tscn" % pname
+		if only_missing and ResourceLoader.exists(out_path):
+			prop_scenes[pname] = load(out_path)
+			continue
 		var root: Node3D
 		if def.has("col") or def.has("script"):
 			var sb := StaticBody3D.new()
@@ -525,46 +633,52 @@ func _build_props() -> void:
 #  MODELLI SEGNAPOSTO (rivolti verso -Z)
 # ==========================================================================================
 
-func _build_models() -> void:
-	DirAccess.make_dir_recursive_absolute("res://scenes/characters")
-	DirAccess.make_dir_recursive_absolute("res://scenes/enemies")
+func _build_models(only_missing: bool = false, only_prefix: String = "") -> void:
+	for dir in ["characters", "enemies", "npcs"]:
+		DirAccess.make_dir_recursive_absolute("res://scenes/" + dir)
+	var models := _model_defs()
+	for key: String in models:
+		var out_path := "res://scenes/%s.tscn" % key
+		if only_missing and ResourceLoader.exists(out_path):
+			continue
+		if only_prefix != "" and not key.begins_with(only_prefix):
+			continue
+		var root := Node3D.new()
+		root.name = "Model"
+		var gfx := Node3D.new()
+		gfx.name = "Graybox"
+		root.add_child(gfx)
+		gfx.owner = root
+		var prese: Node3D = null
+		for p: Array in models[key]:
+			if p[0] == "presa":
+				# Presa dell'equipaggiamento (core/appearance.gd); con lo scheletro diventa un BoneAttachment3D
+				if prese == null:
+					prese = Node3D.new()
+					prese.name = "Prese"
+					root.add_child(prese)
+					prese.owner = root
+				var m := Marker3D.new()
+				m.name = String(p[1])
+				m.position = p[2]
+				prese.add_child(m)
+				m.owner = root
+				continue
+			var mi := _part(gfx, root, p, 0.0)
+			if p.size() > 6:
+				mi.set_meta("body_part", true)
+			if (p[3] as Color).a < 1.0:
+				mi.material_override = Fx.new_mat(p[3], float(p[4]) if p.size() > 4 else 0.0, true)
+		_save_scene(root, out_path)
+		root.free()
+	print("Modelli: %d" % models.size())
+
+
+func _model_defs() -> Dictionary:
 	var skin := Color(0.85, 0.65, 0.5)
 	var bronze := Color(0.7, 0.5, 0.25)
-	var models := {
-		"characters/legionario": [
-			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), RED],
-			["box", Vector3(0, 1.05, 0), Vector3(0.9, 0.5, 0.6), METAL.lightened(0.2)],
-			["sphere", Vector3(0, 1.75, 0), Vector3(0.3, 0.55, 0), GOLD],
-			["box", Vector3(0, 2.0, 0.05), Vector3(0.08, 0.22, 0.55), Color(0.9, 0.1, 0.1), 1.0],
-			["box", Vector3(-0.52, 0.95, -0.15), Vector3(0.1, 1.0, 0.7), GOLD],
-			["box", Vector3(0.45, 0.9, -0.55), Vector3(0.08, 0.08, 0.9), PLASMA, 4.0],
-		],
-		"characters/gladiatore": [
-			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), skin],
-			["box", Vector3(0, 0.7, 0), Vector3(0.88, 0.35, 0.6), Color(0.45, 0.2, 0.12)],
-			["sphere", Vector3(0, 1.75, 0), Vector3(0.32, 0.6, 0), bronze],
-			["box", Vector3(0, 1.75, -0.28), Vector3(0.35, 0.3, 0.06), Color(0.2, 0.15, 0.1)],
-			["box", Vector3(0, 2.05, 0), Vector3(0.1, 0.25, 0.6), bronze],
-			["box", Vector3(-0.48, 1.1, 0), Vector3(0.2, 0.6, 0.25), bronze],
-			["box", Vector3(0.48, 0.9, -0.5), Vector3(0.07, 0.07, 1.0), WOOD],
-			["box", Vector3(0.48, 0.9, -0.95), Vector3(0.1, 0.45, 0.25), METAL.lightened(0.3), 0.5],
-		],
-		"characters/sagittario": [
-			["capsule", Vector3(0, 0.85, 0), Vector3(0.38, 1.5, 0), Color(0.25, 0.45, 0.25)],
-			["sphere", Vector3(0, 1.72, 0), Vector3(0.26, 0.5, 0), skin],
-			["cyl", Vector3(0, 1.85, 0.03), Vector3(0, 0.6, 0.34), Color(0.18, 0.32, 0.18)],
-			["box", Vector3(-0.45, 1.0, -0.3), Vector3(0.06, 1.5, 0.08), WOOD],
-			["box", Vector3(-0.43, 1.0, -0.22), Vector3(0.02, 1.4, 0.02), PLASMA, 4.0],
-			["cyl", Vector3(0.2, 1.2, 0.35), Vector3(0.12, 0.8, 0.12), Color(0.35, 0.25, 0.15), 0.0, Vector3(20, 0, -15)],
-		],
-		"characters/augure": [
-			["cyl", Vector3(0, 0.75, 0), Vector3(0.3, 1.5, 0.55), Color(0.9, 0.9, 0.95)],
-			["box", Vector3(0, 0.9, 0), Vector3(0.62, 0.12, 0.62), Color(0.45, 0.2, 0.6)],
-			["sphere", Vector3(0, 1.72, 0), Vector3(0.26, 0.5, 0), skin],
-			["cyl", Vector3(0, 1.88, 0.03), Vector3(0, 0.55, 0.34), Color(0.45, 0.2, 0.6)],
-			["cyl", Vector3(0.5, 1.1, -0.1), Vector3(0.04, 2.2, 0.04), WOOD],
-			["sphere", Vector3(0.5, 2.3, -0.1), Vector3(0.16, 0.32, 0), Color(0.5, 0.6, 1.0), 5.0],
-		],
+	var d := _character_defs()
+	d.merge({
 		"enemies/predone": [
 			["capsule", Vector3(0, 0.8, 0), Vector3(0.42, 1.6, 0), Color(0.45, 0.33, 0.22)],
 			["cyl", Vector3(0, 1.75, 0), Vector3(0, 0.55, 0.33), Color(0.3, 0.22, 0.15)],
@@ -628,21 +742,142 @@ func _build_models() -> void:
 			["box", Vector3(1.2, 1.8, -0.8), Vector3(0.12, 0.12, 2.2), WOOD],
 			["box", Vector3(1.2, 1.8, -1.8), Vector3(0.2, 1.1, 0.7), FIRE, 2.5],
 		],
+		# --- Nemici del porto (atto 2) ---
+		"enemies/pirata": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.7, 0), Color(0.18, 0.3, 0.35)],
+			["box", Vector3(0, 0.75, 0), Vector3(0.88, 0.2, 0.62), Color(0.55, 0.12, 0.1)],
+			["sphere", Vector3(0, 1.8, 0), Vector3(0.28, 0.52, 0), skin],
+			["sphere", Vector3(0, 1.9, 0.02), Vector3(0.3, 0.4, 0), Color(0.75, 0.12, 0.1)],
+			["box", Vector3(0.5, 0.95, -0.5), Vector3(0.06, 0.12, 0.9), PLASMA, 3.0, Vector3(0, 0, 0)],
+		],
+		"enemies/arpionatore": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.7, 0), Color(0.3, 0.25, 0.2)],
+			["sphere", Vector3(0, 1.8, 0), Vector3(0.28, 0.52, 0), skin],
+			["box", Vector3(0, 2.0, 0), Vector3(0.6, 0.08, 0.6), Color(0.2, 0.2, 0.22)],
+			["box", Vector3(0.35, 1.2, -0.5), Vector3(0.14, 0.14, 1.4), METAL],
+			["box", Vector3(0.35, 1.2, -1.25), Vector3(0.08, 0.3, 0.2), Color(0.3, 0.9, 0.8), 3.0],
+		],
+		"enemies/granchio": [
+			["sphere", Vector3(0, 0.45, 0), Vector3(0.55, 0.5, 0), Color(0.75, 0.35, 0.15)],
+			["box", Vector3(-0.45, 0.45, -0.55), Vector3(0.25, 0.2, 0.4), METAL], ["box", Vector3(0.45, 0.45, -0.55), Vector3(0.25, 0.2, 0.4), METAL],
+			["box", Vector3(0, 0.62, -0.42), Vector3(0.3, 0.06, 0.06), Color(0.3, 1, 0.9), 4.0],
+			["box", Vector3(-0.6, 0.2, 0.1), Vector3(0.5, 0.06, 0.06), METAL, 0.0, Vector3(0, 0, -30)],
+			["box", Vector3(0.6, 0.2, 0.1), Vector3(0.5, 0.06, 0.06), METAL, 0.0, Vector3(0, 0, 30)],
+		],
+		"enemies/automa": [
+			["box", Vector3(0, 1.0, 0), Vector3(1.2, 1.2, 0.9), METAL.darkened(0.1)],
+			["box", Vector3(0, 2.0, 0), Vector3(1.8, 1.1, 1.2), Color(0.85, 0.65, 0.15)],
+			["box", Vector3(0, 2.8, -0.1), Vector3(0.7, 0.5, 0.6), METAL],
+			["box", Vector3(0, 2.85, -0.42), Vector3(0.45, 0.1, 0.05), Color(1, 0.8, 0.1), 5.0],
+			["box", Vector3(-1.15, 1.6, -0.2), Vector3(0.45, 1.6, 0.45), METAL.darkened(0.2)],
+			["box", Vector3(1.15, 1.6, -0.2), Vector3(0.45, 1.6, 0.45), METAL.darkened(0.2)],
+			["box", Vector3(-0.35, 0.3, 0), Vector3(0.4, 0.6, 0.5), METAL.darkened(0.3)], ["box", Vector3(0.35, 0.3, 0), Vector3(0.4, 0.6, 0.5), METAL.darkened(0.3)],
+		],
+		"enemies/vulso": [
+			["capsule", Vector3(0, 1.5, 0), Vector3(0.95, 3.0, 0), Color(0.55, 0.1, 0.12)],
+			["box", Vector3(0, 1.0, 0), Vector3(2.0, 0.3, 1.4), Color(0.2, 0.15, 0.1)],
+			["sphere", Vector3(0, 3.2, 0), Vector3(0.45, 0.85, 0), skin],
+			["box", Vector3(0.2, 3.3, -0.42), Vector3(0.22, 0.18, 0.05), Color(0.05, 0.05, 0.05)],
+			["prism", Vector3(0, 3.75, 0), Vector3(1.6, 0.6, 1.0), Color(0.12, 0.1, 0.1)],
+			["box", Vector3(1.15, 1.8, -1.0), Vector3(0.1, 0.25, 2.0), PLASMA, 4.0],
+			["sphere", Vector3(-1.0, 2.4, 0), Vector3(0.35, 0.6, 0), GOLD, 0.5],
+		],
+		# --- Personaggi non giocanti ---
+		"npcs/mercante": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.45, 1.6, 0), Color(0.75, 0.55, 0.2)],
+			["box", Vector3(0, 0.95, 0), Vector3(0.95, 0.12, 0.7), Color(0.45, 0.2, 0.55)],
+			["sphere", Vector3(0, 1.78, 0), Vector3(0.27, 0.52, 0), skin],
+			["cyl", Vector3(0, 2.05, 0), Vector3(0.22, 0.25, 0.26), Color(0.45, 0.2, 0.55)],
+			["box", Vector3(0.45, 0.8, 0.1), Vector3(0.3, 0.35, 0.2), Color(0.5, 0.35, 0.2)],
+		],
+		"npcs/fabbro": [
+			["capsule", Vector3(0, 0.9, 0), Vector3(0.5, 1.75, 0), Color(0.5, 0.36, 0.25)],
+			["box", Vector3(0, 0.8, -0.38), Vector3(0.75, 1.1, 0.08), Color(0.25, 0.18, 0.12)],
+			["sphere", Vector3(0, 1.85, 0), Vector3(0.3, 0.55, 0), skin],
+			["box", Vector3(0.55, 1.0, -0.2), Vector3(0.07, 0.7, 0.07), WOOD],
+			["box", Vector3(0.55, 1.4, -0.2), Vector3(0.3, 0.18, 0.18), METAL],
+		],
+		"npcs/prefetto": [
+			["cyl", Vector3(0, 0.8, 0), Vector3(0.32, 1.6, 0.55), Color(0.93, 0.92, 0.88)],
+			["box", Vector3(0.15, 1.05, -0.2), Vector3(0.12, 1.2, 0.3), Color(0.5, 0.1, 0.4), 0.0, Vector3(0, 0, 20)],
+			["sphere", Vector3(0, 1.78, 0), Vector3(0.27, 0.52, 0), skin],
+			["torus", Vector3(0, 1.95, 0), Vector3(0.22, 0.3, 0), GOLD, 0.8],
+		],
+		"npcs/vestale": [
+			["cyl", Vector3(0, 0.8, 0), Vector3(0.28, 1.6, 0.5), Color(0.97, 0.96, 0.93)],
+			["sphere", Vector3(0, 1.75, 0), Vector3(0.25, 0.48, 0), skin],
+			["cyl", Vector3(0, 1.85, 0.05), Vector3(0.3, 0.6, 0.38), Color(0.9, 0.9, 0.95)],
+			["cyl", Vector3(0.35, 1.1, -0.3), Vector3(0.18, 0.12, 0.1), GOLD],
+			["sphere", Vector3(0.35, 1.3, -0.3), Vector3(0.14, 0.3, 0), FIRE, 5.0],
+		],
+		"npcs/guardia": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.42, 1.5, 0), Color(0.2, 0.3, 0.5)],
+			["box", Vector3(0, 1.05, 0), Vector3(0.9, 0.5, 0.6), METAL.lightened(0.15)],
+			["sphere", Vector3(0, 1.75, 0), Vector3(0.3, 0.55, 0), METAL.lightened(0.2)],
+			["box", Vector3(0, 2.0, 0.05), Vector3(0.08, 0.22, 0.55), Color(0.2, 0.4, 0.9), 1.0],
+			["cyl", Vector3(0.5, 1.3, -0.1), Vector3(0.04, 2.6, 0.04), WOOD],
+			["cyl", Vector3(0.5, 2.7, -0.1), Vector3(0.0, 0.35, 0.08), PLASMA, 3.0],
+		],
+		"npcs/cittadino": [
+			["capsule", Vector3(0, 0.85, 0), Vector3(0.4, 1.55, 0), Color(0.72, 0.65, 0.5)],
+			["box", Vector3(0, 0.8, 0), Vector3(0.85, 0.1, 0.62), Color(0.4, 0.3, 0.2)],
+			["sphere", Vector3(0, 1.75, 0), Vector3(0.27, 0.52, 0), skin],
+		],
+	})
+	return d
+
+
+## Eroi: corpo base (maschile "<classe>" e femminile "<classe>_f") con le prese dell'equipaggiamento
+## (VisualDB.PRESE). L'equipaggiamento NON fa parte del modello: lo aggiunge core/appearance.gd.
+## Parti con nome (7° elemento) = parti del corpo che un pezzo può nascondere (es. "Capelli" sotto l'elmo).
+## Prese: ["presa", nome, posizione].
+func _character_defs() -> Dictionary:
+	var skin := Color(0.85, 0.65, 0.5)
+	var tunics := {
+		"legionario": [RED, RED.darkened(0.2), Color(0.25, 0.16, 0.1)],
+		"gladiatore": [skin, Color(0.45, 0.2, 0.12), Color(0.2, 0.12, 0.08)],
+		"sagittario": [Color(0.25, 0.45, 0.25), Color(0.3, 0.25, 0.15), Color(0.5, 0.35, 0.18)],
+		"augure": [Color(0.9, 0.9, 0.95), Color(0.85, 0.85, 0.9), Color(0.15, 0.12, 0.1)],
 	}
-	for key: String in models:
-		var root := Node3D.new()
-		root.name = "Model"
-		var gfx := Node3D.new()
-		gfx.name = "Graybox"
-		root.add_child(gfx)
-		gfx.owner = root
-		for p: Array in models[key]:
-			var mi := _part(gfx, root, p, 0.0)
-			if (p[3] as Color).a < 1.0:
-				mi.material_override = Fx.new_mat(p[3], float(p[4]) if p.size() > 4 else 0.0, true)
-		_save_scene(root, "res://scenes/%s.tscn" % key)
-		root.free()
-	print("Modelli: %d" % models.size())
+	var out := {}
+	for cls: String in tunics:
+		var c: Array = tunics[cls]
+		for fem: bool in [false, true]:
+			var k := 0.94 if fem else 1.0
+			var sh := 0.86 if fem else 1.0     # spalle più strette
+			var hip := 1.08 if fem else 1.0    # fianchi
+			var parts: Array = [
+				["capsule", Vector3(0.13 * hip, 0.46, 0), Vector3(0.11, 0.92, 0), skin],
+				["capsule", Vector3(-0.13 * hip, 0.46, 0), Vector3(0.11, 0.92, 0), skin],
+				["cyl", Vector3(0, 0.98, 0), Vector3(0.28 * sh, 0.5, 0.34 * hip), c[1], 0.0, Vector3.ZERO, "Tunica"],
+				["box", Vector3(0, 1.32, 0), Vector3(0.6 * sh, 0.5, 0.32), c[0], 0.0, Vector3.ZERO, "Busto"],
+				["capsule", Vector3(0.4 * sh, 1.1, 0), Vector3(0.085, 0.66, 0), skin],
+				["capsule", Vector3(-0.4 * sh, 1.1, 0), Vector3(0.085, 0.66, 0), skin],
+				["cyl", Vector3(0, 1.6, 0), Vector3(0.07, 0.12, 0.08), skin],
+				["sphere", Vector3(0, 1.74, 0), Vector3(0.16, 0.34, 0), skin, 0.0, Vector3.ZERO, "Testa"],
+				["sphere", Vector3(0, 1.8, 0.03), Vector3(0.17, 0.24, 0), c[2], 0.0, Vector3.ZERO, "Capelli"],
+			]
+			if fem:
+				parts.append(["box", Vector3(0, 1.6, 0.13), Vector3(0.26, 0.42, 0.08), c[2], 0.0, Vector3.ZERO, "Chioma"])
+			var prese := {
+				"Presa_Testa": Vector3(0, 1.74, 0), "Presa_Busto": Vector3(0, 1.32, 0), "Presa_Schiena": Vector3(0, 1.32, 0.2),
+				"Presa_Bacino": Vector3(0, 0.98, 0),
+				"Presa_ManoDx": Vector3(0.4 * sh, 0.78, -0.08), "Presa_ManoSx": Vector3(-0.4 * sh, 0.78, -0.08),
+				"Presa_AvambraccioDx": Vector3(0.4 * sh, 0.95, 0), "Presa_AvambraccioSx": Vector3(-0.4 * sh, 0.95, 0),
+				"Presa_StincoDx": Vector3(0.13 * hip, 0.3, 0), "Presa_StincoSx": Vector3(-0.13 * hip, 0.3, 0),
+				"Presa_PiedeDx": Vector3(0.13 * hip, 0.06, -0.03), "Presa_PiedeSx": Vector3(-0.13 * hip, 0.06, -0.03),
+			}
+			for pr: String in prese:
+				parts.append(["presa", pr, prese[pr]])
+			# Altezza femminile un po' minore: scala posizioni e misure
+			if fem:
+				for p: Array in parts:
+					p[2] = (p[2] as Vector3) * k if p[0] == "presa" else p[2]
+					if p[0] != "presa":
+						p[1] = (p[1] as Vector3) * k
+						p[2] = (p[2] as Vector3) * k
+			out["characters/%s%s" % [cls, "_f" if fem else ""]] = parts
+	return out
 
 
 # ==========================================================================================
@@ -739,14 +974,11 @@ func _build_level() -> void:
 	region.owner = level_root
 
 	_find_bridge()
-	_build_ground(region)
-	_build_road(region)
-	_build_river(region)
 	var pois := _group(region, "Luoghi")
 	_build_villa(pois)
 	_build_pois(pois)
-	_build_road_props(region)
-	_build_scatter(region)
+	_build_river_props(pois)
+	_build_shape()
 	_build_encounters()
 
 	var start := Marker3D.new()
@@ -759,6 +991,8 @@ func _build_level() -> void:
 	exit.name = "UscitaOstiaNova"
 	exit.position = Vector3(50, 0, -905)
 	exit.set("title", "Ostia Nova")
+	exit.set("target_level", "ostia_nova")
+	exit.set("target_spawn", "DaLazio")
 	var ecs := CollisionShape3D.new()
 	var ebs := BoxShape3D.new()
 	ebs.size = Vector3(10, 4, 4)
@@ -769,22 +1003,15 @@ func _build_level() -> void:
 	exit.owner = level_root
 	ecs.owner = level_root
 
-	print("Calcolo navmesh (può richiedere un po')...")
-	var t0 := Time.get_ticks_msec()
-	var nm := NavigationMesh.new()
-	nm.cell_size = 0.4
-	nm.cell_height = 0.25
-	nm.agent_radius = 0.4
-	nm.agent_height = 2.0
-	nm.agent_max_climb = 0.25
-	nm.region_min_size = 30.0
-	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	nm.geometry_collision_mask = Layers.WORLD
-	region.navigation_mesh = nm
-	region.bake_navigation_mesh(false)
-	print("Navmesh: %d poligoni in %d ms" % [nm.get_polygon_count(), Time.get_ticks_msec() - t0])
-	var nm_path := "res://scenes/levels/level_01_navmesh.res"
-	ResourceSaver.save(nm, nm_path, ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_CHANGE_PATH)
+	# Punto di arrivo tornando dalla città (porta sud di Ostia Nova)
+	var from_hub := Marker3D.new()
+	from_hub.name = "DaOstia"
+	from_hub.position = Vector3(50, 0, -878)
+	level_root.add_child(from_hub)
+	from_hub.owner = level_root
+
+	# Terreno, confini, strade, acqua, vegetazione, lampioni e navmesh dalla Forma
+	print(load("res://tools/map_builder.gd").new().build(level_root, true))
 
 	get_root().remove_child(level_root)
 	level_root.set_script(load("res://world/level.gd"))
@@ -795,6 +1022,112 @@ func _build_level() -> void:
 	_save_scene(level_root, "res://scenes/levels/level_01.tscn")
 	print("Livello salvato. Lunghezza del percorso: %d m (circa %d s a piedi)" % [roundi(road_total), roundi(road_total / 6.0)])
 	level_root.free()
+
+
+## FORMA del livello 1 (modificabile poi nell'editor): strada principale con le zone lungo il
+## percorso, aree laterali, sentieri, fiume con ponte e guado, radure da tenere libere.
+func _build_shape() -> void:
+	var forma: Node3D = load("res://world/map_shape.gd").new()
+	forma.name = "Forma"
+	forma.set("seed", SEED)
+	forma.set("default_zone", "fattoria")
+	forma.set("background_color", Color(0.1, 0.14, 0.09))
+	forma.set("water_color", Color(0.15, 0.38, 0.58))
+	level_root.add_child(forma)
+	forma.owner = level_root
+	var widths := PackedFloat32Array()
+	for i in ROAD.size():
+		widths.append(float(maxi(ROAD_HW[maxi(i - 1, 0)], ROAD_HW[mini(i, ROAD_HW.size() - 1)])))
+	_shape_road(forma, "ViaPrincipale", ROAD, widths, {"paved_width": 6.0, "curbs": true, "paved_color": Color(0.6, 0.57, 0.52),
+		"zone_breaks": PackedStringArray(["0=fattoria", "0.17=bosco", "0.35=fiume", "0.43=tempio", "0.53=campo", "0.66=necropoli", "0.83=citta"]),
+		"lamp_spacing": 36.0, "milestone_every": 6})
+	var i := 0
+	for sd: Array in SIDE:
+		_shape_area(forma, "Area_%s_%d" % [sd[2], i], sd[0], float(sd[1]), {"zone": sd[2]})
+		i += 1
+	i = 0
+	for c: Array in PATHS:
+		var w := float(c[2])
+		_shape_road(forma, "Sentiero_%d" % i, [c[0], c[1]], PackedFloat32Array([w, w]), {"paved_width": 3.5, "paved_color": Color(0.5, 0.4, 0.28)})
+		i += 1
+	# Fiume: poligono d'acqua che segue _river_z, con ponte e guado che lo attraversano
+	var river := PackedVector2Array()
+	var x := X0 - 16.0
+	while x <= X0 + NX * CELL + 16.0:
+		river.append(Vector2(x, _river_z(x) - 7.0))
+		x += 8.0
+	x -= 8.0
+	while x >= X0 - 16.0:
+		river.append(Vector2(x, _river_z(x) + 7.0))
+		x -= 8.0
+	_shape_polygon(forma, "Fiume", river, {"mode": "acqua"})
+	_shape_road(forma, "Ponte", [_bridge_c - _bridge_d * 13.0, _bridge_c + _bridge_d * 13.0], PackedFloat32Array([3.6, 3.6]),
+		{"paved_width": 0.0, "over_water": true, "zone": "fiume"})
+	_shape_road(forma, "Guado", [FORD + Vector2(0, 9), FORD - Vector2(0, 9)], PackedFloat32Array([3.0, 3.0]),
+		{"paved_width": 0.0, "over_water": true, "zone": "fiume"})
+	# Radure: spazi da tenere liberi dalla vegetazione (cortili, campi, piazzali)
+	i = 0
+	for c: Array in _clear:
+		if float(c[1]) >= 8.0:
+			_shape_area(forma, "Radura_%d" % i, c[0], float(c[1]), {"walkable": false, "scatter": false})
+			i += 1
+
+
+func _shape_road(forma: Node, n: String, pts: Array, widths: PackedFloat32Array, props: Dictionary) -> Node3D:
+	var r: Path3D = load("res://world/map_road.gd").new()
+	r.name = n
+	var cv := Curve3D.new()
+	cv.bake_interval = 2.0
+	for p: Vector2 in pts:
+		cv.add_point(_v3(p))
+	r.curve = cv
+	r.set("widths", widths)
+	r.set("half_width", widths[0] if widths.size() > 0 else 10.0)
+	for k: String in props:
+		r.set(k, props[k])
+	forma.add_child(r)
+	r.owner = level_root
+	return r
+
+
+func _shape_area(forma: Node, n: String, c: Vector2, radius: float, props: Dictionary) -> Node3D:
+	var a: Node3D = load("res://world/map_area.gd").new()
+	a.name = n
+	a.position = _v3(c)
+	a.set("radius", radius)
+	for k: String in props:
+		a.set(k, props[k])
+	forma.add_child(a)
+	a.owner = level_root
+	return a
+
+
+func _shape_polygon(forma: Node, n: String, pts: PackedVector2Array, props: Dictionary) -> Node3D:
+	var p: Path3D = load("res://world/map_polygon.gd").new()
+	p.name = n
+	var cv := Curve3D.new()
+	for v in pts:
+		cv.add_point(_v3(v))
+	p.curve = cv
+	for k: String in props:
+		p.set(k, props[k])
+	forma.add_child(p)
+	p.owner = level_root
+	return p
+
+
+## Ponte, guado e canne del fiume (oggetti "a mano": non vengono toccati da Ricostruisci terreno).
+func _build_river_props(parent: Node) -> void:
+	var g := _group(parent, "Fiume")
+	_place("ponte", g, _bridge_c, rad_to_deg(atan2(_bridge_d.x, _bridge_d.y)))
+	for i in 6:
+		var p := FORD + Vector2(rng.randf_range(-3, 3), -6 + i * 2.4)
+		_disc(g, p, rng.randf_range(0.6, 0.9), 0.05, ROCK.lightened(0.1))
+	for i in 10:
+		var side := 1.0 if i % 2 == 0 else -1.0
+		var p := _bridge_c + Vector2(rng.randf_range(-14, 14), side * rng.randf_range(8, 11))
+		if absf(p.x - _bridge_c.x) > 5.0:
+			_place("canne", g, p, rng.randf() * 360.0)
 
 
 func _build_environment() -> void:
@@ -850,152 +1183,6 @@ func _find_bridge() -> void:
 		s += 0.5
 	_clear.append([_bridge_c, 16.0])
 	_clear.append([FORD, 9.0])
-
-
-func _build_ground(region: Node3D) -> void:
-	var ground := _group(region, "Terreno")
-	var bounds := _group(region, "Confini")
-	# Base scura sotto tutto (solo grafica)
-	var base := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(NX * CELL + 200, NZ * CELL + 200)
-	base.mesh = pm
-	base.material_override = Fx.mat(Color(0.1, 0.14, 0.09))
-	base.position = Vector3(X0 + NX * CELL * 0.5, -0.05, Z0 - NZ * CELL * 0.5)
-	base.name = "Base"
-	ground.add_child(base)
-	base.owner = level_root
-
-	var allowed := []
-	for ix in NX:
-		var col := []
-		for iz in NZ:
-			col.append(_allowed(_cell_center(ix, iz)))
-		allowed.append(col)
-	var kind := {}   # Vector2i -> "a" giocabile / "b" confine
-	for ix in NX:
-		for iz in NZ:
-			if allowed[ix][iz]:
-				kind[Vector2i(ix, iz)] = "a"
-			else:
-				for dx in range(-1, 2):
-					for dz in range(-1, 2):
-						var nx := ix + dx
-						var nz := iz + dz
-						if nx >= 0 and nx < NX and nz >= 0 and nz < NZ and allowed[nx][nz]:
-							kind[Vector2i(ix, iz)] = "b"
-	# Terreno: strisce orizzontali unite per zona (meno nodi)
-	var runs := 0
-	for iz in NZ:
-		var ix := 0
-		while ix < NX:
-			if not kind.has(Vector2i(ix, iz)):
-				ix += 1
-				continue
-			var z := _zone(_cell_center(ix, iz))
-			var start := ix
-			while ix < NX and kind.has(Vector2i(ix, iz)) and _zone(_cell_center(ix, iz)) == z:
-				ix += 1
-			var n := ix - start
-			var c := Vector2(X0 + (start + n * 0.5) * CELL, Z0 - (iz + 0.5) * CELL)
-			var sb := StaticBody3D.new()
-			sb.name = "Suolo_%d" % runs
-			sb.collision_layer = Layers.WORLD
-			sb.collision_mask = 0
-			sb.position = _v3(c, -0.5)
-			var cs := CollisionShape3D.new()
-			var bs := BoxShape3D.new()
-			bs.size = Vector3(n * CELL, 1, CELL)
-			cs.shape = bs
-			sb.add_child(cs)
-			var mi := MeshInstance3D.new()
-			var bm := BoxMesh.new()
-			bm.size = bs.size
-			mi.mesh = bm
-			var zc: Color = ZONE_COLORS[z]
-			mi.material_override = Fx.mat(zc.darkened(0.04 * (iz % 2)))
-			sb.add_child(mi)
-			ground.add_child(sb)
-			sb.owner = level_root
-			cs.owner = level_root
-			mi.owner = level_root
-			runs += 1
-	# Confini: bosco fitto o scogliere
-	var nb := 0
-	for k: Vector2i in kind:
-		if kind[k] != "b":
-			continue
-		var c := _cell_center(k.x, k.y)
-		var z := _zone(c)
-		var pname := "scogliera" if z in ["campo", "necropoli", "citta", "relitto"] else "bosco_fitto"
-		var inst: Node3D = (prop_scenes[pname] as PackedScene).instantiate()
-		inst.position = _v3(c)
-		inst.rotation_degrees.y = 90.0 * rng.randi_range(0, 3)
-		bounds.add_child(inst)
-		inst.owner = level_root
-		nb += 1
-	print("Terreno: %d strisce, %d celle di confine" % [runs, nb])
-
-
-func _cell_center(ix: int, iz: int) -> Vector2:
-	return Vector2(X0 + (ix + 0.5) * CELL, Z0 - (iz + 0.5) * CELL)
-
-
-func _build_road(region: Node3D) -> void:
-	var road := _group(region, "Strada")
-	var stone := Color(0.6, 0.57, 0.52)
-	for i in ROAD.size() - 1:
-		_strip(road, ROAD[i], ROAD[i + 1], 6.0, 0.02, 0.04, stone)
-		_disc(road, ROAD[i], 3.0, 0.02, stone)
-		# Bordi della via (cordoli)
-		var d := ((ROAD[i + 1] as Vector2) - (ROAD[i] as Vector2)).normalized()
-		var n := _perp(d) * 3.2
-		_strip(road, (ROAD[i] as Vector2) + n, (ROAD[i + 1] as Vector2) + n, 0.4, 0.04, 0.08, stone.darkened(0.25))
-		_strip(road, (ROAD[i] as Vector2) - n, (ROAD[i + 1] as Vector2) - n, 0.4, 0.04, 0.08, stone.darkened(0.25))
-	_disc(road, ROAD[-1], 3.0, 0.02, stone)
-	var dirt := Color(0.5, 0.4, 0.28)
-	for c: Array in PATHS:
-		_strip(road, c[0], c[1], 3.5, 0.015, 0.03, dirt)
-		_disc(road, c[0], 1.75, 0.015, dirt)
-		_disc(road, c[1], 1.75, 0.015, dirt)
-
-
-func _build_river(region: Node3D) -> void:
-	var river := _group(region, "Fiume")
-	var water := Color(0.15, 0.38, 0.58)
-	var x := X0
-	while x < X0 + NX * CELL:
-		var a := Vector2(x, _river_z(x))
-		var b := Vector2(x + 4.0, _river_z(x + 4.0))
-		var mid := (a + b) * 0.5
-		_strip(river, a - (b - a).normalized() * 0.2, b + (b - a).normalized() * 0.2, 14.0, 0.03, 0.04, water)
-		if mid.distance_to(_bridge_c) > 4.5 and mid.distance_to(FORD) > 4.0:
-			if _allowed(mid) or _allowed(mid + Vector2(0, 8)) or _allowed(mid - Vector2(0, 8)):
-				var blk := StaticBody3D.new()
-				blk.collision_layer = Layers.WORLD
-				blk.collision_mask = 0
-				blk.position = _v3(mid, 0.75)
-				blk.rotation.y = atan2(-(b.y - a.y), b.x - a.x)
-				var cs := CollisionShape3D.new()
-				var bs := BoxShape3D.new()
-				bs.size = Vector3(4.4, 1.5, 12.0)
-				cs.shape = bs
-				blk.add_child(cs)
-				river.add_child(blk)
-				blk.owner = level_root
-				cs.owner = level_root
-		x += 4.0
-	# Ponte sulla strada
-	_place("ponte", river, _bridge_c, rad_to_deg(atan2(_bridge_d.x, _bridge_d.y)))
-	# Guado a ovest: pietre
-	for i in 6:
-		var p := FORD + Vector2(rng.randf_range(-3, 3), -6 + i * 2.4)
-		_disc(river, p, rng.randf_range(0.6, 0.9), 0.05, ROCK.lightened(0.1))
-	for i in 10:
-		var side := 1.0 if i % 2 == 0 else -1.0
-		var p := _bridge_c + Vector2(rng.randf_range(-14, 14), side * rng.randf_range(8, 11))
-		if absf(p.x - _bridge_c.x) > 5.0:
-			_place("canne", river, p, rng.randf() * 360.0)
 
 
 func _build_villa(parent: Node) -> void:
@@ -1130,6 +1317,9 @@ func _build_pois(parent: Node) -> void:
 		_place("anfora", g, c + Vector2(rng.randf_range(-6, 6), rng.randf_range(-12, -8)))
 	for i in 3:
 		_place("cassa", g, c + Vector2(-9 + i * 1.3, 9), rng.randf() * 30.0)
+	# Entrata delle Caverne del Clan (dungeon generato, data/dungeon_db.gd)
+	var ing_c := _place("ingresso_catacombe", g, c + Vector2(0, -15), 0.0, 1.0, {"dungeon_id": "caverne_clan"})
+	ing_c.name = "IngressoCaverne"
 
 	# --- Necropoli lungo la Via (come la Via Appia) ---
 	g = _group(parent, "Necropoli")
@@ -1169,6 +1359,9 @@ func _build_pois(parent: Node) -> void:
 	_place("forziere", g, c + Vector2(0, 8), 180.0, 1.0, {"flag_id": "chest_mausoleo", "item_level": 5, "rich": true})
 	for i in 4:
 		_place("anfora", g, c + Vector2(rng.randf_range(-6, 6), rng.randf_range(10, 13)))
+	# Entrata delle catacombe (dungeon generato, data/dungeon_db.gd). Fuori dal flusso di rng: non sposta il resto.
+	var ing := _place("ingresso_catacombe", g, c + Vector2(-12, 2), 0.0, 1.0, {"dungeon_id": "catacombe"})
+	ing.name = "IngressoCatacombe"
 
 	# --- Periferia di Ostia Nova: acquedotto, mura, porta ---
 	g = _group(parent, "OstiaNova")
@@ -1193,55 +1386,6 @@ func _build_pois(parent: Node) -> void:
 	_place("altare", g, (rp4[0] as Vector2) + _perp(rp4[1]) * 6.0, 0.0, 1.0, {"checkpoint_id": "acquedotto", "title": "Altare di Giano"})
 	_place("cartello", g, Vector2(66, -884), 0.0, 1.0, {"title": "Porta di Ostia Nova",
 		"text": "La porta della città. Le guardie sono sparite e un rinnegato si è accampato qui davanti.\n\n[TRAMA]"})
-
-
-func _build_road_props(region: Node3D) -> void:
-	var g := _group(region, "ArredoStradale")
-	var s := 30.0
-	var side := 1.0
-	var i := 0
-	while s < road_total - 10.0:
-		var rp: Array = _road_point(s)
-		var p: Vector2 = (rp[0] as Vector2) + _perp(rp[1]) * 4.6 * side
-		if p.distance_to(_bridge_c) > 15.0 and _is_clear(p):
-			_place("lampione_plasma", g, p)
-		if i % 6 == 3:
-			var m: Vector2 = (rp[0] as Vector2) - _perp(rp[1]) * 4.6 * side
-			if _is_clear(m) and m.distance_to(_bridge_c) > 15.0:
-				_place("miliario", g, m)
-		side = -side
-		s += 36.0
-		i += 1
-
-
-func _build_scatter(region: Node3D) -> void:
-	var g := _group(region, "Vegetazione")
-	var count := 0
-	for ix in NX:
-		for iz in NZ:
-			var cc := _cell_center(ix, iz)
-			if not _allowed(cc):
-				continue
-			var z := _zone(cc)
-			for entry: Array in ZONE_SCATTER[z]:
-				if rng.randf() >= float(entry[1]):
-					continue
-				var pname: String = entry[0]
-				var p := cc + Vector2(rng.randf_range(-3.6, 3.6), rng.randf_range(-3.6, 3.6))
-				var big := pname in BIG_PROPS
-				var rad := 2.0 if big else 0.8
-				if float(_road_info(p)[0]) < (5.5 if big else 4.0):
-					continue
-				if _in_river(p, 2.0) and pname != "canne":
-					continue
-				if pname == "canne" and not _in_river(p, 6.0):
-					continue
-				if not _allowed(p) or not _is_clear(p) or not _free_spot(p, rad):
-					continue
-				_occupy(p, rad)
-				_place(pname, g, p, rng.randf() * 360.0, rng.randf_range(0.85, 1.25) if big else rng.randf_range(0.8, 1.2))
-				count += 1
-	print("Vegetazione e oggetti sparsi: %d" % count)
 
 
 func _build_encounters() -> void:

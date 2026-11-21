@@ -1,0 +1,1 @@
+- [Trama ufficiale](trama_ufficiale.md) — docs/TRAMA.md è vincolante; proposte vecchie superate; struttura atti proposta il 20-11
