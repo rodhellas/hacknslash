@@ -102,7 +102,7 @@ la stella compare sui critici (`glow:stella`); il fumo dopo le esplosioni di fuo
 ## 5. Futuro
 
 - Effetti propri per abilità speciali dove serve (campo `"vfx"` nei dati dell'abilità, letto da
-  `core/abilities.gd`): es. Bombardamento orbitale con raggio dalla flotta, Pioggia di frecce con
+  `core/abilities.gd`): es. Fulmine di Giove con colonna di luce dal cielo, Pioggia di frecce con
   frecce che cadono, Sciame di corvi con corvi (questi ultimi sì, modellini Tripo piccoli).
 - Scia sull'arma quando ci saranno i modelli veri (nastro che segue la `Presa_ManoDx`).
 - Particelle GPU al posto delle CPU se gli effetti diventano tanti.

@@ -113,6 +113,26 @@ func _run() -> void:
 			real = false
 	var helm_scale: float = (App.pieces(model, "elmo")[0] as Node3D).scale.x
 	_check(real and helm_scale > 1.2, "gladio, scutum e galea usano i modelli veri (elmo ingrandito sulla testa graybox: ×%.2f)" % helm_scale)
+	# Armature con pelle sui corpi veri (maschio e femmina): sotto lo scheletro del corpo, piedi nascosti dai calzari
+	for body: String in ["res://scenes/characters/legionario_vero.tscn", "res://scenes/characters/corpo_f_vero.tscn"]:
+		var vm: Node3D = (load(body) as PackedScene).instantiate()
+		root.add_child(vm)
+		var ve := {}
+		for b: String in ["lorica", "ocreae", "caligae", "humeralia"]:
+			var vi: Variant = IDB.make_basic(b, 1)
+			ve[vi.slot] = vi
+		App.apply(vm, ve)
+		var sk: Skeleton3D = vm.find_children("*", "Skeleton3D", true, false)[0]
+		var skinned := 0
+		for c: Node in sk.get_children():
+			if c.has_meta(App.META) and c is MeshInstance3D and (c as MeshInstance3D).skin != null:
+				skinned += 1
+		var feet: Node3D = vm.find_child("Piedi", true, false)
+		var hidden_ok := feet != null and not feet.visible
+		App.apply(vm, {})
+		_check(skinned == 4 and hidden_ok and App.pieces(vm).is_empty() and feet.visible,
+			"%s: 4 pezzi di armatura con pelle sullo scheletro, piedi nascosti dai calzari, tolti e rimessi" % body.get_file())
+		vm.queue_free()
 	eq.erase("elmo")
 	eq.erase("arma")
 	App.apply(model, eq)

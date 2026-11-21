@@ -1,1 +1,1 @@
-- [Trama ufficiale](trama_ufficiale.md) — docs/TRAMA.md è vincolante; proposte vecchie superate; struttura atti proposta il 20-11
+- [Trama ufficiale e decisioni](trama_ufficiale.md) — TRAMA.md vincolante; STRUTTURA_ATTI_2 APPROVATA 21-11 (18 atti); Senatore solo scene; "Fulmine di Giove"

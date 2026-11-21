@@ -1,5 +1,8 @@
 # Struttura degli atti (narrative designer)
 
+> **SUPERATA**: questa prima proposta (12 atti) è sostituita da `docs/STRUTTURA_ATTI_2.md`, approvata il 21-11-2026.
+> È tenuta solo per confronto.
+
 Proposta del 20-11-2026, costruita sopra `docs/TRAMA.md` (trama ufficiale) senza cambiarne nulla: mondo,
 tre personaggi principali, due medaglioni identici, dubbio spontaneo "sono figlio dell'imperatore?" come falsa pista,
 motivo del regalo, famiglia adottiva uccisa dall'imperatore su spinta del senatore (solo nella cutscene iniziale),

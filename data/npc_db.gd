@@ -14,7 +14,7 @@ const DATA := {
 	"mercante": {
 		"name": "Tito Mercatore", "role": "vendor", "title": "Mercante",
 		"model": "res://scenes/npcs/mercante.tscn",
-		"lines": ["Merce fresca dai cantieri orbitali!", "Si paga in sesterzi, non in promesse.",
+		"lines": ["Merce fresca dai cantieri di Ostia!", "Si paga in sesterzi, non in promesse.",
 			"Questa? Appartenne a un tribuno. Più o meno.", "Comprare, vendere... è tutto commercio, amico."],
 		"text": "",
 	},

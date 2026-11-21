@@ -12,7 +12,7 @@
   Scelte per le abilità (20-11-2026): dardi e frecce del Sagittario = **dardi di energia**; oggetti lanciati =
   **energia pura** (granata = sfera instabile lanciata ad arco, trappola = disco a terra che pulsa, bolas = due sfere
   legate da un raggio, rete = filamenti di energia), tranne la **Scure rotante** che è l'arma vera (metallo + energia);
-  Sciame di corvi = **corvi di energia** evocati; Bombardamento orbitale = **raggio dall'orbita** (puntamento sottile,
+  Sciame di corvi = **corvi di energia** evocati; Fulmine di Giove (ex Bombardamento orbitale; niente spazio nella storia) = **colonna di luce divina dal cielo** (puntamento sottile,
   poi colpo largo che lascia il terreno rovente). Le onde d'urto fisiche (terremoti, atterraggio del balzo) lasciano
   crepe che si illuminano. Fulmini, sfere di fuoco, meteora, anelli, scudi e falci erano già energia.
 - L'idea iniziale (Bud Spencer e Terence Hill nel mondo di Star Wars) è stata **scartata**: tutto deve restare originale.
@@ -27,7 +27,7 @@ Tutti i punti in cui inserire la storia sono segnati con `[TRAMA]`:
 ## Classi (data/hero_classes.gd)
 | Classe | Statistica | Risorsa | Stile |
 |---|---|---|---|
-| Legionario | Forza | Disciplina (si rigenera) | tank in mischia, scudo, pilum, bombardamento orbitale |
+| Legionario | Forza | Disciplina (si rigenera) | tank in mischia, scudo, pilum, Fulmine di Giove |
 | Gladiatore | Forza | Furia (si accumula colpendo) | mischia veloce, balzo, turbine, rete |
 | Sagittario | Destrezza | Concentrazione | a distanza, arco al plasma, trappole, pioggia di frecce |
 | Augure | Intelligenza | Favore divino | incantatore: fulmine a catena, meteora, teletrasporto |

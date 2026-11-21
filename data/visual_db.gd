@@ -7,6 +7,8 @@ extends RefCounted
 ##            e calzari) e "parts" resta solo come riserva graybox se il file manca;
 ##            l'origine del modello è il punto della presa, il davanti verso -Z;
 ##   "energy": (armi con "scene") mesh del guscio di energia che avvolge la lama (Vfx "energy");
+##   "skinned": {"m": glb, "f": glb} armatura vera con pelle, una per corpo (stesso scheletro del corpo, si piega
+##            con lui); vale solo sui corpi veri (metadato "corpo" della scena), sui graybox restano "parts";
 ##   "socket": presa per "scene";  "mirror": seconda presa per "scene" (copia specchiata in x);
 ##   "parts": pezzi graybox [presa, forma, posizione, dimensioni, materiale, rotazione in gradi (facoltativa)];
 ##            forma = "box" | "cyl" | "sphere" | "capsule"; dimensioni come in build_world.gd
@@ -103,7 +105,7 @@ const VISUALS := {
 	"cappuccio": {"hide": ["Capelli"], "parts": [
 		["Presa_Testa", "cyl", Vector3(0, 0.12, 0.03), Vector3(0.0, 0.55, 0.3), "porpora"]]},
 	# --- Busto ---
-	"lorica": {"parts": [
+	"lorica": {"skinned": {"m": "res://modelli/equipaggiamento/lorica_m.glb", "f": "res://modelli/equipaggiamento/lorica_f.glb"}, "parts": [
 		["Presa_Busto", "box", Vector3(0, 0.12, 0), Vector3(0.66, 0.16, 0.42), "ferro"],
 		["Presa_Busto", "box", Vector3(0, -0.04, 0), Vector3(0.62, 0.14, 0.4), "ferro"],
 		["Presa_Busto", "box", Vector3(0, -0.2, 0), Vector3(0.58, 0.14, 0.38), "ferro"],
@@ -123,7 +125,7 @@ const VISUALS := {
 		["Presa_ManoDx", "box", Vector3(0, 0.05, 0), Vector3(0.13, 0.16, 0.13), "cuoio"],
 		["Presa_ManoSx", "box", Vector3(0, 0.05, 0), Vector3(0.13, 0.16, 0.13), "cuoio"]]},
 	# --- Gambe ---
-	"ocreae": {"parts": [
+	"ocreae": {"skinned": {"m": "res://modelli/equipaggiamento/ocreae_m.glb", "f": "res://modelli/equipaggiamento/ocreae_f.glb"}, "parts": [
 		["Presa_StincoDx", "box", Vector3(0, 0, -0.03), Vector3(0.16, 0.38, 0.12), "bronzo"],
 		["Presa_StincoSx", "box", Vector3(0, 0, -0.03), Vector3(0.16, 0.38, 0.12), "bronzo"]]},
 	"bracae": {"parts": [
@@ -131,7 +133,7 @@ const VISUALS := {
 		["Presa_StincoDx", "box", Vector3(0, 0.05, 0), Vector3(0.17, 0.42, 0.17), "verde"],
 		["Presa_StincoSx", "box", Vector3(0, 0.05, 0), Vector3(0.17, 0.42, 0.17), "verde"]]},
 	# --- Spallacci, cinture, bracciali ---
-	"humeralia": {"parts": [
+	"humeralia": {"skinned": {"m": "res://modelli/equipaggiamento/humeralia_m.glb", "f": "res://modelli/equipaggiamento/humeralia_f.glb"}, "parts": [
 		["Presa_Busto", "box", Vector3(-0.4, 0.26, 0), Vector3(0.24, 0.08, 0.34), "ferro", Vector3(0, 0, 15)],
 		["Presa_Busto", "box", Vector3(0.4, 0.26, 0), Vector3(0.24, 0.08, 0.34), "ferro", Vector3(0, 0, -15)]]},
 	"spallacci_bronzo": {"parts": [
@@ -149,7 +151,7 @@ const VISUALS := {
 		["Presa_AvambraccioDx", "cyl", Vector3(0, -0.05, 0), Vector3(0.1, 0.18, 0.1), "cuoio"],
 		["Presa_AvambraccioSx", "cyl", Vector3(0, -0.05, 0), Vector3(0.1, 0.18, 0.1), "cuoio"]]},
 	# --- Calzari ---
-	"caligae": {"parts": [
+	"caligae": {"skinned": {"m": "res://modelli/equipaggiamento/caligae_m.glb", "f": "res://modelli/equipaggiamento/caligae_f.glb"}, "hide": ["Piedi"], "parts": [
 		["Presa_PiedeDx", "box", Vector3(0, 0, -0.04), Vector3(0.15, 0.12, 0.3), "cuoio"],
 		["Presa_PiedeSx", "box", Vector3(0, 0, -0.04), Vector3(0.15, 0.12, 0.3), "cuoio"]]},
 	"calcei": {"parts": [

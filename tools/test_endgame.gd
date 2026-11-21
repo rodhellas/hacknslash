@@ -175,7 +175,7 @@ func _run() -> void:
 	await _frames(65)
 	var after_first: float = e.life
 	await _frames(70)
-	_check(after_first < lb and e.life < after_first, "Salva doppia: il bombardamento colpisce due volte")
+	_check(after_first < lb and e.life < after_first, "Doppia folgore: il Fulmine di Giove colpisce due volte")
 	# Leggendario che cambia l'abilità
 	var mario: Variant = IDB.make_basic("spatha", 40)
 	mario.power = "mario"

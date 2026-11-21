@@ -38,6 +38,24 @@ Priorità: **P1** subito (prova del flusso), **P2** gioco attuale, **P3** rifini
   (`HeroClasses` "model"; il graybox `legionario.tscn` resta per i test e il generatore). Il viso è debole (Tripo
   l'ha visto a ~60 px nel foglio): si rifà con una testa a parte (Kit 2) da un'immagine di solo busto.
 
+## Armature con pelle (lorica, schinieri, calzari, spallacci; fatte il 21-11)
+
+Pezzi che si piegano col corpo: uno per corpo, `modelli/equipaggiamento/<id>_m.glb` / `<id>_f.glb`, chiave
+`"skinned"` in `VisualDB` (sui graybox restano le `parts`). File Blender: `arte/modelli/armatura/armatura_m.blend`
+e `armatura_f.blend` (copie dei rig con i pezzi `pz_*`). Script: skill `blender-game-assets`, cartella `scripts/legio/` (vedi LEGGIMI.md). Passi:
+1. Pezzo di Tripo ripulito e ridotto (lorica ~3k, gli altri ~1,5k per lato), posa di riposo dello scheletro.
+2. **Lorica**: in altezza linea delle spalle del pezzo = spalle del corpo (+3,5 cm) e bordo a 9 cm sotto l'osso
+   Hips; in larghezza/profondità misure del busto al petto, poi allargata finché il busto (spinto fuori di 6 mm)
+   resta dentro il volume (test "punto dentro" con raggi). Femmina: in più svasata in basso sui fianchi.
+3. **Schinieri/calzari**: lato destro adattato alla gamba (schiniere: dal ginocchio +7 cm alla caviglia; calzare:
+   gambale centrato sulla caviglia, lungo il 110% del piede), **spallaccio**: arco misurato dall'interno con
+   raggi e messo 1,5 cm sopra braccio e spallaccio della lorica. Poi specchiati a sinistra e uniti.
+4. Pesi copiati dalla pelle (Data Transfer, poligono più vicino), max 4 ossa; nei pezzi doppi ogni parte
+   connessa tiene solo le ossa del suo lato (altrimenti gli schinieri si "incollano" tra le gambe), vertici
+   rimasti senza pesi = osso del loro lato.
+5. Export GLB con lo scheletro (pelle, niente animazioni). In Godot `Appearance._add_skinned` sposta la mesh
+   sotto lo Skeleton3D del corpo (scelto dal metadato `corpo` della scena, messo da `build_corpo_vero.gd`).
+
 ## Corpo con Mixamo (fatto per il Legionario M, da ripetere per gli altri corpi)
 
 1. Blender: corpo sistemato come sopra, davanti verso **−Y**, piedi a z = 0 → `<nome>_mixamo.fbx`.
@@ -191,23 +209,17 @@ Armi in piedi con la punta in alto; scudi con l'impugnatura dietro descritta nel
 
 ---
 
-## Kit 1 – Corpi umanoidi (8) → servono anche a nemici e NPC
+## Kit 1 – Corpi umanoidi (2) → eroi di tutte le classi, nemici e NPC
 
-Gli 8 corpi degli eroi (2 per classe, come deciso) sono **anche** i corpi di tutti gli umani del gioco.
-Consiglio: generare prima il corpo maschile e quello femminile del Legionario, riggarli su Mixamo, poi
-fare gli altri 6 **partendo da quelli** (stesso scheletro e stesse proporzioni di base, cambia la corporatura):
-le animazioni e i pezzi di equipaggiamento vanno su tutti senza ritocchi.
+**Decisione del 21-11-2026: due corpi in tutto**, uno maschile e uno femminile, per tutte e 4 le classi
+(prima erano 8, due per classe). Le classi si distinguono per equipaggiamento, tinte, teste/capelli (Kit 2) e
+animazioni (stesso scheletro Mixamo: si scaricano le animazioni per arco, bastone, due mani...). Gli stessi due
+corpi vestono anche tutti i nemici umani e gli NPC; per bruti e boss più grossi basta la scala (`model_scale`).
 
 | ✓ | Pr. | Corpo | Corporatura | Riusato anche per |
 |---|---|---|---|---|
-| [x] | P1 | Legionario M (viso da rifare: testa del Kit 2) | robusto | guardia, legionario rinnegato, prefetto, Brenno (×1,3) |
-| [ ] | P2 | Legionario F | atletica | guardia donna, cittadina |
-| [ ] | P2 | Gladiatore M | muscoloso, più grosso | barbaro, bruto (×1,4), Tharvo (×1,6), fabbro |
-| [ ] | P2 | Gladiatore F | muscolosa | barbara, pirata donna |
-| [ ] | P2 | Sagittario M | snello | predone, frombolier, pirata, arpionatore, cittadino |
-| [ ] | P2 | Sagittario F | snella | predona, cittadina |
-| [ ] | P2 | Augure M | normale, più anziano | mercante, Vulso (con cappotto), cittadino anziano |
-| [ ] | P2 | Augure F | normale | vestale, sacerdotessa |
+| [x] | P1 | Corpo M (oggi "Legionario M"; viso da rifare: testa del Kit 2) | robusto | tutti gli eroi maschi, guardie, rinnegati, barbari, pirati, bruto (×1,4), Brenno (×1,3), Tharvo (×1,6), mercante, fabbro, cittadini |
+| [x] | P1 | Corpo F (`modelli/corpi/corpo_f.glb`, scena `corpo_f_vero.tscn`; animazioni del maschio riusate; galea un po' bassa sugli occhi) | atletica | tutte le eroine, guardie, barbare, predone, vestale, sacerdotessa, cittadine |
 
 Prompt: `<descrizione corpo>, skin-tight neutral grey undershirt and undershorts, bare arms and legs, barefoot, no hair, T-pose, full body`
 (senza capelli: li mette il kit 2). **Niente tunica larga né sandali sul corpo**: sotto l'armatura o gli stivali
@@ -248,10 +260,10 @@ Pezzi doppi (schinieri, calzari, bracciali, spallacci, guanti) si fanno **una vo
 | [x] | P1 | galea | `roman galea helmet, iron, cheek guards, crest` | guardie, rinnegati |
 | [ ] | P2 | elmo_centurione | `roman centurion helmet, transverse crest` | Brenno, prefetto (cerimonia) |
 | [ ] | P2 | cappuccio | `cloth hood with trim` | predoni, frombolieri, augure |
-| [ ] | P2 | lorica | `roman lorica segmentata chest armor, plates` | guardie, rinnegati |
+| [x] | P1 | lorica (M e F, con pelle) | `roman lorica segmentata chest armor, plates` | guardie, rinnegati |
 | [ ] | P2 | lorica_hamata | `chainmail shirt` (pesi) | pirati, barbari, arpionatori |
 | [ ] | P2 | toga | `draped roman toga` (pesi) | prefetto, mercante, cittadini, vestale (tinta bianca) |
-| [ ] | P2 | humeralia | `single segmented shoulder pauldron` | guardie, bruto |
+| [x] | P1 | humeralia (con pelle) | `single segmented shoulder pauldron` | guardie, bruto |
 | [ ] | P2 | spallacci_bronzo | `single round shoulder guard` | gladiatori, Tharvo |
 | [ ] | P2 | cingulum | `military belt with hanging straps` | quasi tutti i soldati |
 | [ ] | P2 | balteo | `leather baldric strap` | pirati, arcieri |
@@ -259,9 +271,9 @@ Pezzi doppi (schinieri, calzari, bracciali, spallacci, guanti) si fanno **una vo
 | [ ] | P2 | guanti_cuoio | `leather glove` | predoni, fabbro |
 | [ ] | P2 | armillae | `gold arm ring` | NPC ricchi, Vulso |
 | [ ] | P2 | bracciali_cuoio | `leather bracer` | arcieri, pirati |
-| [ ] | P2 | ocreae | `bronze greave` | guardie, rinnegati |
+| [x] | P1 | ocreae (con pelle) | `bronze greave` | guardie, rinnegati |
 | [ ] | P2 | bracae | `wool trousers` (pesi) | barbari, predoni, cittadini |
-| [ ] | P2 | caligae | `hobnailed military sandal boot` | soldati |
+| [x] | P1 | caligae (con pelle, nasconde i piedi) | `hobnailed military sandal boot` | soldati |
 | [ ] | P2 | calcei | `closed leather shoe` | cittadini, NPC |
 
 Pezzi **solo per nemici/NPC**, che diventano anche aspetti sbloccabili per l'eroe (P3):
@@ -360,7 +372,7 @@ Scure rotante usa il modello della scure del kit 4). Fuoco, fulmini, sfere e met
 
 ## Chi si costruisce con cosa (nessun modello nuovo)
 
-| Personaggio | Corpo (kit 1) | Testa (kit 2) | Equipaggiamento (kit 3-4) | Tinta |
+| Personaggio | Corpo (kit 1: le vecchie classi indicano solo la corporatura, ora corpo M o F) | Testa (kit 2) | Equipaggiamento (kit 3-4) | Tinta |
 |---|---|---|---|---|
 | Guardia | Legionario M/F | qualsiasi | galea, lorica, ocreae, caligae, gladio, scutum | rosso città |
 | Legionario rinnegato | Legionario M | visore luminoso | galea, lorica, ocreae, gladio | nero/rosso spento |
@@ -389,7 +401,7 @@ questo; si fa quando arrivano i primi modelli veri.
 
 | Kit | Pezzi |
 |---|---|
-| 1 Corpi | 8 |
+| 1 Corpi | 2 |
 | 2 Teste e capelli | ~15 |
 | 3 Equipaggiamento | 26 |
 | 4 Armi | 12 (+4) |

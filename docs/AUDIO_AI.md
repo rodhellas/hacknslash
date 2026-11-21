@@ -49,7 +49,7 @@ Strumenti consigliati: **ElevenLabs Sound Effects** o **Stable Audio** per A e B
 | `scure_lancio` | 2 | 0,6 s | Throwing axe spinning through the air, rhythmic whoosh-whoosh with energy hum |
 | `granata` | 2 | 0,5 s | Unstable energy sphere lobbed, pulsing whine rising in pitch |
 | `trappola` | 2 | 0,7 s | Energy trap placed on the ground and armed, mechanical click and rising electric hum |
-| `raggio_orbitale` | 2 | 1,2 s | Orbital laser strike from a starship: distant charging whine from the sky, then a massive descending energy beam blast |
+| `raggio_orbitale` | 2 | 1,2 s | Jupiter thunderbolt: rumbling storm charge in the clouds, then a massive descending bolt of divine light and thunder |
 | `meteora` | 2 | 1,2 s | Flaming meteor falling from the sky, growing roar and whistle |
 | `saetta` | 2 | 1,0 s | Thunderbolt striking the ground, deafening thunder crack with electric sizzle |
 | `pioggia_dardi` | 2 | 2,5 s | Dozens of energy bolts raining down, rapid whistling and impacts on the ground |

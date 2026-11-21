@@ -2,6 +2,7 @@ extends SceneTree
 ## Crea la scena di un corpo vero (Tripo + Mixamo) con le 12 prese agganciate alle ossa.
 ##   Godot --headless --path . --script res://tools/build_corpo_vero.gd -- <glb> <scena .tscn>
 ##   es. -- res://modelli/corpi/legionario_m.glb res://scenes/characters/legionario_vero.tscn
+##       -- res://modelli/corpi/corpo_f.glb res://scenes/characters/corpo_f_vero.tscn 0.0246
 ## Il GLB (vedi docs/MODELLI_TRIPO.md) guarda verso +Z (Mixamo): qui si gira di 180° (gioco: davanti = -Z).
 ## Ogni presa = BoneAttachment3D (scheletro esterno) "Osso_<nome>" + Marker3D "Presa_<nome>" figlio, messo in
 ## modo che nella posa a T abbia la stessa orientazione delle prese del graybox: i pezzi (VisualDB) valgono
@@ -27,8 +28,13 @@ func _build() -> void:
 	var args := OS.get_cmdline_user_args()
 	var glb := args[0] if args.size() > 0 else "res://modelli/corpi/legionario_m.glb"
 	var out := args[1] if args.size() > 1 else "res://scenes/characters/legionario_vero.tscn"
+	# terzo argomento facoltativo: quanto il centro della testa sta davanti all'osso Head (m, misurato in Blender)
+	if args.size() > 2:
+		_head_forward = float(args[2])
 	_model = Node3D.new()
 	_model.name = "Model"
+	# corpo "m"/"f": Appearance sceglie la versione giusta delle armature con pelle (VisualDB "skinned")
+	_model.set_meta("corpo", "f" if glb.get_file().contains("_f") else "m")
 	root.add_child(_model)
 	var corpo := (load(glb) as PackedScene).instantiate() as Node3D
 	corpo.name = "Corpo"
@@ -110,7 +116,8 @@ func _pos(suffix: String) -> Vector3:
 ## "Testa" del Legionario M: fetta tra 8 e 16 cm sotto la cima). I vertici di una mesh con scheletro qui non
 ## sono nello spazio del modello, per questo non si misurano in Godot.
 const HEAD_FORWARD := 0.028
+var _head_forward := HEAD_FORWARD
 
 
 func _head_center() -> Vector3:
-	return Vector3(0, 1.74, _pos("Head").z - HEAD_FORWARD)
+	return Vector3(0, 1.74, _pos("Head").z - _head_forward)

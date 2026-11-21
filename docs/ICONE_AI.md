@@ -58,7 +58,7 @@ Con Midjourney aggiungi in fondo `--ar 1:1`; con Stable Diffusion, nel negativo:
 | `granata` | tattica | An unstable sphere of crackling orange energy flying in an arc, about to explode, sparks flying |
 | `grido_marte` | tattica | A shouting Roman legionary helmet with red crest, fiery red aura and sound waves bursting outward |
 | `terremoto_legione` | tattica | A Roman military boot stomping the ground, cracks and a circular shockwave spreading from it |
-| `bombardamento` | tattica | A single massive energy beam fired down from a starship in orbit onto a glowing targeted circle on the ground |
+| `bombardamento` | tattica | Jupiter thunderbolt: a single massive column of divine golden-white light and lightning striking down from storm clouds onto a glowing targeted circle on the ground |
 
 ### Passive
 | File (`id`) | Soggetto |

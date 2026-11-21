@@ -34,7 +34,7 @@ const DATA := {
 		"weapons": ["gladio", "spatha"], "offhands": ["scudo"],
 		"start_items": ["gladio_plasma", "scutum", "galea"],
 		"model": "res://scenes/characters/legionario_vero.tscn",   # corpo vero (graybox: legionario.tscn)
-		"model_f": "res://scenes/characters/legionario_f.tscn",
+		"model_f": "res://scenes/characters/corpo_f_vero.tscn",   # corpo vero (graybox: legionario_f.tscn)
 		"color": Color(0.7, 0.1, 0.1),
 		"abilities": [
 			{"id": "colpo_gladio", "name": "Colpo di gladio", "slot": "lmb", "unlock": 1, "kind": "melee",
@@ -54,7 +54,7 @@ const DATA := {
 			{"id": "grido_marte", "name": "Grido di Marte", "slot": "3", "unlock": 4, "kind": "buff",
 				"cooldown": 20.0, "duration": 6.0, "damage": 0.3, "heal_pct": 0.15, "color": Color(1.0, 0.3, 0.2),
 				"desc": "+30% danni per 6 s e cura il 15% della vita massima."},
-			{"id": "bombardamento", "name": "Bombardamento orbitale", "slot": "4", "unlock": 6, "kind": "aoe_point",
+			{"id": "bombardamento", "name": "Fulmine di Giove", "slot": "4", "unlock": 6, "kind": "aoe_point",
 				"cost": 40.0, "cooldown": 10.0, "radius": 6.0, "delay": 0.8, "dmg": 4.5, "max_range": 18.0, "visual": "raggio_orbitale",
 				"color": Color(1.0, 0.5, 0.1),
 				"desc": "Un raggio della flotta in orbita colpisce l'area indicata dopo un breve ritardo."},
@@ -62,7 +62,7 @@ const DATA := {
 	},
 	"gladiatore": {
 		"name": "Gladiatore",
-		"desc": "Campione delle arene orbitali. Veloce e brutale: accumula Furia colpendo e la scatena in attacchi devastanti.",
+		"desc": "Campione delle grandi arene. Veloce e brutale: accumula Furia colpendo e la scatena in attacchi devastanti.",
 		"main_stat": "forza",
 		"resource": "Furia", "resource_color": Color(0.9, 0.15, 0.1),
 		"resource_max": 100.0, "resource_regen": 0.0, "resource_starts_full": false,

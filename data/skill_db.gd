@@ -63,10 +63,10 @@ const RUNES := {
 			"mods": {"aspd": 0.25, "move": 0.2}},
 	],
 	"bombardamento": [
-		{"id": "salva_doppia", "name": "Salva doppia", "desc": "Una seconda salva colpisce 1 s dopo.", "mods": {"echo": 1.0}},
-		{"id": "incendiario", "name": "Bombardamento incendiario", "desc": "L'area brucia: 100% del danno dell'arma al secondo per 4 s.",
+		{"id": "salva_doppia", "name": "Doppia folgore", "desc": "Una seconda folgore colpisce 1 s dopo.", "mods": {"echo": 1.0}},
+		{"id": "incendiario", "name": "Folgore incendiaria", "desc": "L'area brucia: 100% del danno dell'arma al secondo per 4 s.",
 			"mods": {"dot": 1.0, "dot_time": 4.0}},
-		{"id": "precisione", "name": "Tiro di precisione", "desc": "Raggio di 3,5 m ma +80% danni e 10 Disciplina in meno.",
+		{"id": "precisione", "name": "Folgore mirata", "desc": "Raggio di 3,5 m ma +80% danni e 10 Disciplina in meno.",
 			"mods": {"radius": 3.5}, "mul": {"dmg": 1.8}, "add": {"cost": -10.0}},
 	],
 	"affondo": [

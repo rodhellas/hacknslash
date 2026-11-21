@@ -1,16 +1,32 @@
 ---
 name: trama-ufficiale
-description: docs/TRAMA.md è la trama ufficiale decisa dall'utente (20-11-2026); PROPOSTE_TRAMA*.md superate; livelli/missioni attuali da rifare
+description: docs/TRAMA.md è la trama ufficiale (aggiornata da me il 21-11 su richiesta dell'utente); decisioni chiave del 21-11 (Terra sola, Thule, emissario-governatore, senatore presente, scelta 1 distruggere/Adige, serpente)
 metadata:
   type: project
 ---
 
-`docs/TRAMA.md` (20-11-2026) è la trama UFFICIALE: senatore (cattivo, padre segreto), imperatore corrotto da medaglione
-identico, protagonista con medaglione, scelta 1 (tenere/buttare) verso atto 7-9, scelta 2 nell'atto 12, 4 finali.
-Non cambiare nulla di ciò che è deciso lì; le `PROPOSTE_TRAMA*.md` sono superate.
+`docs/TRAMA.md` è la trama UFFICIALE e vincolante. Il 21-11-2026 l'utente mi ha chiesto di aggiornarla con le sue
+decisioni (lo storico delle modifiche è in fondo al file): ora contiene tutto ciò che è deciso.
 
-**Why:** l'utente ha deciso la trama dopo diverse proposte; i livelli e le missioni attuali del gioco sono da rifare.
-**How to apply:** costruisci sopra TRAMA.md senza contraddirla; ignora quest_db/livelli attuali come vincolo narrativo.
-Il 20-11 ho proposto la struttura in 12 atti (+34 extra, consiglio 16) in un documento consegnato al chiamante
-(nomi di lavoro: Severiano Lupino XIV, Aulo Pellenio Sabino, la Bulla, i Prodigi): verifica in docs/ se è stato
-adottato prima di usarlo. A volte il disco del progetto rifiuta la scrittura (ETXTBSY): si scrive nello scratchpad.
+Decisioni dell'utente del 21-11 (oltre a quelle del 20-11 già in TRAMA.md):
+- **Solo Terra**: niente Marte né orbita. Finale nella **Cittadella del Palatino**. Partenza da **Thule**.
+- **Emissario**: la famiglia la uccide il **governatore di Thule** mandato dall'imperatore; la prima parte del gioco è la
+  caccia a lui (boss), che rivela il mandante (l'imperatore).
+- **Senatore presente e amato** lungo la storia (salva, difende, consiglia), smascherato solo alla fine.
+- Motore "**il dono si nutre d'odio**" + sussurro del "pretendente": approvato.
+- **Scelta 1 = distruggere / gettare nell'Adige**; Teodote lo ripesca, il senatore lo rimette all'eroe prima del finale
+  (Adige = "tenuto", distrutto = "buttato").
+- Simbolo: **serpente che cambia pelle**. Bocciati: melograno, cicala non scelta, regola del "gemello", Acca, figli o
+  sorelle dell'imperatore, orfano, rivale d'arena.
+- **Nomi**: li inventa l'utente; per ora principali per ruolo, secondari provvisori.
+- Numero di atti: libero, non un limite; morti lasciate a me ("decidi tu"), ne vuole anche nella prima metà.
+
+**Why:** l'utente decide la trama; preferisce restare sul pianeta, vuole affezionarsi al cattivo, più morti e scelte.
+**How to apply:** non contraddire TRAMA.md; quando l'utente decide, aggiorna TRAMA.md + changelog in fondo.
+
+Stato: `docs/STRUTTURA_ATTI_2.md` **APPROVATA il 21-11-2026**: 18 atti + prologo, ~40 h, rivelazione atto XII (Verona).
+È il riferimento per missioni, dialoghi e cutscene. `STRUTTURA_ATTI.md` è superata.
+Con l'approvazione: il **Senatore compare solo in scena** (hub + cutscene, niente alleato controllato dal computer:
+i suoi combattimenti sono cutscene); l'abilità "Bombardamento orbitale" diventa **"Fulmine di Giove"** (codice
+dell'utente: nei testi non usare più "orbitale"); confermati Thule ghiaccio e vulcani, commissione su Gavio, Albino. A volte il disco rifiuta la scrittura
+(ETXTBSY): si scrive nello scratchpad.

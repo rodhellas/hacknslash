@@ -134,7 +134,7 @@ const POWERS := {
 	"achille": "La pozione si ricarica in metà tempo e ti rende invulnerabile per 2 s.",
 	"mario": "Pilum lancia tre pila a ventaglio.",
 	"orazio": "Testuggine dura 4 s in più e la sua onda d'urto stordisce per 1,5 s.",
-	"germanico": "Bombardamento orbitale colpisce una seconda volta.",
+	"germanico": "Fulmine di Giove colpisce una seconda volta.",
 	"flamma": "Turbine ha 2 m di raggio in più e incendia i nemici.",
 	"prisco": "Rete del reziario stordisce per 2 s e ha 1,5 m di raggio in più.",
 	"vero": "Balzo si ricarica in metà tempo e infligge il doppio dei danni.",
@@ -318,7 +318,7 @@ const SETS := {
 			2: {"stats": [["armor", 60.0], ["vitalita", 20.0]]},
 			3: {"stats": [["life_regen", 5.0], ["cdr_pct", 10.0]]},
 			4: {"skills": {"pilum": 200.0, "bombardamento": 200.0, "colpo_gladio": 100.0},
-				"text": "+200% danni di Pilum e Bombardamento orbitale, +100% danni di Colpo di gladio."},
+				"text": "+200% danni di Pilum e Fulmine di Giove, +100% danni di Colpo di gladio."},
 		}},
 	"reziario": {"name": "Paramenti del Reziario", "class": "gladiatore",
 		"pieces": [

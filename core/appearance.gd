@@ -27,7 +27,9 @@ static func apply(model: Node3D, equipment: Dictionary, transmog: Dictionary = {
 		hidden.append_array(vis.get("hide", []))
 		var dye := String(dyes.get(slot, ""))
 		var dual := slot == "secondaria" and it.slot == "arma"
-		if vis.has("scene") and _add_scene(model, slot, vis, it.rarity, dye, dual):
+		if vis.has("skinned") and _add_skinned(model, slot, vis, it.rarity, dye):
+			pass
+		elif vis.has("scene") and _add_scene(model, slot, vis, it.rarity, dye, dual):
 			pass
 		else:
 			for p: Array in vis.get("parts", []):
@@ -60,7 +62,53 @@ static func pieces(model: Node3D, slot: String = "") -> Array:
 		for c: Node in s.get_children():
 			if c.has_meta(META) and (slot == "" or String(c.get_meta(META)) == slot):
 				out.append(c)
+	# Pezzi con pelle (armature vere): figli dello scheletro del corpo
+	var sk := _skeleton(model)
+	if sk != null:
+		for c: Node in sk.get_children():
+			if c.has_meta(META) and (slot == "" or String(c.get_meta(META)) == slot):
+				out.append(c)
 	return out
+
+
+static func _skeleton(model: Node3D) -> Skeleton3D:
+	var list := model.find_children("*", "Skeleton3D", true, false)
+	return list[0] as Skeleton3D if not list.is_empty() else null
+
+
+## Pezzo con pelle (lorica, schinieri...): GLB con lo stesso scheletro del corpo, uno per corpo
+## ("skinned": {"m": ..., "f": ...}, corpo dal metadato "corpo" della scena). La sua mesh passa sotto lo
+## scheletro del corpo e si piega con lui. Falso se il corpo è graybox o il file manca.
+static func _add_skinned(model: Node3D, slot: String, vis: Dictionary, rarity: int, dye: String) -> bool:
+	if not model.has_meta("corpo"):
+		return false
+	var path := String((vis["skinned"] as Dictionary).get(String(model.get_meta("corpo")), ""))
+	if path == "" or not ResourceLoader.exists(path):
+		return false
+	var sk := _skeleton(model)
+	var ps := load(path) as PackedScene
+	if sk == null or ps == null:
+		return false
+	var inst := ps.instantiate()
+	var overlay := _tint_overlay(rarity, dye)
+	var n := 0
+	for node: Node in inst.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.skin == null:
+			continue
+		mi.get_parent().remove_child(mi)
+		mi.owner = null
+		sk.add_child(mi)
+		mi.transform = Transform3D.IDENTITY
+		mi.skeleton = NodePath("..")
+		mi.name = "Equip_%s_%d" % [slot, n]
+		mi.set_meta(META, slot)
+		if overlay != null:
+			mi.material_overlay = overlay
+			mi.set_meta("_own_overlay", overlay)
+		n += 1
+	inst.free()
+	return n > 0
 
 
 static func _socket(model: Node3D, name: String) -> Node3D:

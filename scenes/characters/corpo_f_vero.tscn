@@ -1,0 +1,131 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://modelli/corpi/corpo_f.glb" id="1_etr3c"]
+
+[node name="Model" type="Node3D" unique_id=129305684]
+metadata/corpo = "f"
+
+[node name="Corpo" type="Node3D" parent="." unique_id=1116598106 instance=ExtResource("1_etr3c")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+
+[node name="Prese" type="Node3D" parent="." unique_id=1284346444]
+
+[node name="Osso_Testa" type="BoneAttachment3D" parent="Prese" unique_id=1619532314]
+transform = Transform3D(-1, 8.173715e-16, -8.742277e-08, 0, 0.99999994, 9.34964e-09, 8.742278e-08, 9.34964e-09, -0.99999994, -0.00013163191, 1.6493728, 0.0562457)
+bone_name = "mixamorig_Head"
+bone_idx = 39
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_Testa" type="Marker3D" parent="Prese/Osso_Testa" unique_id=1712756563]
+transform = Transform3D(-1, 0, 8.742277e-08, 8.173716e-16, 1, 9.349641e-09, -8.742278e-08, 9.349641e-09, -1, -0.00013163406, 0.09062719, 0.0246)
+
+[node name="Osso_Busto" type="BoneAttachment3D" parent="Prese" unique_id=1131913483]
+transform = Transform3D(-1, 6.3717556e-09, -8.719026e-08, 0, 0.9973403, 0.07288439, 8.742278e-08, 0.07288439, -0.9973403, -0.00013163124, 1.4307741, 0.06412246)
+bone_name = "mixamorig_Spine2"
+bone_idx = 13
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_Busto" type="Marker3D" parent="Prese/Osso_Busto" unique_id=672677528]
+transform = Transform3D(-1, 4.4408926e-16, 8.742277e-08, 6.371756e-09, 0.99734044, 0.07288439, -8.7190266e-08, 0.07288439, -0.99734044, -0.00013163124, 0, 0)
+
+[node name="Osso_Schiena" type="BoneAttachment3D" parent="Prese" unique_id=1029046590]
+transform = Transform3D(-1, 6.3717556e-09, -8.719026e-08, 0, 0.9973403, 0.07288439, 8.742278e-08, 0.07288439, -0.9973403, -0.00013163124, 1.4307741, 0.06412246)
+bone_name = "mixamorig_Spine2"
+bone_idx = 13
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_Schiena" type="Marker3D" parent="Prese/Osso_Schiena" unique_id=1807005547]
+transform = Transform3D(-1, 4.4408926e-16, 8.742277e-08, 6.371756e-09, 0.99734044, 0.07288439, -8.7190266e-08, 0.07288439, -0.99734044, -0.0001316155, 0.013119221, -0.17952128)
+
+[node name="Osso_Bacino" type="BoneAttachment3D" parent="Prese" unique_id=1876510561]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -0.00013163328, 1.1133502, 0.040925495)
+bone_name = "mixamorig_Hips"
+bone_idx = 0
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_Bacino" type="Marker3D" parent="Prese/Osso_Bacino" unique_id=1563437912]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -0.00013163328, 0, 0)
+
+[node name="Osso_ManoDx" type="BoneAttachment3D" parent="Prese" unique_id=1217864097]
+transform = Transform3D(0.024498938, 0.99890316, -0.039901815, 0.14578468, -0.043056965, -0.98837876, -0.9890131, 0.01839706, -0.14667952, 0.64047056, 1.4728862, 0.056630995)
+bone_name = "mixamorig_RightHand"
+bone_idx = 44
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_ManoDx" type="Marker3D" parent="Prese/Osso_ManoDx" unique_id=1618739456]
+transform = Transform3D(0.02449895, 0.1457847, -0.98901284, 0.9989033, -0.04305703, 0.018397158, -0.0399019, -0.9883791, -0.14667967, 0.0013392568, 0.062683225, 0.028957725)
+
+[node name="Osso_ManoSx" type="BoneAttachment3D" parent="Prese" unique_id=674310313]
+transform = Transform3D(0.012158569, -0.9990525, 0.04178069, -0.12725249, -0.042989958, -0.99093825, 0.9917958, 0.0067316825, -0.12765467, -0.6407336, 1.4728861, 0.057527192)
+bone_name = "mixamorig_LeftHand"
+bone_idx = 17
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_ManoSx" type="Marker3D" parent="Prese/Osso_ManoSx" unique_id=2096242999]
+transform = Transform3D(0.012158673, -0.1272525, 0.9917958, -0.9990529, -0.042990018, 0.0067318054, 0.0417806, -0.99093807, -0.12765469, -0.0024125874, 0.061097622, 0.02906847)
+
+[node name="Osso_AvambraccioDx" type="BoneAttachment3D" parent="Prese" unique_id=243526893]
+transform = Transform3D(-0.060588814, 0.9978018, -0.026838176, 0.084119104, -0.021687761, -0.9962195, -0.9946119, -0.06261749, -0.08262006, 0.4169441, 1.4777446, 0.0706585)
+bone_name = "mixamorig_RightForeArm"
+bone_idx = 43
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_AvambraccioDx" type="Marker3D" parent="Prese/Osso_AvambraccioDx" unique_id=584901095]
+transform = Transform3D(0.084119156, 0.06058882, -0.994612, -0.021687873, -0.99780214, -0.06261738, -0.9962198, 0.026838299, -0.08262021, 0, 0.112009466, 0)
+
+[node name="Osso_AvambraccioSx" type="BoneAttachment3D" parent="Prese" unique_id=1212061894]
+transform = Transform3D(-0.055377103, -0.9980996, 0.027026884, -0.094721, -0.02169478, -0.99526745, 0.9939624, -0.057675052, -0.09333962, -0.4172073, 1.4777448, 0.070443615)
+bone_name = "mixamorig_LeftForeArm"
+bone_idx = 16
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_AvambraccioSx" type="Marker3D" parent="Prese/Osso_AvambraccioSx" unique_id=337921071]
+transform = Transform3D(0.09472102, -0.05537699, 0.9939624, 0.021694867, -0.9980995, -0.057674933, 0.9952672, 0.027026828, -0.093339615, 0, 0.11197591, 0)
+
+[node name="Osso_StincoDx" type="BoneAttachment3D" parent="Prese" unique_id=847710152]
+transform = Transform3D(0.9996469, 0.026554186, -0.0013981073, 0.026452776, -0.99842995, -0.04938706, -0.0027073447, 0.049332608, -0.9987786, 0.09351462, 0.5811692, 0.050642546)
+bone_name = "mixamorig_RightLeg"
+bone_idx = 7
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_StincoDx" type="Marker3D" parent="Prese/Osso_StincoDx" unique_id=1040592108]
+transform = Transform3D(0.9996461, 0.026452754, -0.0027073435, 0.02655415, -0.998429, 0.04933259, -0.0013981086, -0.04938703, -0.99877876, 7.450581e-09, 0.23904988, 0)
+
+[node name="Osso_StincoSx" type="BoneAttachment3D" parent="Prese" unique_id=1399891687]
+transform = Transform3D(0.9996447, -0.026554823, 0.0023750677, -0.02640709, -0.9984558, -0.04887738, 0.0036693288, 0.04879729, -0.9988021, -0.09377784, 0.58116937, 0.05240968)
+bone_name = "mixamorig_LeftLeg"
+bone_idx = 2
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_StincoSx" type="Marker3D" parent="Prese/Osso_StincoSx" unique_id=1841160159]
+transform = Transform3D(0.99964434, -0.026407097, 0.0036693285, -0.026554782, -0.9984554, 0.04879727, 0.0023750677, -0.04887737, -0.9988018, 7.450581e-09, 0.23904404, 7.450581e-09)
+
+[node name="Osso_PiedeDx" type="BoneAttachment3D" parent="Prese" unique_id=13435406]
+transform = Transform3D(0.9808979, -0.016388102, -0.19383344, 0.1455354, -0.59933656, 0.7871571, -0.12907128, -0.8003297, -0.58550215, 0.10621017, 0.103819996, 0.07422845)
+bone_name = "mixamorig_RightFoot"
+bone_idx = 8
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_PiedeDx" type="Marker3D" parent="Prese/Osso_PiedeDx" unique_id=1736307358]
+transform = Transform3D(0.9808974, 0.14553528, -0.12907134, -0.01638808, -0.59933585, -0.80032957, -0.1938333, 0.78715646, -0.58550245, -0.001214534, 0.05827622, -0.011073282)
+
+[node name="Osso_PiedeSx" type="BoneAttachment3D" parent="Prese" unique_id=404322535]
+transform = Transform3D(0.980931, 0.016355602, 0.19366802, -0.14562915, -0.59804666, 0.7881198, 0.12871265, -0.8012946, -0.5842604, -0.10647339, 0.10381964, 0.075739056)
+bone_name = "mixamorig_LeftFoot"
+bone_idx = 3
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/corpo_f_Rig/Skeleton3D")
+
+[node name="Presa_PiedeSx" type="Marker3D" parent="Prese/Osso_PiedeSx" unique_id=1920781957]
+transform = Transform3D(0.98093045, -0.14562912, 0.12871261, 0.016355637, -0.59804624, -0.8012944, 0.1936679, 0.78811944, -0.5842603, 0.0012329072, 0.058257923, -0.011164675)
