@@ -123,11 +123,17 @@ func _run() -> void:
 	App.apply(model, {"arma": IDB.make_basic("gladio_plasma", 10)})
 	var metal := false
 	var shell := false
-	for mi: MeshInstance3D in model.find_children("Equip_*", "MeshInstance3D", true, false):
-		if mi.material_override == V.material("energy"):
-			shell = true
-		elif mi.material_override is StandardMaterial3D:
-			metal = true
+	# Pezzi graybox (Equip_* = MeshInstance3D) o modello vero (Equip_* = scena con le mesh dentro)
+	for piece: Node in App.pieces(model, "arma"):
+		var list: Array = piece.find_children("*", "MeshInstance3D", true, false)
+		if piece is MeshInstance3D:
+			list.append(piece)
+		for mi: MeshInstance3D in list:
+			if mi.material_override == V.material("energy"):
+				shell = true
+			elif mi.material_override is StandardMaterial3D or (mi.material_override == null and mi.mesh != null
+					and mi.mesh.get_surface_count() > 0 and mi.mesh.surface_get_material(0) is StandardMaterial3D):
+				metal = true
 	_check(metal and shell, "il gladio indossato ha la lama di metallo avvolta dal guscio di energia")
 	model.queue_free()
 

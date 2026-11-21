@@ -76,6 +76,11 @@ func show_hero(h: HeroData) -> void:
 		pivot.add_child(model)
 		model.rotation_degrees.y = 180.0   # guarda verso la telecamera
 		_model_path = path
+		# Corpo vero animato: in piedi a riposo invece che nella posa a T
+		var ap := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		if ap != null and ap.has_animation("idle"):
+			ap.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
+			ap.play("idle")
 	Appearance.apply(model, h.equipment, h.transmog, h.dyes)
 
 

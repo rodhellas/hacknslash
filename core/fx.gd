@@ -72,7 +72,9 @@ static func _apply_overlay(root: Node, color: Variant) -> void:
 		m = _overlays[key]
 	for gi: Variant in meshes(root):
 		if is_instance_valid(gi):
-			(gi as GeometryInstance3D).material_overlay = m
+			var g := gi as GeometryInstance3D
+			# Senza lampo torna la sovrapposizione propria del pezzo (tinta dell'equipaggiamento vero)
+			g.material_overlay = m if m != null or not g.has_meta("_own_overlay") else g.get_meta("_own_overlay")
 
 
 ## Testo che sale e svanisce (numeri di danno, "LIVELLO SU!", ecc.).

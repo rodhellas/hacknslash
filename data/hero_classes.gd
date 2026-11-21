@@ -33,7 +33,7 @@ const DATA := {
 		"per_level": {"forza": 3, "destrezza": 1, "intelligenza": 1, "vitalita": 2},
 		"weapons": ["gladio", "spatha"], "offhands": ["scudo"],
 		"start_items": ["gladio_plasma", "scutum", "galea"],
-		"model": "res://scenes/characters/legionario.tscn",
+		"model": "res://scenes/characters/legionario_vero.tscn",   # corpo vero (graybox: legionario.tscn)
 		"model_f": "res://scenes/characters/legionario_f.tscn",
 		"color": Color(0.7, 0.1, 0.1),
 		"abilities": [

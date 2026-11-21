@@ -2,8 +2,11 @@ class_name VisualDB
 extends RefCounted
 ## Aspetto dell'equipaggiamento indossato (vedi docs/PIANO_EQUIPAGGIAMENTO.md).
 ## Ogni base di ItemDB.BASES può avere una voce in VISUALS (chiave = id della base). Una voce ha:
-##   "scene": scena .tscn/.glb del pezzo vero (Tripo); se c'è si istanzia nella presa "socket"
-##            (e anche in "mirror", per i pezzi doppi come schinieri e calzari) e "parts" si ignora;
+##   "scene": scena .tscn/.glb del pezzo vero (Tripo, sistemato in Blender: vedi docs/MODELLI_TRIPO.md);
+##            se c'è si istanzia nella presa "socket" (e anche in "mirror", per i pezzi doppi come schinieri
+##            e calzari) e "parts" resta solo come riserva graybox se il file manca;
+##            l'origine del modello è il punto della presa, il davanti verso -Z;
+##   "energy": (armi con "scene") mesh del guscio di energia che avvolge la lama (Vfx "energy");
 ##   "socket": presa per "scene";  "mirror": seconda presa per "scene" (copia specchiata in x);
 ##   "parts": pezzi graybox [presa, forma, posizione, dimensioni, materiale, rotazione in gradi (facoltativa)];
 ##            forma = "box" | "cyl" | "sphere" | "capsule"; dimensioni come in build_world.gd
@@ -18,6 +21,14 @@ const PRESE := [
 	"Presa_ManoDx", "Presa_ManoSx", "Presa_AvambraccioDx", "Presa_AvambraccioSx",
 	"Presa_StincoDx", "Presa_StincoSx", "Presa_PiedeDx", "Presa_PiedeSx",
 ]
+
+## Larghezza (m) dell'interno degli elmi veri: testa del corpo vero (Legionario M di Tripo, 0,186 m)
+## + 1 cm. Serve ad Appearance per ingrandire gli elmi sulle teste graybox.
+const HEAD_WIDTH := 0.196
+
+## Parti dei corpi veri (mesh separate nel GLB, vedi tools/build_corpo_vero.gd): un pezzo le nasconde con "hide"
+## (es. una lorica vera nasconderà "Busto"). Nei corpi graybox le parti hanno il metadato body_part.
+const BODY_PARTS := ["Testa", "Busto", "Braccia", "Mani", "Gambe", "Piedi", "Capelli"]
 
 ## Materiali dei pezzi graybox (colore base; rarità alte aggiungono una tinta e un bagliore).
 const MATERIALS := {
@@ -35,7 +46,8 @@ const GLOW := {"plasma": 4.0, "cristallo": 3.0}
 
 const VISUALS := {
 	# --- Armi (presa: mano destra; la lama punta in avanti, verso -Z) ---
-	"gladio_plasma": {"parts": [
+	"gladio_plasma": {"scene": "res://modelli/equipaggiamento/gladio_plasma.glb", "socket": "Presa_ManoDx",
+		"energy": "res://modelli/equipaggiamento/gladio_plasma_energia.glb", "parts": [
 		["Presa_ManoDx", "box", Vector3(0, 0, 0), Vector3(0.1, 0.1, 0.22), "cuoio"],
 		["Presa_ManoDx", "box", Vector3(0, 0, -0.14), Vector3(0.22, 0.05, 0.05), "oro"],
 		["Presa_ManoDx", "box", Vector3(0, 0, -0.5), Vector3(0.08, 0.025, 0.68), "acciaio"],
@@ -64,7 +76,7 @@ const VISUALS := {
 		["Presa_ManoDx", "cyl", Vector3(0, 0.32, 0), Vector3(0.04, 2.2, 0.04), "legno"],
 		["Presa_ManoDx", "sphere", Vector3(0, 1.48, 0), Vector3(0.16, 0.32, 0), "cristallo"]]},
 	# --- Mano secondaria ---
-	"scutum": {"parts": [
+	"scutum": {"scene": "res://modelli/equipaggiamento/scutum.glb", "socket": "Presa_AvambraccioSx", "parts": [
 		["Presa_AvambraccioSx", "box", Vector3(-0.08, 0, 0), Vector3(0.08, 1.0, 0.7), "rosso"],
 		["Presa_AvambraccioSx", "box", Vector3(-0.13, 0, 0), Vector3(0.03, 0.2, 0.2), "oro"],
 		["Presa_AvambraccioSx", "box", Vector3(-0.13, 0, 0), Vector3(0.02, 1.02, 0.04), "plasma"]]},
@@ -81,7 +93,7 @@ const VISUALS := {
 	"sfera_oracolo": {"parts": [
 		["Presa_ManoSx", "sphere", Vector3(0, 0.12, 0), Vector3(0.14, 0.28, 0), "cristallo"]]},
 	# --- Elmi ---
-	"galea": {"hide": ["Capelli"], "parts": [
+	"galea": {"hide": ["Capelli"], "scene": "res://modelli/equipaggiamento/galea.glb", "socket": "Presa_Testa", "parts": [
 		["Presa_Testa", "sphere", Vector3(0, 0.06, 0), Vector3(0.24, 0.4, 0), "ferro"],
 		["Presa_Testa", "box", Vector3(0, 0.3, 0.02), Vector3(0.06, 0.16, 0.45), "rosso"]]},
 	"elmo_centurione": {"hide": ["Capelli"], "parts": [

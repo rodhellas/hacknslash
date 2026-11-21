@@ -94,6 +94,8 @@ func _ready() -> void:
 	add_child(model)
 	Appearance.apply(model, hero.equipment, hero.transmog, hero.dyes)
 	anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if anim != null:
+		_setup_anims()
 
 	buff_bubble = MeshInstance3D.new()
 	var sb := SphereMesh.new()
@@ -322,7 +324,9 @@ func _on_primary_click(h: Dictionary) -> void:
 	if Input.is_action_pressed("force_stand"):
 		_try_cast("lmb", h["point"])
 		return
-	match String(h["kind"]):
+	# Il nodo sotto il cursore può essere sparito tra un fotogramma e l'altro (bottino raccolto, nemico morto)
+	var kind := String(h["kind"]) if is_instance_valid(h["node"]) or h["kind"] == "ground" else "ground"
+	match kind:
 		"enemy":
 			attack_target = h["node"]
 			move_target = Vector3.INF
@@ -339,7 +343,7 @@ func _follow_mouse_hold() -> void:
 	var h: Dictionary = Game.level.hover
 	if Input.is_action_pressed("force_stand"):
 		_try_cast("lmb", h["point"])
-	elif h["kind"] == "enemy" and interact_target == null:
+	elif h["kind"] == "enemy" and interact_target == null and is_instance_valid(h["node"]):
 		attack_target = h["node"]
 	elif h["kind"] == "ground" and attack_target == null and interact_target == null:
 		move_target = h["point"]
@@ -554,7 +558,11 @@ func _animate(delta: float, wish: Vector3) -> void:
 	_footsteps(delta, wish.length() > 0.1 and _dash.is_empty())
 	if anim != null:
 		if cast_lock <= 0.0:
-			_play_anim("run" if wish.length() > 0.1 else "idle")
+			if wish.length() > 0.1:
+				_play_anim("run")
+				anim.speed_scale = clampf(move_speed() / RUN_ANIM_SPEED, 0.8, 2.5)
+			elif not (anim.is_playing() and anim.current_animation in ONE_SHOT_ANIMS):
+				_play_anim("idle")   # finito l'attacco (o il colpo subito) si torna fermi
 		return
 	# Modelli grayboxing: piccolo saltello quando cammina
 	if wish.length() > 0.1:
@@ -564,9 +572,33 @@ func _animate(delta: float, wish: Vector3) -> void:
 		model.position.y = move_toward(model.position.y, 0.0, delta)
 
 
-func _play_anim(anim_name: String) -> void:
-	if anim != null and anim.has_animation(anim_name) and anim.current_animation != anim_name:
-		anim.play(anim_name)
+## Modello animato (Mixamo): metri al secondo della corsa a velocità 1, animazioni che non si interrompono
+## appena l'eroe è fermo, durata minima di un attacco/lancio (le animazioni si accelerano per starci dentro).
+const RUN_ANIM_SPEED := 5.0
+const ONE_SHOT_ANIMS := ["attack", "cast", "hit"]
+const LOOP_ANIMS := ["idle", "idle_2", "idle_3", "idle_4", "run", "walk"]
+
+
+func _setup_anims() -> void:
+	anim.playback_default_blend_time = 0.15
+	for n: String in LOOP_ANIMS:
+		if anim.has_animation(n):
+			anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+
+
+## duration > 0: l'animazione si accelera per durare al massimo tanto (attacchi veloci); restart: riparte da capo.
+func _play_anim(anim_name: String, duration: float = 0.0, restart: bool = false) -> void:
+	if anim == null or not anim.has_animation(anim_name):
+		return
+	if anim.current_animation == anim_name and not restart:
+		return
+	var speed := 1.0
+	if duration > 0.0:
+		speed = clampf(anim.get_animation(anim_name).length / duration, 1.0, 3.5)
+	anim.speed_scale = 1.0
+	anim.play(anim_name, -1, speed)
+	if restart:
+		anim.seek(0.0, true)
 
 
 # --- Abilità ------------------------------------------------------------------------
@@ -611,7 +643,10 @@ func _try_cast(slot: String, point: Vector3) -> bool:
 		sb["id"] = String(ab["id"]) + "_effetto"
 		add_buff(sb)
 	Abilities.execute(self, ab, point)
-	_play_anim("attack" if ab["kind"] == "melee" else "cast")
+	if slot == "lmb" or ab["kind"] == "melee":
+		_play_anim("attack", maxf(1.0 / aps, 0.45), true)
+	else:
+		_play_anim("cast", 0.6, true)
 	if ab["kind"] == "dash" and has_power("mercurio"):
 		add_buff({"id": "mercurio", "duration": 4.0, "aspd": 0.3})
 	return true
@@ -771,6 +806,9 @@ func take_damage(raw: float, attacker_level: int = 1) -> void:
 	Fx.popup_text(Game.world_root(), global_position + Vector3(0, 2.3, 0), str(roundi(amount)), Color(1, 0.25, 0.25), 38)
 	Fx.flash(model, Color(1, 0.15, 0.15, 0.6))
 	Sfx.play("eroe_ferito_" + ("f" if hero.sex == "f" else "m"))
+	# Modello animato: sussulto solo da fermo (non interrompe attacchi, lanci e corsa)
+	if anim != null and cast_lock <= 0.0 and anim.current_animation in ["idle", ""]:
+		_play_anim("hit", 0.5)
 	shake(0.08)
 	if life <= 0.0:
 		_die()

@@ -27,3 +27,6 @@ mono_crash.*.json
 # Build Android
 build/
 *.tpz
+
+# Backup automatici di Blender
+*.blend1

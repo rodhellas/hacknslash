@@ -1,0 +1,130 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://modelli/corpi/legionario_m.glb" id="1_o72hf"]
+
+[node name="Model" type="Node3D" unique_id=1808018741]
+
+[node name="Corpo" type="Node3D" parent="." unique_id=582596317 instance=ExtResource("1_o72hf")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+
+[node name="Prese" type="Node3D" parent="." unique_id=1469701739]
+
+[node name="Osso_Testa" type="BoneAttachment3D" parent="Prese" unique_id=1697706273]
+transform = Transform3D(-1, -1.3027009e-15, -8.742278e-08, 0, 0.9999999, -7.450581e-09, 8.742278e-08, -1.4901161e-08, -1, -5.0122675e-05, 1.638021, 0.055283137)
+bone_name = "mixamorig_Head"
+bone_idx = 39
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_Testa" type="Marker3D" parent="Prese/Osso_Testa" unique_id=1277468312]
+transform = Transform3D(-1, 0, 8.742278e-08, -6.513505e-16, 1.0000001, -7.4505815e-09, -8.742278e-08, -1.4901163e-08, -1, -5.012512e-05, 0.10197902, 0.028)
+
+[node name="Osso_Busto" type="BoneAttachment3D" parent="Prese" unique_id=344233699]
+transform = Transform3D(-1, 6.015739e-09, -8.7215554e-08, 0, 0.9976295, 0.068812035, 8.742278e-08, 0.068812035, -0.99762964, -5.0121493e-05, 1.4103462, 0.06876947)
+bone_name = "mixamorig_Spine2"
+bone_idx = 13
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_Busto" type="Marker3D" parent="Prese/Osso_Busto" unique_id=879206408]
+transform = Transform3D(-1, 4.4408926e-16, 8.742278e-08, 6.015741e-09, 0.99762976, 0.06881205, -8.721555e-08, 0.06881205, -0.99762964, -5.0121493e-05, 0, 0)
+
+[node name="Osso_Schiena" type="BoneAttachment3D" parent="Prese" unique_id=361395550]
+transform = Transform3D(-1, 6.015739e-09, -8.7215554e-08, 0, 0.9976295, 0.068812035, 8.742278e-08, 0.068812035, -0.99762964, -5.0121493e-05, 1.4103462, 0.06876947)
+bone_name = "mixamorig_Spine2"
+bone_idx = 13
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_Schiena" type="Marker3D" parent="Prese/Osso_Schiena" unique_id=753548697]
+transform = Transform3D(-1, 4.4408926e-16, 8.742278e-08, 6.015741e-09, 0.99762976, 0.06881205, -8.721555e-08, 0.06881205, -0.99762964, -5.010576e-05, 0.012386203, -0.17957336)
+
+[node name="Osso_Bacino" type="BoneAttachment3D" parent="Prese" unique_id=1588722456]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 0.99999994, 0, 8.742278e-08, 0, -1, -5.0123526e-05, 1.0736525, 0.045545835)
+bone_name = "mixamorig_Hips"
+bone_idx = 0
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_Bacino" type="Marker3D" parent="Prese/Osso_Bacino" unique_id=133119020]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1.0000001, 0, -8.742278e-08, 0, -1, -5.0123526e-05, 0, 0)
+
+[node name="Osso_ManoDx" type="BoneAttachment3D" parent="Prese" unique_id=3196916]
+transform = Transform3D(-0.0016343724, 0.9944098, -0.10557628, 0.08223897, -0.105084985, -0.9910567, -0.9966113, -0.010302273, -0.081607506, 0.6674007, 1.4659954, 0.0399585)
+bone_name = "mixamorig_RightHand"
+bone_idx = 44
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_ManoDx" type="Marker3D" parent="Prese/Osso_ManoDx" unique_id=1141803700]
+transform = Transform3D(-0.0016343759, 0.08223894, -0.99661124, 0.9944098, -0.10508521, -0.010302236, -0.1055763, -0.991057, -0.08160746, 0.004742436, 0.07435411, 0.028218746)
+
+[node name="Osso_ManoSx" type="BoneAttachment3D" parent="Prese" unique_id=1402178518]
+transform = Transform3D(0.002361008, -0.9940336, 0.109048806, -0.08504062, -0.10885362, -0.99041325, 0.9963748, -0.0069352626, -0.084790125, -0.6675012, 1.4659951, 0.040596552)
+bone_name = "mixamorig_LeftHand"
+bone_idx = 17
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_ManoSx" type="Marker3D" parent="Prese/Osso_ManoSx" unique_id=1499863697]
+transform = Transform3D(0.002360941, -0.0850406, 0.99637467, -0.9940337, -0.10885366, -0.0069352393, 0.109048724, -0.99041384, -0.084790245, -0.0042307824, 0.0801357, 0.02912438)
+
+[node name="Osso_AvambraccioDx" type="BoneAttachment3D" parent="Prese" unique_id=2047562472]
+transform = Transform3D(-0.11993212, 0.99275094, 0.007874346, 0.09663994, 0.01956819, -0.99512684, -0.98806727, -0.11858675, -0.09828626, 0.44729474, 1.4616568, 0.066250734)
+bone_name = "mixamorig_RightForeArm"
+bone_idx = 43
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_AvambraccioDx" type="Marker3D" parent="Prese/Osso_AvambraccioDx" unique_id=1967507854]
+transform = Transform3D(0.09663994, 0.11993211, -0.9880672, 0.019567953, -0.9927507, -0.118586704, -0.995127, -0.007874267, -0.09828621, 0, 0.11085659, 0)
+
+[node name="Osso_AvambraccioSx" type="BoneAttachment3D" parent="Prese" unique_id=822937478]
+transform = Transform3D(-0.11518552, -0.99330777, -0.00848394, -0.0955361, 0.019578919, -0.9952332, 0.98873925, -0.11382604, -0.09715187, -0.44739515, 1.4616567, 0.065819174)
+bone_name = "mixamorig_LeftForeArm"
+bone_idx = 16
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_AvambraccioSx" type="Marker3D" parent="Prese/Osso_AvambraccioSx" unique_id=1558645391]
+transform = Transform3D(0.095536105, -0.11518557, 0.9887392, -0.019578865, -0.9933079, -0.11382597, 0.9952337, -0.008483958, -0.097151965, -1.8626451e-08, 0.110794544, -1.1920929e-07)
+
+[node name="Osso_StincoDx" type="BoneAttachment3D" parent="Prese" unique_id=1794237895]
+transform = Transform3D(0.9999592, -0.0074083926, -0.005221731, -0.007634168, -0.9989744, -0.044632554, -0.0048857103, 0.044670466, -0.9989918, 0.10705688, 0.5546491, 0.05810755)
+bone_name = "mixamorig_RightLeg"
+bone_idx = 7
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_StincoDx" type="Marker3D" parent="Prese/Osso_StincoDx" unique_id=1031014843]
+transform = Transform3D(0.9999588, -0.0076341634, -0.0048857094, -0.007408393, -0.9989744, 0.044670496, -0.0052217096, -0.04463235, -0.9989879, 0, 0.22510698, -1.4901161e-08)
+
+[node name="Osso_StincoSx" type="BoneAttachment3D" parent="Prese" unique_id=223138698]
+transform = Transform3D(0.9999598, 0.0074109794, 0.0050896555, 0.007593647, -0.9992918, -0.036861252, 0.0048128623, 0.03689829, -0.9993093, -0.10715727, 0.5546492, 0.06010824)
+bone_name = "mixamorig_LeftLeg"
+bone_idx = 2
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_StincoSx" type="Marker3D" parent="Prese/Osso_StincoSx" unique_id=926632749]
+transform = Transform3D(0.99995947, 0.0075936415, 0.004812862, 0.0074109766, -0.99929154, 0.036898345, 0.0050896355, -0.036861055, -0.9993056, 0, 0.22503579, 0)
+
+[node name="Osso_PiedeDx" type="BoneAttachment3D" parent="Prese" unique_id=133742318]
+transform = Transform3D(0.99583745, 0.054552067, -0.073022455, 0.09086256, -0.5306221, 0.8427245, 0.007225079, -0.845853, -0.5333709, 0.10372152, 0.10489681, 0.07821884)
+bone_name = "mixamorig_RightFoot"
+bone_idx = 8
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_PiedeDx" type="Marker3D" parent="Prese/Osso_PiedeDx" unique_id=740509940]
+transform = Transform3D(0.9958371, 0.090862535, 0.007225013, 0.054552067, -0.5306218, -0.8458496, -0.073022395, 0.8427242, -0.53336877, -0.004368447, 0.057657283, -0.016501013)
+
+[node name="Osso_PiedeSx" type="BoneAttachment3D" parent="Prese" unique_id=1134187768]
+transform = Transform3D(0.9958412, -0.05501072, 0.07262446, -0.09081054, -0.5350782, 0.8399078, -0.0073442063, -0.8430112, -0.5378491, -0.1038218, 0.10489634, 0.07671512)
+bone_name = "mixamorig_LeftFoot"
+bone_idx = 3
+use_external_skeleton = true
+external_skeleton = NodePath("../../Corpo/legionario_m_Rig/Skeleton3D")
+
+[node name="Presa_PiedeSx" type="Marker3D" parent="Prese/Osso_PiedeSx" unique_id=1220581832]
+transform = Transform3D(0.995841, -0.09081054, -0.0073441397, -0.055010725, -0.5350781, -0.84300804, 0.07262442, 0.8399077, -0.5378475, 0.004370831, 0.057743434, -0.016194982)

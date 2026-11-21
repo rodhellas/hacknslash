@@ -25,8 +25,10 @@ static func apply(model: Node3D, equipment: Dictionary, transmog: Dictionary = {
 		if vis.is_empty():
 			continue
 		hidden.append_array(vis.get("hide", []))
-		if vis.has("scene"):
-			_add_scene(model, slot, vis)
+		var dye := String(dyes.get(slot, ""))
+		var dual := slot == "secondaria" and it.slot == "arma"
+		if vis.has("scene") and _add_scene(model, slot, vis, it.rarity, dye, dual):
+			pass
 		else:
 			for p: Array in vis.get("parts", []):
 				var part := p
@@ -34,10 +36,10 @@ static func apply(model: Node3D, equipment: Dictionary, transmog: Dictionary = {
 				if slot == "secondaria" and it.slot == "arma":
 					part = p.duplicate()
 					part[0] = String(p[0]).replace("Dx", "Sx")
-				_add_part(model, slot, part, it.rarity, String(dyes.get(slot, "")))
+				_add_part(model, slot, part, it.rarity, dye)
 	# Parti del corpo coperte dall'equipaggiamento (es. capelli sotto l'elmo)
 	for n: Node in model.find_children("*", "Node3D", true, false):
-		if n.has_meta("body_part"):
+		if n.has_meta("body_part") or (n is MeshInstance3D and VisualDB.BODY_PARTS.has(String(n.name)) and not n.has_meta(META)):
 			(n as Node3D).visible = not hidden.has(String(n.name))
 
 
@@ -102,22 +104,82 @@ static func _add_part(model: Node3D, slot: String, p: Array, rarity: int, dye: S
 	s.add_child(mi)
 
 
-static func _add_scene(model: Node3D, slot: String, vis: Dictionary) -> void:
-	var ps := load(String(vis["scene"])) as PackedScene
+## Pezzo vero (modello .glb/.tscn). Falso se il file non c'è (allora si usano i pezzi graybox).
+## dual: arma tenuta nella mano sinistra (doppia arma), presa Dx -> Sx.
+static func _add_scene(model: Node3D, slot: String, vis: Dictionary, rarity: int, dye: String, dual: bool) -> bool:
+	var path := String(vis["scene"])
+	if not ResourceLoader.exists(path):
+		return false
+	var ps := load(path) as PackedScene
 	if ps == null:
-		return
+		return false
+	var energy: PackedScene = null
+	if vis.has("energy") and ResourceLoader.exists(String(vis["energy"])):
+		energy = load(String(vis["energy"])) as PackedScene
+	var overlay := _tint_overlay(rarity, dye)
 	for key: String in ["socket", "mirror"]:
 		if not vis.has(key):
 			continue
-		var s := _socket(model, String(vis[key]))
+		var sock := String(vis[key])
+		if dual:
+			sock = sock.replace("Dx", "Sx")
+		var s := _socket(model, sock)
 		if s == null:
 			continue
 		var n := ps.instantiate() as Node3D
+		if sock == "Presa_Testa":
+			n.scale = Vector3.ONE * _graybox_head_scale(model)
 		if key == "mirror":
-			n.scale.x = -1.0
+			n.scale.x = -n.scale.x
+		if overlay != null:
+			for mi: Node in n.find_children("*", "MeshInstance3D", true, false):
+				(mi as MeshInstance3D).material_overlay = overlay
+				mi.set_meta("_own_overlay", overlay)   # Fx.flash la rimette dopo il lampo
+		if energy != null:
+			# Guscio di energia attorno alla lama (colore della rarità per leggendari e set)
+			var ec: Color = VisualDB.MATERIALS["energia"]
+			if rarity >= Item.Rarity.LEGGENDARIO:
+				ec = Item.RARITY_COLORS[rarity]
+			var en := energy.instantiate() as Node3D
+			en.name = "Energia"
+			for mi: Node in en.find_children("*", "MeshInstance3D", true, false):
+				Vfx.make_energy(mi as MeshInstance3D, ec)
+			n.add_child(en)
 		n.name = "Equip_%s_%s" % [slot, key]
 		n.set_meta(META, slot)
 		s.add_child(n)
+	return true
+
+
+## Gli elmi veri sono fatti sulla testa del corpo vero (larga VisualDB.HEAD_WIDTH). Finché il corpo
+## è graybox (testa = sfera più grossa) si ingrandiscono per contenerla; col corpo vero la scala è 1.
+static func _graybox_head_scale(model: Node3D) -> float:
+	var head := model.get_node_or_null("Graybox/Testa") as MeshInstance3D
+	if head == null or not head.mesh is SphereMesh:
+		return 1.0
+	var w: float = (head.mesh as SphereMesh).radius * 2.0 * head.scale.x
+	return maxf(1.0, (w + 0.01) / VisualDB.HEAD_WIDTH)
+
+
+## Tinta di un pezzo vero (che ha già la sua texture): moltiplica per il colore della tinta scelta
+## nella scheda Aspetto e aggiunge un leggero bagliore del colore di rarità per leggendari e set.
+static func _tint_overlay(rarity: int, dye: String) -> Material:
+	var mul: StandardMaterial3D = null
+	if dye != "" and VisualDB.MATERIALS.has(dye):
+		mul = StandardMaterial3D.new()
+		mul.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mul.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+		mul.albedo_color = Color.WHITE.lerp(VisualDB.MATERIALS[dye], 0.65)
+	var add: StandardMaterial3D = null
+	if rarity >= Item.Rarity.LEGGENDARIO:
+		add = StandardMaterial3D.new()
+		add.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		add.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		add.albedo_color = (Item.RARITY_COLORS[rarity] as Color) * 0.18
+	if mul != null and add != null:
+		mul.next_pass = add
+		return mul
+	return mul if mul != null else add
 
 
 static func _mesh(kind: String, size: Vector3) -> Mesh:

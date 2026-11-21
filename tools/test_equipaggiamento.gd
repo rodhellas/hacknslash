@@ -106,6 +106,13 @@ func _run() -> void:
 	eq["elmo"] = IDB.make_basic("galea", 1)
 	App.apply(model, eq)
 	_check(not hair.visible and _sockets_of(model, App, "elmo") == ["Presa_Testa"], "con la galea: elmo in testa, capelli nascosti")
+	var real := true
+	for s: String in ["arma", "secondaria", "elmo"]:
+		var ps: Array = App.pieces(model, s)
+		if ps.size() != 1 or ps[0] is MeshInstance3D or (ps[0] as Node).find_children("*", "MeshInstance3D", true, false).is_empty():
+			real = false
+	var helm_scale: float = (App.pieces(model, "elmo")[0] as Node3D).scale.x
+	_check(real and helm_scale > 1.2, "gladio, scutum e galea usano i modelli veri (elmo ingrandito sulla testa graybox: ×%.2f)" % helm_scale)
 	eq.erase("elmo")
 	eq.erase("arma")
 	App.apply(model, eq)

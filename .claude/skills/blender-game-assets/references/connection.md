@@ -1,5 +1,12 @@
 # Connecting an agent to the live Blender
 
+> **PC Windows di Legio 3000 (21-11-2026):** in Blender 5.2 è installato l'add-on MCP di **ahujasid**
+> (`%APPDATA%/Blender Foundation/Blender/5.2/scripts/addons/addon.py`, porta 9876), non quello di Blender Lab:
+> il protocollo è diverso e `blender_exec.py` resta appeso. Usa `scripts/blender_exec_addon.py` col Python
+> di Blender (`C:/Program Files/Blender Foundation/Blender 5.2/5.2/python/bin/python.exe`; `python3` di sistema
+> è lo stub dello Store) e `scripts/tripo_lib.py` per i GLB di Tripo. Blender in background:
+> `C:/Program Files/Blender Foundation/Blender 5.2/blender.exe -b --python bg_verify.py -- FILE`.
+
 ## Pieces
 
 1. **Blender side** — the Blender Lab "MCP" extension (Blender 5.1+). It runs a TCP socket server inside Blender (default `127.0.0.1:9876`). Protocol: JSON + `\0`,
